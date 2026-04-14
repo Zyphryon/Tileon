@@ -1,0 +1,153 @@
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Copyright (C) 2025-2026 Tileon contributors (see AUTHORS.md)
+//
+// This work is licensed under the terms of the MIT license.
+//
+// For a copy, see <https://opensource.org/licenses/MIT>.
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#pragma once
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// [  HEADER  ]
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#include "Region.hpp"
+#include <Zyphryon.Math/Geometry/Rect.hpp>
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// [   CODE   ]
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+namespace Tileon
+{
+    /// \brief Provides utility functions for coordinate transformations in the world.
+    class Coordinate final
+    {
+    public:
+
+        /// \brief Bit shift value for converting world coordinates to world tile x-coordinates.
+        static constexpr SInt32 kBitShiftWorldX = Math::Log(Tile::kExtent);
+
+        /// \brief Bit shift value for converting world tile x-coordinates to region x-coordinates.
+        static constexpr SInt32 kBitShiftLocalX = Math::Log(Region::kTilesPerRow);
+
+        /// \brief Bit mask for extracting the local x-coordinate within a region.
+        static constexpr SInt32 kBitMaskLocalX  = (1u << kBitShiftLocalX) - 1u;
+
+        /// \brief Bit shift value for converting world coordinates to world tile y-coordinates.
+        static constexpr SInt32 kBitShiftWorldY = Math::Log(Tile::kExtent);
+
+        /// \brief Bit shift value for converting world tile y-coordinates to region y-coordinates.
+        static constexpr SInt32 kBitShiftLocalY = Math::Log(Region::kTilesPerColumn);
+
+        /// \brief Bit mask for extracting the local y-coordinate within a region.
+        static constexpr SInt32 kBitMaskLocalY  = (1u << kBitShiftLocalY) - 1u;
+
+    public:
+
+        /// \brief Converts world x-coordinates to world tile x-coordinates.
+        ///
+        /// \param WorldCoordinatesX The x-coordinate in world space.
+        /// \return The corresponding x-coordinate in world tile space.
+        ZYPHRYON_INLINE static constexpr SInt32 GetWorldTileX(SInt32 WorldCoordinatesX)
+        {
+            return WorldCoordinatesX >> kBitShiftWorldX;
+        }
+
+        /// \brief Converts world y-coordinates to world tile y-coordinates.
+        ///
+        /// \param WorldCoordinatesY The y-coordinate in world space.
+        /// \return The corresponding y-coordinate in world tile space.
+        ZYPHRYON_INLINE static constexpr SInt32 GetWorldTileY(SInt32 WorldCoordinatesY)
+        {
+            return WorldCoordinatesY >> kBitShiftWorldY;
+        }
+
+        /// \brief Converts world tile x-coordinates to region x-coordinates.
+        ///
+        /// \param WorldTileX The x-coordinate in world tile space.
+        /// \return The corresponding x-coordinate in region space.
+        ZYPHRYON_INLINE static constexpr SInt16 GetRegionX(SInt32 WorldTileX)
+        {
+            return WorldTileX >> kBitShiftLocalX;
+        }
+
+        /// \brief Extracts the local x-coordinate within a region from a world tile x-coordinate.
+        ///
+        /// \param WorldTileX The x-coordinate in world tile space.
+        /// \return The local x-coordinate within the region.
+        ZYPHRYON_INLINE static constexpr UInt8 GetLocalTileX(SInt32 WorldTileX)
+        {
+            return WorldTileX & kBitMaskLocalX;
+        }
+
+        /// \brief Converts world tile y-coordinates to region y-coordinates.
+        ///
+        /// \param WorldTileY The y-coordinate in world tile space.
+        /// \return The corresponding y-coordinate in region space.
+        ZYPHRYON_INLINE static constexpr SInt16 GetRegionY(SInt32 WorldTileY)
+        {
+            return WorldTileY >> kBitShiftLocalY;
+        }
+
+        /// \brief Extracts the local y-coordinate within a region from a world tile y-coordinate.
+        ///
+        /// \param WorldTileY The y-coordinate in world tile space.
+        /// \return The local y-coordinate within the region.
+        ZYPHRYON_INLINE static constexpr UInt8 GetLocalTileY(SInt32 WorldTileY)
+        {
+            return WorldTileY & kBitMaskLocalY;
+        }
+
+        /// \brief Computes the cell bounds for a given rectangular area in integer coordinates.
+        ///
+        /// \tparam ShiftX     The bit shift value for the x-dimension.
+        /// \tparam ShiftY     The bit shift value for the y-dimension.
+        /// \param Coordinates The rectangle defining the area.
+        /// \return The computed cell bounds as an IntRect.
+        template<SInt32 ShiftX, SInt32 ShiftY = ShiftX>
+        ZYPHRYON_INLINE static constexpr IntRect GetCell(IntRect Coordinates)
+        {
+            const SInt32 MinX = Coordinates.GetMinimumX() >> ShiftX;
+            const SInt32 MinY = Coordinates.GetMinimumY() >> ShiftY;
+            const SInt32 MaxX = (Coordinates.GetMaximumX() + (1 << ShiftX) - 1) >> ShiftX;
+            const SInt32 MaxY = (Coordinates.GetMaximumY() + (1 << ShiftY) - 1) >> ShiftY;
+            return IntRect(MinX, MinY, MaxX, MaxY);
+        }
+
+        /// \brief Computes the world cell bounds for a given rectangular area.
+        ///
+        /// \param Coordinates The rectangle defining the area.
+        /// \return The computed world cell bounds.
+        ZYPHRYON_INLINE static constexpr IntRect GetWorldCell(IntRect Coordinates)
+        {
+            return GetCell<kBitShiftWorldX, kBitShiftWorldY>(Coordinates);
+        }
+
+        /// \brief Computes the cell bounds for a given rectangular area in floating-point coordinates.
+        ///
+        /// \tparam ShiftX     The bit shift value for the x-dimension.
+        /// \tparam ShiftY     The bit shift value for the y-dimension.
+        /// \param Coordinates The rectangle defining the area.
+        /// \return The computed cell bounds as an IntRect.
+        template<SInt32 ShiftX, SInt32 ShiftY = ShiftX>
+        ZYPHRYON_INLINE static constexpr IntRect GetCell(Rect Coordinates)
+        {
+            const SInt32 MinX = static_cast<SInt32>(Floor(Coordinates.GetMinimumX())) >> ShiftX;
+            const SInt32 MinY = static_cast<SInt32>(Floor(Coordinates.GetMinimumY())) >> ShiftY;
+            const SInt32 MaxX = static_cast<SInt32>(-Ceil(Coordinates.GetMaximumX()))  >> ShiftX;
+            const SInt32 MaxY = static_cast<SInt32>(-Ceil(Coordinates.GetMaximumY()))  >> ShiftY;
+            return IntRect(MinX, MinY, -MaxX, -MaxY);
+        }
+
+        /// \brief Computes the world cell bounds for a given rectangular area.
+        ///
+        /// \param Coordinates The rectangle defining the area.
+        /// \return The computed world cell bounds.
+        ZYPHRYON_INLINE static constexpr IntRect GetWorldCell(Rect Coordinates)
+        {
+            return GetCell<kBitShiftWorldX, kBitShiftWorldY>(Coordinates);
+        }
+    };
+}
