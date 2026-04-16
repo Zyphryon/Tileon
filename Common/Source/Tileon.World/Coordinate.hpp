@@ -100,12 +100,12 @@ namespace Tileon
             return WorldTileY & kBitMaskLocalY;
         }
 
-        /// \brief Computes the cell bounds for a given rectangular area in integer coordinates.
+        /// \brief Converts world coordinates to cell coordinates based on the specified bit shifts for x and y axes.
         ///
-        /// \tparam ShiftX     The bit shift value for the x-dimension.
-        /// \tparam ShiftY     The bit shift value for the y-dimension.
-        /// \param Coordinates The rectangle defining the area.
-        /// \return The computed cell bounds as an IntRect.
+        /// \tparam ShiftX     The bit shift value for the x-axis, determining the size of the cell in world units.
+        /// \tparam ShiftY     The bit shift value for the y-axis, determining the size of the cell in world units.
+        /// \param Coordinates The rectangle representing the world coordinates to convert.
+        /// \return A rect representing the cell coordinates corresponding to the given world coordinates
         template<SInt32 ShiftX, SInt32 ShiftY = ShiftX>
         ZYPHRYON_INLINE static constexpr IntRect GetCell(IntRect Coordinates)
         {
@@ -116,38 +116,56 @@ namespace Tileon
             return IntRect(MinX, MinY, MaxX, MaxY);
         }
 
-        /// \brief Computes the world cell bounds for a given rectangular area.
+        /// \brief Converts world coordinates to world cell coordinates.
         ///
-        /// \param Coordinates The rectangle defining the area.
-        /// \return The computed world cell bounds.
+        /// \param Coordinates The rectangle representing the world coordinates to convert.
+        /// return A rect representing the world cell coordinates corresponding to the given world coordinates
         ZYPHRYON_INLINE static constexpr IntRect GetWorldCell(IntRect Coordinates)
         {
             return GetCell<kBitShiftWorldX, kBitShiftWorldY>(Coordinates);
         }
 
-        /// \brief Computes the cell bounds for a given rectangular area in floating-point coordinates.
+        /// \brief Converts world coordinates to region cell coordinates.
         ///
-        /// \tparam ShiftX     The bit shift value for the x-dimension.
-        /// \tparam ShiftY     The bit shift value for the y-dimension.
-        /// \param Coordinates The rectangle defining the area.
-        /// \return The computed cell bounds as an IntRect.
+        /// \param Coordinates The rectangle representing the world coordinates to convert.
+        /// \return A rect representing the region cell coordinates corresponding to the given world coordinates
+        ZYPHRYON_INLINE static constexpr IntRect GetRegionCell(IntRect Coordinates)
+        {
+            return GetCell<kBitShiftLocalX, kBitShiftLocalY>(Coordinates);
+        }
+
+        /// \brief Converts world coordinates to cell coordinates based on the specified bit shifts for x and y axes.
+        ///
+        /// \tparam ShiftX     The bit shift value for the x-axis, determining the size of the cell in world units.
+        /// \tparam ShiftY     The bit shift value for the y-axis, determining the size of the cell in world units.
+        /// \param Coordinates The rectangle representing the world coordinates to convert.
+        /// \return A rect representing the cell coordinates corresponding to the given world coordinates
         template<SInt32 ShiftX, SInt32 ShiftY = ShiftX>
         ZYPHRYON_INLINE static constexpr IntRect GetCell(Rect Coordinates)
         {
             const SInt32 MinX = static_cast<SInt32>(Floor(Coordinates.GetMinimumX())) >> ShiftX;
             const SInt32 MinY = static_cast<SInt32>(Floor(Coordinates.GetMinimumY())) >> ShiftY;
-            const SInt32 MaxX = static_cast<SInt32>(-Ceil(Coordinates.GetMaximumX()))  >> ShiftX;
-            const SInt32 MaxY = static_cast<SInt32>(-Ceil(Coordinates.GetMaximumY()))  >> ShiftY;
+            const SInt32 MaxX = static_cast<SInt32>(-Ceil(Coordinates.GetMaximumX())) >> ShiftX;
+            const SInt32 MaxY = static_cast<SInt32>(-Ceil(Coordinates.GetMaximumY())) >> ShiftY;
             return IntRect(MinX, MinY, -MaxX, -MaxY);
         }
 
-        /// \brief Computes the world cell bounds for a given rectangular area.
+        /// \brief Converts world coordinates to world cell coordinates.
         ///
-        /// \param Coordinates The rectangle defining the area.
-        /// \return The computed world cell bounds.
+        /// \param Coordinates The rectangle representing the world coordinates to convert.
+        /// return A rect representing the world cell coordinates corresponding to the given world coordinates
         ZYPHRYON_INLINE static constexpr IntRect GetWorldCell(Rect Coordinates)
         {
             return GetCell<kBitShiftWorldX, kBitShiftWorldY>(Coordinates);
+        }
+
+        /// \brief Converts world coordinates to region cell coordinates.
+        ///
+        /// \param Coordinates The rectangle representing the world coordinates to convert.
+        /// \return A rect representing the region cell coordinates corresponding to the given world coordinates
+        ZYPHRYON_INLINE static constexpr IntRect GetRegionCell(Rect Coordinates)
+        {
+            return GetCell<kBitShiftLocalX, kBitShiftLocalY>(Coordinates);
         }
     };
 }

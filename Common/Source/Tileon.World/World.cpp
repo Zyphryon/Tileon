@@ -67,7 +67,7 @@ namespace Tileon
         Scene.GetComponent<Worldspace>("Worldspace").With<Volume>();
         Scene.GetComponent<Localspace>("Localspace").With<Worldspace>().AddTrait(Scene::Trait::Serializable);
         Scene.GetComponent<Origin>("Origin").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Extent>("Extent").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable, Scene::Trait::Final);
+        Scene.GetComponent<Extent>("Extent").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Velocity>("Velocity").With<EcsKinetic>();
         Scene.GetComponent<Region>("Region").AddTrait(Scene::Trait::Serializable);
 
@@ -113,7 +113,7 @@ namespace Tileon
         // System that computes world matrices from local transforms of kinetic entities.
         Scene.CreateSystem<Scene::DSL::Cascade<ConstPtr<Worldspace>>, Scene::DSL::In<const Localspace, ConstPtr<Origin>, Worldspace>, EcsDynamic>(
             "World::ComputeWorldspace",
-            EcsPreUpdate,
+            EcsOnUpdate,
             Scene::Execution::Concurrent,
             [](ConstPtr<Worldspace> Parent, ConstRef<Localspace> Localspace, ConstPtr<Origin> Origin, Ref<Worldspace> Worldspace)
             {
@@ -124,7 +124,7 @@ namespace Tileon
         // System that computes world-space volumes from local-space volumes and updates spatial partitioning.
         Scene.CreateSystem<Scene::DSL::In<const Worldspace, const Extent, Volume>, EcsDynamic>(
             "World::ComputeHierarchy",
-            EcsPreUpdate,
+            EcsOnUpdate,
             Scene::Execution::Concurrent,
             [this](Scene::Entity Actor, ConstRef<Worldspace> Worldspace, Extent Extent, Ref<Volume> Volume)
             {
@@ -145,9 +145,9 @@ namespace Tileon
         // System that optimizes the entity hierarchy (sync point).
         Scene.CreateSystem<>(
             "World::UpdateHierarchy",
-            EcsPreUpdate,
+            EcsPostUpdate,
             Scene::Execution::Immediate,
-            [&]
+            [this]
             {
                 mSupervisor.UpdateHierarchy();
             });

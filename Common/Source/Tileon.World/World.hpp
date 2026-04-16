@@ -58,14 +58,14 @@ namespace Tileon
 
     private:
 
-        /// \brief Registers the World with the specified Scene service.
+        /// \brief Registers the world with the specified scene service.
         ///
-        /// \param Scene The Scene service to register with.
+        /// \param Scene The scene service to register with.
         void OnRegister(Ref<Scene::Service> Scene);
 
-        /// \brief Tears down the World from the specified Scene service.
+        /// \brief Tears down the world from the specified scene service.
         ///
-        /// \param Scene The Scene service to tear down from.
+        /// \param Scene The scene service to tear down from.
         void OnTeardown(Ref<Scene::Service> Scene);
 
     private:
