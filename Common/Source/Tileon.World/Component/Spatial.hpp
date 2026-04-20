@@ -30,7 +30,10 @@ namespace Tileon
     /// \brief Represents the origin point of an entity, defined in localspace.
     using Origin     = Math::Vector2;
 
+    /// \brief Represents the grid coordinates of an entity within the world.
+    using Locale     = Math::IntVector2;
+
     /// \brief Represents the bounding volume of an entity, defined as an axis-aligned rectangle in worldspace.
-    using Volume     = Math::Rect;
+    using Volume     = Math::IntRect;
 }
 

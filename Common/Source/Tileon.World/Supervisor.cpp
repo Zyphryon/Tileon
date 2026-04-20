@@ -84,7 +84,7 @@ namespace Tileon
 
                         Actor.Children([this](Scene::Entity Child)
                         {
-                            RemoveEntityOnCell(Child, Child.Get<Volume>());
+                            RemoveEntityOnCell(Child, Child.Get<Volume>().GetCenter());
                         });
                         Actor.Destruct();
                     }
@@ -187,9 +187,7 @@ namespace Tileon
 
             if (Actor.IsValid())
             {
-                const Vector2 Translation(Region::kTilesPerX * RegionX, Region::kTilesPerY * RegionY);
-                Actor.Set(Worldspace::FromTranslation(Translation));
-                Actor.Add<Stale>();
+                Actor.Emplace<Locale>(RegionX * Region::kTilesPerX, RegionY * Region::kTilesPerY);
             }
         }
         return Actor;
@@ -328,10 +326,8 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Supervisor::InsertEntityOnCell(Scene::Entity Actor, Rect Volume)
+    void Supervisor::InsertEntityOnCell(Scene::Entity Actor, IntVector2 Center)
     {
-        const IntVector2 Center(Volume.GetCenter());
-
         // Link entity to loose cell.
         IntVector2 Loose = Center >> Math::Log(kHierarchyLooseExtent);
         Loose.SetX(Clamp(Loose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
@@ -349,10 +345,8 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Supervisor::RemoveEntityOnCell(Scene::Entity Actor, Rect Volume)
+    void Supervisor::RemoveEntityOnCell(Scene::Entity Actor, IntVector2 Center)
     {
-        const IntVector2 Center(Volume.GetCenter());
-
         // Unlink entity from loose cell.
         IntVector2 Loose    = Center >> Math::Log(kHierarchyLooseExtent);
         Loose.SetX(Clamp(Loose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
@@ -370,16 +364,13 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Supervisor::UpdateEntityOnCell(Scene::Entity Actor, Rect OldestVolume, Rect NewestVolume)
+    void Supervisor::UpdateEntityOnCell(Scene::Entity Actor, IntVector2 OldestCenter, IntVector2 NewestCenter)
     {
-        const IntVector2 OldCenter(OldestVolume.GetCenter());
-        const IntVector2 NewCenter(NewestVolume.GetCenter());
-
-        IntVector2 OldLoose  = OldCenter >> Math::Log(kHierarchyLooseExtent);
+        IntVector2 OldLoose  = OldestCenter >> Math::Log(kHierarchyLooseExtent);
         OldLoose.SetX(Clamp(OldLoose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
         OldLoose.SetY(Clamp(OldLoose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
 
-        IntVector2 NewLoose  = NewCenter >> Math::Log(kHierarchyLooseExtent);
+        IntVector2 NewLoose  = NewestCenter >> Math::Log(kHierarchyLooseExtent);
         NewLoose.SetX(Clamp(NewLoose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
         NewLoose.SetY(Clamp(NewLoose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
 
@@ -395,8 +386,8 @@ namespace Tileon
         }
         else
         {
-            RemoveEntityOnCell(Actor, OldestVolume);
-            InsertEntityOnCell(Actor, NewestVolume);
+            RemoveEntityOnCell(Actor, OldestCenter);
+            InsertEntityOnCell(Actor, NewestCenter);
         }
     }
 }

@@ -91,9 +91,9 @@ namespace Tileon
         /// \param Hitbox   The area used to query overlapping spatial nodes.
         /// \param Callback The function invoked for each candidate entity.
         template<typename Function>
-        ZYPHRYON_INLINE void QueryEach(Rect Hitbox, AnyRef<Function> Callback)
+        ZYPHRYON_INLINE void QueryEach(IntRect Hitbox, AnyRef<Function> Callback)
         {
-            ForEachEntity(Rect::Enclose<SInt32>(Hitbox), Callback);
+            ForEachEntity(Hitbox, Callback);
         }
 
         /// \brief Determines if any entity within the spatial nodes intersects the specified hitbox satisfies a given condition.
@@ -101,27 +101,27 @@ namespace Tileon
         /// \param Hitbox   The area used to query overlapping spatial nodes.
         /// \param Callback The predicate function applied to each candidate entity.
         template<typename Function>
-        ZYPHRYON_INLINE Bool QueryAnyOf(Rect Hitbox, AnyRef<Function> Callback)
+        ZYPHRYON_INLINE Bool QueryAnyOf(IntRect Hitbox, AnyRef<Function> Callback)
         {
-            return AnyOfEntity(Rect::Enclose<SInt32>(Hitbox), Callback);
+            return AnyOfEntity(Hitbox, Callback);
         }
 
         /// \brief Queries the frontmost entity within the specified hitbox that intersects it.
         ///
         /// \param Hitbox The hitbox area used for querying candidate entities.
         /// \return The frontmost entity that satisfies the filter, or an invalid entity if none found.
-        ZYPHRYON_INLINE Scene::Entity QueryFrontmost(Rect Hitbox)
+        ZYPHRYON_INLINE Scene::Entity QueryFrontmost(IntRect Hitbox)
         {
             Scene::Entity Result;
 
             // Find the entity with the highest maximum Y-coordinate that intersects the hitbox and satisfies the filter.
-            Real32 MaxY = -FLT_MAX;
+            SInt32 MaxY = INT32_MIN;
 
-            ForEachEntity(Rect::Enclose<SInt32>(Hitbox), [&](Scene::Entity Actor)
+            ForEachEntity(Hitbox, [&](Scene::Entity Actor)
             {
                 const Volume Volume = Actor.Get<Tileon::Volume>();
 
-                if (const Real32 ActorMaxY = Volume.GetMaximumY(); ActorMaxY > MaxY)
+                if (const SInt32 ActorMaxY = Volume.GetMaximumY(); ActorMaxY > MaxY)
                 {
                     if (Volume.Test(Hitbox))
                     {
@@ -185,7 +185,7 @@ namespace Tileon
                         ForEach([&](UInt64 ID)
                         {
                             const Scene::Entity Actor = Scene.GetEntity(ID);
-                            AABB = IntRect::Union(AABB, Rect::Enclose<SInt32>(Actor.Get<Volume>()));
+                            AABB = IntRect::Union(AABB, Actor.Get<Volume>());
                         });
                         Boundaries = AABB;
                     }
@@ -492,21 +492,21 @@ namespace Tileon
         /// \brief Inserts an entity into the appropriate cell based on its volume.
         ///
         /// \param Actor  The entity to insert.
-        /// \param Volume The volume of the entity.
-        void InsertEntityOnCell(Scene::Entity Actor, Rect Volume);
+        /// \param Center The center coordinates of the entity's volume.
+        void InsertEntityOnCell(Scene::Entity Actor, IntVector2 Center);
 
         /// \brief Removes an entity from the appropriate cell based on its volume.
         ///
         /// \param Actor  The entity to remove.
-        /// \param Volume The volume of the entity.
-        void RemoveEntityOnCell(Scene::Entity Actor, Rect Volume);
+        /// \param Center The center coordinates of the entity's volume.
+        void RemoveEntityOnCell(Scene::Entity Actor, IntVector2 Center);
 
         /// \brief Updates an entity's position in the grid based on its old and new volumes.
         ///
         /// \param Actor        The entity to update.
-        /// \param OldestVolume The previous volume of the entity.
-        /// \param NewestVolume The new volume of the entity.
-        void UpdateEntityOnCell(Scene::Entity Actor, Rect OldestVolume, Rect NewestVolume);
+        /// \param OldestCenter The previous center coordinates of the entity's volume before the update.
+        /// \param NewestCenter The new center coordinates of the entity's volume after the update.
+        void UpdateEntityOnCell(Scene::Entity Actor, IntVector2 OldestCenter, IntVector2 NewestCenter);
 
     private:
 

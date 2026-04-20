@@ -66,6 +66,7 @@ namespace Tileon
         Scene.GetComponent<Worldspace>("Worldspace");
         Scene.GetComponent<Localspace>("Localspace").With<Worldspace>().AddTrait(Scene::Trait::Serializable);
         Scene.GetComponent<Origin>("Origin").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<Locale>("Locale");
         Scene.GetComponent<Volume>("Volume");
         Scene.GetComponent<Extent>("Extent").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Volume>();
         Scene.GetComponent<Velocity>("Velocity").With<Dynamic>();
@@ -121,25 +122,30 @@ namespace Tileon
                 Worldspace = Parent ? (* Parent) * Localspace.Compute(Offset) : Localspace.Compute(Offset);
             });
 
+        // TODO: Parent Migration.
+
         // System that computes world-space volumes from local-space volumes and updates spatial partitioning.
-        Scene.CreateSystem<Scene::DSL::In<const Worldspace, const Extent, Volume>, Kinetic>(
+        Scene.CreateSystem<Scene::DSL::Cascade<const Locale>, Scene::DSL::In<const Worldspace, const Extent, Volume>, Kinetic>(
             "World::ComputeHierarchy",
             EcsOnUpdate,
             Scene::Execution::Concurrent,
-            [this](Scene::Entity Actor, ConstRef<Worldspace> Worldspace, Extent Extent, Ref<Volume> Volume)
+            [this](Scene::Entity Actor, ConstRef<Locale> Locale, ConstRef<Worldspace> Worldspace, Extent Extent, Ref<Volume> Volume)
             {
                 const Rect LocalAABB(Extent.GetOffset(), Extent.GetOffset() + Extent.GetSize());
-                const Rect NewestWorldAABB = Rect::Transform(LocalAABB, Worldspace);
+                const Rect WorldAABB = Rect::Transform(LocalAABB, Worldspace);
+
+                const IntRect    NewestVolume = Rect::Enclose<SInt32>(WorldAABB) + Locale;
+                const IntVector2 NewestCenter = NewestVolume.GetCenter();
 
                 if (Volume.IsAlmostZero())
                 {
-                    mSupervisor.InsertEntityOnCell(Actor, NewestWorldAABB);
+                    mSupervisor.InsertEntityOnCell(Actor, NewestCenter);
                 }
                 else
                 {
-                    mSupervisor.UpdateEntityOnCell(Actor, Volume, NewestWorldAABB);
+                    mSupervisor.UpdateEntityOnCell(Actor, Volume.GetCenter(), NewestCenter);
                 }
-                Volume = NewestWorldAABB;
+                Volume = NewestVolume;
             });
 
         // System that optimizes the entity hierarchy (sync point).
@@ -161,7 +167,7 @@ namespace Tileon
             {
                 if (Volume)
                 {
-                    mSupervisor.RemoveEntityOnCell(Actor, * Volume);
+                   mSupervisor.RemoveEntityOnCell(Actor, Volume->GetCenter());
                 }
                 Actor.Destruct();
             });
