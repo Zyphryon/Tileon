@@ -12,7 +12,8 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include <Zyphryon.Scene/Tag.hpp>
+#include <Zyphryon.Math/Transform2D.hpp>
+#include <Zyphryon.Math/Geometry/Rect.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -20,9 +21,16 @@
 
 namespace Tileon
 {
-    /// \brief Represents a tag for entities that are to be disposed of or removed.
-    using EcsDispose = Scene::Tag<"Dispose">;
+    /// \brief Represents the world space transformation of an entity, defined relative to the region it occupies.
+    using Worldspace = Math::Matrix3x2;
 
-    /// \brief Represents a tag for entities that persist across sessions or contexts.
-    using EcsPersist = Scene::Tag<"Persist">;
+    /// \brief Represents the local space transformation of an entity, defined as a 2D affine transformation.
+    using Localspace = Math::Transform2D;
+
+    /// \brief Represents the origin point of an entity, defined in localspace.
+    using Origin     = Math::Vector2;
+
+    /// \brief Represents the bounding volume of an entity, defined as an axis-aligned rectangle in worldspace.
+    using Volume     = Math::Rect;
 }
+

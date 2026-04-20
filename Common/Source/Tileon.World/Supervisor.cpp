@@ -47,7 +47,7 @@ namespace Tileon
     {
         for (Scene::Entity Actor : mRegionList)
         {
-            if (Actor.IsValid() && Actor.Has<EcsPersist>())
+            if (Actor.IsValid() && Actor.Has<Persist>())
             {
                 SaveRegion(Actor);  // TODO: Multithreaden (System?)
             }
@@ -77,7 +77,7 @@ namespace Tileon
 
                     if (Actor.IsValid())   // TODO: Multithreaden (System?)
                     {
-                        if (Actor.Has<EcsPersist>())
+                        if (Actor.Has<Persist>())
                         {
                             SaveRegion(Actor);
                         }
@@ -118,9 +118,8 @@ namespace Tileon
         mRegionList       = Move(Registry);
         mRegionBoundaries = Boundaries;
 
-        // Adjust spatial hierarchy to new boundaries (with a 1 region margin).
-        const IntRect PixelsPerRegion = Boundaries * IntVector2(Region::kPixelsPerRow, Region::kPixelsPerColumn);
-        AdjustHierarchy(PixelsPerRegion.Expand(Region::kPixelsPerRow, Region::kPixelsPerColumn));
+        // Adjust spatial hierarchy to new boundaries.
+        AdjustHierarchy(Boundaries);
         return true;
     }
 
@@ -188,9 +187,9 @@ namespace Tileon
 
             if (Actor.IsValid())
             {
-                const Vector2 Translation(Region::kPixelsPerRow * RegionX, Region::kPixelsPerColumn * RegionY);
+                const Vector2 Translation(Region::kTilesPerX * RegionX, Region::kTilesPerY * RegionY);
                 Actor.Set(Worldspace::FromTranslation(Translation));
-                Actor.Add<EcsStale>();
+                Actor.Add<Stale>();
             }
         }
         return Actor;
@@ -339,7 +338,7 @@ namespace Tileon
         Loose.SetY(Clamp(Loose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
 
         const UInt32 LooseKey = GetKey(Loose.GetX(), Loose.GetY(), mLooseBoundaries);
-        if (!mLooseRegistry[LooseKey].Insert(Actor, IntRect(Volume)))
+        if (!mLooseRegistry[LooseKey].Insert(Actor))
         {
             // Mark cell as dirty for next hierarchy update.
             Guard Guard(mLooseMutex);

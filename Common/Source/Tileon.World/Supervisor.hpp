@@ -23,7 +23,7 @@
 
 namespace Tileon
 {
-    /// \brief Manages regions and cells in the world, providing spatial queries and entity management.
+    /// \brief Manages regions and cells in the world, providing spatial queries and entity management
     class Supervisor final : public Locator<Scene::Service, Content::Service>
     {
         friend class World;
@@ -33,11 +33,11 @@ namespace Tileon
         /// \brief Default filename format for storing region data.
         static constexpr ConstStr8 kRegionFilename       = "Resources://World/{}_{}.region";
 
-        /// \brief Maximum depth of the cell hierarchy.
-        static constexpr UInt32    kHierarchyLooseExtent = 256;
+        /// \brief Maximum depth of the cell hierarchy (in tiles).
+        static constexpr UInt32    kHierarchyLooseExtent = 8;
 
-        /// \brief Origin offset for the cell hierarchy.
-        static constexpr UInt32    kHierarchyTightExtent = 128;
+        /// \brief Origin offset for the cell hierarchy (in tiles).
+        static constexpr UInt32    kHierarchyTightExtent = 4;
 
     public:
 
@@ -93,7 +93,7 @@ namespace Tileon
         template<typename Function>
         ZYPHRYON_INLINE void QueryEach(Rect Hitbox, AnyRef<Function> Callback)
         {
-            ForEachEntity(IntRect(Hitbox), Callback);  // TODO: Remove Cast
+            ForEachEntity(Rect::Enclose<SInt32>(Hitbox), Callback);
         }
 
         /// \brief Determines if any entity within the spatial nodes intersects the specified hitbox satisfies a given condition.
@@ -103,7 +103,7 @@ namespace Tileon
         template<typename Function>
         ZYPHRYON_INLINE Bool QueryAnyOf(Rect Hitbox, AnyRef<Function> Callback)
         {
-            return AnyOfEntity(IntRect(Hitbox), Callback);  // TODO: Remove Cast
+            return AnyOfEntity(Rect::Enclose<SInt32>(Hitbox), Callback);
         }
 
         /// \brief Queries the frontmost entity within the specified hitbox that intersects it.
@@ -117,9 +117,9 @@ namespace Tileon
             // Find the entity with the highest maximum Y-coordinate that intersects the hitbox and satisfies the filter.
             Real32 MaxY = -FLT_MAX;
 
-            ForEachEntity(IntRect(Hitbox), [&](Scene::Entity Actor)
+            ForEachEntity(Rect::Enclose<SInt32>(Hitbox), [&](Scene::Entity Actor)
             {
-                const Rect Volume = Actor.Get<Tileon::Volume>();
+                const Volume Volume = Actor.Get<Tileon::Volume>();
 
                 if (const Real32 ActorMaxY = Volume.GetMaximumY(); ActorMaxY > MaxY)
                 {
@@ -137,11 +137,6 @@ namespace Tileon
         void UpdateHierarchy();
 
     private:
-
-        static constexpr UInt32 kLooseCellsPerRow    = Region::kPixelsPerRow    / kHierarchyLooseExtent;
-        static constexpr UInt32 kLooseCellsPerColumn = Region::kPixelsPerColumn / kHierarchyLooseExtent;
-        static constexpr UInt32 kTightCellsPerRow    = Region::kPixelsPerRow    / kHierarchyTightExtent;
-        static constexpr UInt32 kTightCellsPerColumn = Region::kPixelsPerColumn / kHierarchyTightExtent;
 
         /// \brief Computes a unique key for a cell based on its coordinates and boundaries.
         ///
@@ -190,7 +185,7 @@ namespace Tileon
                         ForEach([&](UInt64 ID)
                         {
                             const Scene::Entity Actor = Scene.GetEntity(ID);
-                            AABB = IntRect::Union(AABB, IntRect(Actor.Get<Volume>()));
+                            AABB = IntRect::Union(AABB, Rect::Enclose<SInt32>(Actor.Get<Volume>()));
                         });
                         Boundaries = AABB;
                     }
@@ -201,10 +196,9 @@ namespace Tileon
 
             /// \brief Inserts an entity into the cell.
             ///
-            /// \param Actor  The entity to insert.
-            /// \param Volume The volume of the entity.
+            /// \param Actor The entity to insert.
             /// \return `true` if the cell was previously dirty, `false` otherwise.
-            ZYPHRYON_INLINE Bool Insert(Scene::Entity Actor, IntRect Volume)
+            ZYPHRYON_INLINE Bool Insert(Scene::Entity Actor)
             {
                 Guard Guard(Mutex);
                 Entities.emplace(Actor.GetID());

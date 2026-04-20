@@ -26,9 +26,6 @@ namespace Tileon
             Detail,     ///< The overlay layer, used for additional details like paths or markings.
         };
 
-        /// \brief The size of the tile in pixels (width and height).
-        static constexpr SInt8 kExtent = 32;
-
     public:
 
         /// \brief Constructs an empty tile with no layers set.

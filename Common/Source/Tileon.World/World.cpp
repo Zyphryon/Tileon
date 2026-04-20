@@ -59,44 +59,44 @@ namespace Tileon
 
     void World::OnRegister(Ref<Scene::Service> Scene)
     {
-        Scene.GetComponent<EcsPersist>("Persist");
-        Scene.GetComponent<EcsDispose>("Dispose");
-        Scene.GetComponent<EcsStale>("Stale");
-        Scene.GetComponent<EcsKinetic>("Kinetic");
-        Scene.GetComponent<Volume>("Volume");
-        Scene.GetComponent<Worldspace>("Worldspace").With<Volume>();
+        Scene.GetComponent<Persist>("Persist");
+        Scene.GetComponent<Dispose>("Dispose");
+        Scene.GetComponent<Stale>("Stale");
+        Scene.GetComponent<Dynamic>("Dynamic");
+        Scene.GetComponent<Worldspace>("Worldspace");
         Scene.GetComponent<Localspace>("Localspace").With<Worldspace>().AddTrait(Scene::Trait::Serializable);
         Scene.GetComponent<Origin>("Origin").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Extent>("Extent").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Velocity>("Velocity").With<EcsKinetic>();
+        Scene.GetComponent<Volume>("Volume");
+        Scene.GetComponent<Extent>("Extent").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Volume>();
+        Scene.GetComponent<Velocity>("Velocity").With<Dynamic>();
         Scene.GetComponent<Region>("Region").AddTrait(Scene::Trait::Serializable);
 
         // Observe changes to the origin component and mark entities as stale if they are not kinetic.
-        Scene.CreateObserver<Scene::DSL::With<Origin>, Scene::DSL::Not<EcsKinetic>>(
+        Scene.CreateObserver<Scene::DSL::With<Origin>, Scene::DSL::Not<Dynamic>>(
             "World::OnSetOriginMarkDirty",
             EcsOnSet,
             [](Scene::Entity Actor)
             {
-                Actor.Add<EcsStale>();
+                Actor.Add<Stale>();
             });
 
         // Observe changes to the extent component and mark entities as stale if they are not kinetic.
-        Scene.CreateObserver<Scene::DSL::With<Extent>, Scene::DSL::Not<EcsKinetic>>(
+        Scene.CreateObserver<Scene::DSL::With<Extent>, Scene::DSL::Not<Dynamic>>(
             "World::OnSetDimensionMarkDirty",
             EcsOnSet,
             [](Scene::Entity Actor)
             {
-                Actor.Add<EcsStale>();
+                Actor.Add<Stale>();
             });
 
         // System that propagates dirty state to children (for static entities).
-        Scene.CreateSystem<Scene::DSL::Not<EcsStale>, Scene::DSL::Cascade<EcsStale>, Scene::DSL::Out<EcsStale>>(
+        Scene.CreateSystem<Scene::DSL::Not<Stale>, Scene::DSL::Cascade<Stale>, Scene::DSL::Out<Stale>>(
             "World::PropagateDirtyStates",
             EcsPreUpdate,
             Scene::Execution::Concurrent,
             [](Scene::Entity Actor)
             {
-                Actor.Add<EcsStale>();
+                Actor.Add<Stale>();
             });
 
         // System that computes motion integration.
@@ -111,7 +111,7 @@ namespace Tileon
             });
 
         // System that computes world matrices from local transforms of kinetic entities.
-        Scene.CreateSystem<Scene::DSL::Cascade<ConstPtr<Worldspace>>, Scene::DSL::In<const Localspace, ConstPtr<Origin>, Worldspace>, EcsDynamic>(
+        Scene.CreateSystem<Scene::DSL::Cascade<ConstPtr<Worldspace>>, Scene::DSL::In<const Localspace, ConstPtr<Origin>, Worldspace>, Kinetic>(
             "World::ComputeWorldspace",
             EcsOnUpdate,
             Scene::Execution::Concurrent,
@@ -122,13 +122,13 @@ namespace Tileon
             });
 
         // System that computes world-space volumes from local-space volumes and updates spatial partitioning.
-        Scene.CreateSystem<Scene::DSL::In<const Worldspace, const Extent, Volume>, EcsDynamic>(
+        Scene.CreateSystem<Scene::DSL::In<const Worldspace, const Extent, Volume>, Kinetic>(
             "World::ComputeHierarchy",
             EcsOnUpdate,
             Scene::Execution::Concurrent,
             [this](Scene::Entity Actor, ConstRef<Worldspace> Worldspace, Extent Extent, Ref<Volume> Volume)
             {
-                const Rect LocalAABB       = Rect(Extent.GetOffset(), Extent.GetOffset() + Extent.GetSize());
+                const Rect LocalAABB(Extent.GetOffset(), Extent.GetOffset() + Extent.GetSize());
                 const Rect NewestWorldAABB = Rect::Transform(LocalAABB, Worldspace);
 
                 if (Volume.IsAlmostZero())
@@ -153,7 +153,7 @@ namespace Tileon
             });
 
         /// System that disposes of entities marked for disposal.
-        Scene.CreateSystem<Scene::DSL::In<ConstPtr<Volume>, const EcsDispose>>(
+        Scene.CreateSystem<Scene::DSL::In<ConstPtr<Volume>, const Dispose>>(
             "World::DestroyEntitiesTagged",
             EcsPostFrame,
             Scene::Execution::Concurrent,
@@ -173,7 +173,7 @@ namespace Tileon
             Scene::Execution::Immediate,
             [this]
             {
-                GetService<Scene::Service>().Clear<EcsStale>();
+                GetService<Scene::Service>().Clear<Stale>();
             });
     }
 

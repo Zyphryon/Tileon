@@ -26,43 +26,19 @@ namespace Tileon
     {
     public:
 
-        /// \brief Bit shift value for converting world coordinates to world tile x-coordinates.
-        static constexpr SInt32 kBitShiftWorldX = Math::Log(Tile::kExtent);
-
         /// \brief Bit shift value for converting world tile x-coordinates to region x-coordinates.
-        static constexpr SInt32 kBitShiftLocalX = Math::Log(Region::kTilesPerRow);
+        static constexpr SInt32 kBitShiftLocalX = Math::Log(Region::kTilesPerX);
 
         /// \brief Bit mask for extracting the local x-coordinate within a region.
         static constexpr SInt32 kBitMaskLocalX  = (1u << kBitShiftLocalX) - 1u;
 
-        /// \brief Bit shift value for converting world coordinates to world tile y-coordinates.
-        static constexpr SInt32 kBitShiftWorldY = Math::Log(Tile::kExtent);
-
         /// \brief Bit shift value for converting world tile y-coordinates to region y-coordinates.
-        static constexpr SInt32 kBitShiftLocalY = Math::Log(Region::kTilesPerColumn);
+        static constexpr SInt32 kBitShiftLocalY = Math::Log(Region::kTilesPerY);
 
         /// \brief Bit mask for extracting the local y-coordinate within a region.
         static constexpr SInt32 kBitMaskLocalY  = (1u << kBitShiftLocalY) - 1u;
 
     public:
-
-        /// \brief Converts world x-coordinates to world tile x-coordinates.
-        ///
-        /// \param WorldCoordinatesX The x-coordinate in world space.
-        /// \return The corresponding x-coordinate in world tile space.
-        ZYPHRYON_INLINE static constexpr SInt32 GetWorldTileX(SInt32 WorldCoordinatesX)
-        {
-            return WorldCoordinatesX >> kBitShiftWorldX;
-        }
-
-        /// \brief Converts world y-coordinates to world tile y-coordinates.
-        ///
-        /// \param WorldCoordinatesY The y-coordinate in world space.
-        /// \return The corresponding y-coordinate in world tile space.
-        ZYPHRYON_INLINE static constexpr SInt32 GetWorldTileY(SInt32 WorldCoordinatesY)
-        {
-            return WorldCoordinatesY >> kBitShiftWorldY;
-        }
 
         /// \brief Converts world tile x-coordinates to region x-coordinates.
         ///
@@ -116,15 +92,6 @@ namespace Tileon
             return IntRect(MinX, MinY, MaxX, MaxY);
         }
 
-        /// \brief Converts world coordinates to world cell coordinates.
-        ///
-        /// \param Coordinates The rectangle representing the world coordinates to convert.
-        /// return A rect representing the world cell coordinates corresponding to the given world coordinates
-        ZYPHRYON_INLINE static constexpr IntRect GetWorldCell(IntRect Coordinates)
-        {
-            return GetCell<kBitShiftWorldX, kBitShiftWorldY>(Coordinates);
-        }
-
         /// \brief Converts world coordinates to region cell coordinates.
         ///
         /// \param Coordinates The rectangle representing the world coordinates to convert.
@@ -148,15 +115,6 @@ namespace Tileon
             const SInt32 MaxX = static_cast<SInt32>(-Ceil(Coordinates.GetMaximumX())) >> ShiftX;
             const SInt32 MaxY = static_cast<SInt32>(-Ceil(Coordinates.GetMaximumY())) >> ShiftY;
             return IntRect(MinX, MinY, -MaxX, -MaxY);
-        }
-
-        /// \brief Converts world coordinates to world cell coordinates.
-        ///
-        /// \param Coordinates The rectangle representing the world coordinates to convert.
-        /// return A rect representing the world cell coordinates corresponding to the given world coordinates
-        ZYPHRYON_INLINE static constexpr IntRect GetWorldCell(Rect Coordinates)
-        {
-            return GetCell<kBitShiftWorldX, kBitShiftWorldY>(Coordinates);
         }
 
         /// \brief Converts world coordinates to region cell coordinates.

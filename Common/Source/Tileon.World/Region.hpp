@@ -25,20 +25,14 @@ namespace Tileon
     {
     public:
 
-        /// \brief Number of tiles per row in a region.
-        static constexpr UInt8  kTilesPerRow     = 32;
-
         /// \brief Number of tiles per column in a region.
-        static constexpr UInt8  kTilesPerColumn  = 32;
+        static constexpr UInt8  kTilesPerX      = 32;
+
+        /// \brief Number of tiles per row in a region.
+        static constexpr UInt8  kTilesPerY      = 32;
 
         /// \brief Total number of tiles in a region.
-        static constexpr SInt16 kTilesPerRegion  = kTilesPerRow * kTilesPerColumn;
-
-        /// \brief Total number of pixels per row in a region.
-        static constexpr SInt32 kPixelsPerRow    = Tile::kExtent * kTilesPerRow;
-
-        /// \brief Total number of pixels per column in a region.
-        static constexpr SInt32 kPixelsPerColumn = Tile::kExtent * kTilesPerColumn;
+        static constexpr SInt16 kTilesPerRegion = kTilesPerX * kTilesPerY;
 
     public:
 
@@ -82,7 +76,17 @@ namespace Tileon
         /// \param Tile The tile to set at the specified coordinates.
         ZYPHRYON_INLINE void SetTile(UInt8 X, UInt8 Y, AnyRef<Tile> Tile)
         {
-            mTiles[Index2D(X, Y, kTilesPerRow)] = Move(Tile);
+            mTiles[Index2D(X, Y, kTilesPerX)] = Move(Tile);
+        }
+
+        /// \brief Gets a tile at the specified coordinates within the region.
+        ///
+        /// \param X The x-coordinate of the tile within the region.
+        /// \param Y The y-coordinate of the tile within the region.
+        /// \return A reference to the tile at the specified coordinates.
+        ZYPHRYON_INLINE Ref<Tile> GetTile(UInt8 X, UInt8 Y)
+        {
+            return mTiles[Index2D(X, Y, kTilesPerX)];
         }
 
         /// \brief Gets a tile at the specified coordinates within the region.
@@ -92,7 +96,7 @@ namespace Tileon
         /// \return A constant reference to the tile at the specified coordinates.
         ZYPHRYON_INLINE ConstRef<Tile> GetTile(UInt8 X, UInt8 Y) const
         {
-            return mTiles[Index2D(X, Y, kTilesPerRow)];
+            return mTiles[Index2D(X, Y, kTilesPerX)];
         }
 
         /// \brief Serializes the state of the object to or from the specified archive.

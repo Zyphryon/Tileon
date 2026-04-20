@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Component/Common.hpp"
 #include "Component/Extent.hpp"
+#include "Component/Lifecycle.hpp"
+#include "Component/Spatial.hpp"
 #include "Component/Velocity.hpp"
-#include "Component/Transform.hpp"
