@@ -26,6 +26,26 @@ namespace Tileon
     {
     public:
 
+        /// \brief The minimum region coordinate in the world.
+        static constexpr SInt16 kMinRegion = kMinimum<SInt16>;
+
+        /// \brief The maximum region coordinate in the world.
+        static constexpr SInt16 kMaxRegion = kMaximum<SInt16>;
+
+        /// \brief The minimum tile coordinate in the world per x-axis.
+        static constexpr SInt32 kMinTileX  = static_cast<SInt32>(kMinRegion) * Region::kTilesPerX;
+
+        /// \brief The maximum tile coordinate in the world per x-axis.
+        static constexpr SInt32 kMaxTileX  = (static_cast<SInt32>(kMaxRegion) + 1) * Region::kTilesPerX - 1;
+
+        /// \brief The minimum tile coordinate in the world per y-axis.
+        static constexpr SInt32 kMinTileY  = static_cast<SInt32>(kMinRegion) * Region::kTilesPerY;
+
+        /// \brief The maximum tile coordinate in the world per y-axis.
+        static constexpr SInt32 kMaxTileY  = (static_cast<SInt32>(kMaxRegion) + 1) * Region::kTilesPerY - 1;
+
+    public:
+
         /// \brief Default constructor initializing the placement at the origin (0, 0) with no offset.
         ZYPHRYON_INLINE constexpr Placement()
             : mRegionX { 0 },
@@ -79,6 +99,22 @@ namespace Tileon
         ZYPHRYON_INLINE constexpr Real32 GetOffsetY() const
         {
             return mOffsetY;
+        }
+
+        /// \brief Gets the shifted x-coordinate of the region.
+        ///
+        /// \return The shifted x-coordinate of the region.
+        ZYPHRYON_INLINE constexpr SInt32 GetBaseX() const
+        {
+            return mRegionX * Region::kTilesPerX;
+        }
+
+        /// \brief Gets the shifted y-coordinate of the region.
+        ///
+        /// \return The shifted y-coordinate of the region.
+        ZYPHRYON_INLINE constexpr SInt32 GetBaseY() const
+        {
+            return mRegionY * Region::kTilesPerY;
         }
 
         /// \brief Gets the absolute x-coordinate in the world by combining the region's x-coordinate and the offset.
@@ -166,6 +202,33 @@ namespace Tileon
                 Input.GetRegionY() + DeltaY,
                 Input.GetOffsetX() - DeltaX * Region::kTilesPerX,
                 Input.GetOffsetY() - DeltaY * Region::kTilesPerY);
+        }
+
+        /// \brief Clamps a placement to the valid world boundaries defined by the region limits.
+        ///
+        /// \param Input The placement to clamp.
+        /// \return A placement clamped to the valid world extents.
+        ZYPHRYON_INLINE static constexpr Placement Clamp(Placement Input)
+        {
+            return FromAbsolute(
+                Math::Clamp(Input.GetAbsoluteX(), static_cast<Real64>(kMinTileX), static_cast<Real64>(kMaxTileX)),
+                Math::Clamp(Input.GetAbsoluteY(), static_cast<Real64>(kMinTileY), static_cast<Real64>(kMaxTileY)));
+        }
+
+        /// \brief Linearly interpolates between two placements.
+        ///
+        /// \param Start      The starting placement.
+        /// \param End        The ending placement.
+        /// \param Percentage The interpolation factor in [0, 1].
+        /// \return A normalized placement interpolated between Start and End.
+        ZYPHRYON_INLINE static constexpr Placement Lerp(Placement Start, Placement End, Real32 Percentage)
+        {
+            const Real64 OffsetX = End.GetAbsoluteX() - Start.GetAbsoluteX();
+            const Real64 OffsetY = End.GetAbsoluteY() - Start.GetAbsoluteY();
+
+            return FromAbsolute(
+                Start.GetAbsoluteX() + OffsetX * Percentage,
+                Start.GetAbsoluteY() + OffsetY * Percentage);
         }
 
     private:
