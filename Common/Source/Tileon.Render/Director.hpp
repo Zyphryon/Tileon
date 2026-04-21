@@ -105,7 +105,7 @@ namespace Tileon
             // Reset any active zoom tween to immediately apply the new zoom.
             mTweenZoom = Tween<Real32>();
 
-            mZoom = Snap(Clamp(Magnitude, kMinimumZoom, kMaximumZoom));
+            mZoom = Clamp(Magnitude, kMinimumZoom, kMaximumZoom);
             SetViewport(mViewport.GetX(), mViewport.GetY(), mDensity);
         }
 

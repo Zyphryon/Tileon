@@ -43,7 +43,7 @@ namespace Tileon
         // Ensure that the zoom level changes in discrete steps that align with the pixel grid.
         if (!mTweenZoom.IsComplete())
         {
-            mZoom = Snap(mTweenZoom.Tick(Delta));
+            mZoom = mTweenZoom.Tick(Delta);
 
             SetViewport(mViewport.GetX(), mViewport.GetY(), mDensity);
         }
@@ -53,16 +53,16 @@ namespace Tileon
 
         if (Dirty)
         {
-            const Real32 HalfWidth  = (mViewport.GetX() * 0.5f * mZoom) + 1.0f;
-            const Real32 HalfHeight = (mViewport.GetY() * 0.5f * mZoom) + 1.0f;
+            const Real32 HalfWidth  = (mViewport.GetX() * 0.5f * mZoom);
+            const Real32 HalfHeight = (mViewport.GetY() * 0.5f * mZoom);
 
-            const SInt32 AbsoluteX = static_cast<SInt32>(mPosition.GetAbsoluteX());
-            const SInt32 AbsoluteY = static_cast<SInt32>(mPosition.GetAbsoluteY());
+            const Real64 AbsoluteX  = mPosition.GetAbsoluteX();
+            const Real64 AbsoluteY  = mPosition.GetAbsoluteY();
 
-            mFrustum.Set(Max(AbsoluteX - HalfWidth,  Placement::kMinTileX),
-                         Max(AbsoluteY - HalfHeight, Placement::kMinTileY),
-                         Min(AbsoluteX + HalfWidth,  Placement::kMaxTileX),
-                         Min(AbsoluteY + HalfHeight, Placement::kMaxTileY));
+            mFrustum.Set(Max(Floor(AbsoluteX - HalfWidth),  Placement::kMinTileX),
+                         Max(Floor(AbsoluteY - HalfHeight), Placement::kMinTileY),
+                         Min( Ceil(AbsoluteX + HalfWidth),  Placement::kMaxTileX),
+                         Min( Ceil(AbsoluteY + HalfHeight), Placement::kMaxTileY));
         }
         return Dirty;
     }
