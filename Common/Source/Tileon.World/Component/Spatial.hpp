@@ -31,7 +31,7 @@ namespace Tileon
     using Origin     = Math::Vector2;
 
     /// \brief Represents the grid coordinates of an entity within the world.
-    using Locale     = Math::IntVector2;
+    using Sector     = Math::IntVector2;
 
     /// \brief Represents the bounding volume of an entity, defined as an axis-aligned rectangle in worldspace.
     using Volume     = Math::IntRect;

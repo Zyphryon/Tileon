@@ -66,7 +66,7 @@ namespace Tileon
         Scene.GetComponent<Worldspace>("Worldspace");
         Scene.GetComponent<Localspace>("Localspace").With<Worldspace>().AddTrait(Scene::Trait::Serializable);
         Scene.GetComponent<Origin>("Origin").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Locale>("Locale");
+        Scene.GetComponent<Sector>("Sector");
         Scene.GetComponent<Volume>("Volume");
         Scene.GetComponent<Extent>("Extent").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Volume>();
         Scene.GetComponent<Velocity>("Velocity").With<Dynamic>();
@@ -122,19 +122,17 @@ namespace Tileon
                 Worldspace = Parent ? (* Parent) * Localspace.Compute(Offset) : Localspace.Compute(Offset);
             });
 
-        // TODO: Parent Migration.
-
         // System that computes world-space volumes from local-space volumes and updates spatial partitioning.
-        Scene.CreateSystem<Scene::DSL::Cascade<const Locale>, Scene::DSL::In<const Worldspace, const Extent, Volume>, Kinetic>(
+        Scene.CreateSystem<Scene::DSL::Up<const Sector>, Scene::DSL::In<const Worldspace, const Extent, Volume>, Kinetic>(
             "World::ComputeHierarchy",
             EcsOnUpdate,
             Scene::Execution::Concurrent,
-            [this](Scene::Entity Actor, ConstRef<Locale> Locale, ConstRef<Worldspace> Worldspace, Extent Extent, Ref<Volume> Volume)
+            [this](Scene::Entity Actor, ConstRef<Sector> Sector, ConstRef<Worldspace> Worldspace, Extent Extent, Ref<Volume> Volume)
             {
                 const Rect LocalAABB(Extent.GetOffset(), Extent.GetOffset() + Extent.GetSize());
                 const Rect WorldAABB = Rect::Transform(LocalAABB, Worldspace);
 
-                const IntRect    NewestVolume = Rect::Enclose<SInt32>(WorldAABB) + Locale;
+                const IntRect    NewestVolume = Rect::Enclose<SInt32>(WorldAABB) + Sector;
                 const IntVector2 NewestCenter = NewestVolume.GetCenter();
 
                 if (Volume.IsAlmostZero())
@@ -157,6 +155,8 @@ namespace Tileon
             {
                 mSupervisor.UpdateHierarchy();
             });
+
+        // TODO: Parent Migration.
 
         /// System that disposes of entities marked for disposal.
         Scene.CreateSystem<Scene::DSL::In<ConstPtr<Volume>, const Dispose>>(

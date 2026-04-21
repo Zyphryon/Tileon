@@ -187,7 +187,7 @@ namespace Tileon
 
             if (Actor.IsValid())
             {
-                Actor.Emplace<Locale>(RegionX * Region::kTilesPerX, RegionY * Region::kTilesPerY);
+                Actor.Emplace<Sector>(RegionX * Region::kTilesPerX, RegionY * Region::kTilesPerY);
             }
         }
         return Actor;
