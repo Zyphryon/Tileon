@@ -174,11 +174,12 @@ namespace Tileon
         /// \brief Snaps a value to the nearest pixel grid based on the current density to prevent sub-pixel artifacts.
         ///
         /// \param Input The value to snap in logical units (e.g., world units).
-        /// return The snapped value aligned to the pixel grid.
+        /// return The snapped value aligned to the effective pixel grid.
         template<typename Type>
         ZYPHRYON_INLINE Type Snap(Type Input) const
         {
-            return Round(Input * mDensity) / mDensity;
+            const Real32 Scale = mZoom / mDensity;
+            return Round(Input / Scale) * Scale;
         }
 
     private:

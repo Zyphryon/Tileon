@@ -128,20 +128,20 @@ namespace Tileon
 
     private:
 
-        /// \brief Loads the archetype database from the file.
+        /// \brief Loads the archetype database from file.
         ///
         /// \return `true` if the database was loaded successfully, `false` otherwise.
         Bool LoadArchetypeDatabase();
 
-        /// \brief Saves the archetype database to the file.
+        /// \brief Saves the archetype database to file.
         void SaveArchetypeDatabase();
 
-        /// \brief Loads the terrain database from the file.
+        /// \brief Loads the terrain database from file.
         ///
         /// \return `true` if the database was loaded successfully, `false` otherwise.
         Bool LoadTerrainDatabase();
 
-        /// \brief Saves the terrain database to the file.
+        /// \brief Saves the terrain database to file.
         void SaveTerrainDatabase();
 
     private:
