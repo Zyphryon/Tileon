@@ -14,7 +14,7 @@
 
 namespace Tileon
 {
-    /// \brief Represents a terrain in the world, with properties and associated sprite.
+    /// \brief Represents a terrain type in the world, defining its properties and characteristics.
     class Terrain final
     {
     public:
@@ -32,7 +32,9 @@ namespace Tileon
         /// \param ID The unique identifier for the terrain.
         ZYPHRYON_INLINE Terrain(UInt16 ID)
             : mID         { ID },
-              mProperties { 0 }
+              mProperties { 0 },
+              mColumns    { 1 },
+              mRows       { 1 }
         {
         }
 
@@ -84,13 +86,30 @@ namespace Tileon
             return HasBit(mProperties, Enum::Cast(Mask));
         }
 
-        /// \brief Clones the properties, name, and sprite from another terrain.
+        /// \brief Sets the size of the terrain in terms of columns and rows.
         ///
-        /// \param Terrain The terrain to clone from.
-        ZYPHRYON_INLINE void Clone(ConstRef<Terrain> Terrain)
+        /// \param Columns The number of columns in the terrain.
+        /// \param Rows    The number of rows in the terrain.
+        ZYPHRYON_INLINE void SetSize(UInt8 Columns, UInt8 Rows)
         {
-            mProperties = Terrain.mProperties;
-            mName       = Terrain.mName;
+            mColumns = Columns;
+            mRows = Rows;
+        }
+
+        /// \brief Gets the number of columns in the terrain.
+        ///
+        /// \return The number of columns in the terrain.
+        ZYPHRYON_INLINE UInt8 GetColumns() const
+        {
+            return mColumns;
+        }
+
+        /// \brief Gets the number of rows in the terrain.
+        ///
+        /// \return The number of rows in the terrain.
+        ZYPHRYON_INLINE UInt8 GetRows() const
+        {
+            return mRows;
         }
 
         /// \brief Serializes the state of the object to or from the specified archive.
@@ -102,6 +121,8 @@ namespace Tileon
             Archive.SerializeUInt(mID);
             Archive.SerializeUInt(mProperties);
             Archive.SerializeText(mName);
+            Archive.SerializeUInt8(mColumns);
+            Archive.SerializeUInt8(mRows);
         }
 
     private:
@@ -109,8 +130,10 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+        Str8   mName;
         UInt16 mID;
         UInt16 mProperties;
-        Str8   mName;
+        UInt8  mColumns;
+        UInt8  mRows;
     };
 }

@@ -13,7 +13,6 @@
 #include "Renderer.hpp"
 #include "Phase.hpp"
 #include "Tileon.World/Component.hpp"
-#include "Tileon.World/Region.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -31,6 +30,30 @@ namespace Tileon
     {
         OnLoad(GetService<Content::Service>());
         OnRegister(GetService<Scene::Service>());
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Renderer::SetProperty(Property Mask, Bool Enable)
+    {
+        // Set or clear the specified property in the renderer's properties bitfield.
+        mProperties = SetOrClearBit(mProperties, Enum::Cast(Mask), Enable);
+
+        // Depending on the property being toggled, activate or deactivate the corresponding system in the scene.
+        Ref<Scene::Service> Scene = GetService<Scene::Service>();
+
+        switch (Mask)
+        {
+        case Property::DrawGuide:
+            Scene.GetEntity("Renderer::RenderGuide").SetActive(Enable);
+            break;
+        case Property::DrawVolumes:
+            Scene.GetEntity("Renderer::RenderVolumes").SetActive(Enable);
+            break;
+        default:
+            return;
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -72,6 +95,7 @@ namespace Tileon
         Scene.GetComponent<Sprite>("Sprite").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Text>("Text").AddTrait(Scene::Trait::Serializable);
         Scene.GetComponent<Typeface>("Typeface").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<Palette>("Palette");
 
         // Create the rendering phases for the scene, defining the order of execution for rendering systems.
         EcsOnRender = Scene.CreatePhase<"OnRender", Scene::Empty>();
@@ -169,14 +193,15 @@ namespace Tileon
             Scene::Execution::Default,
             [this](Volume Volume)
             {
-                if (Volume.IsAlmostZero())
+                if (!Volume.IsAlmostZero())
                 {
-                    return; // TODO: Refactor to prevent this "if"
+                    mRenderer.SetShift(Vector2::Zero());
+                    mRenderer.DrawStrokeRect(Rect(Volume - mOrigin), 0.0f, IntColor8::Green(), 0.1f); // TODO: Depth
                 }
-
-                mRenderer.SetShift(Vector2::Zero());
-                mRenderer.DrawStrokeRect(Rect(Volume - mOrigin), 0.0f, IntColor8::Green(), 0.1f); // TODO: No Cast
             }).Disable();
+
+        // TODO: Frustum Culling System.
+        // TODO: Terrain Animation System (we only need to animate once per type not per instance)
 
         // System that renders sprite entities.
         Scene.CreateSystem<
@@ -190,7 +215,7 @@ namespace Tileon
                 const IntColor8 Color = Tint ? (* Tint) : IntColor8::White();
 
                 const Render::Sprite Command(Appearance.GetMaterial(), Extent.GetSize(), Color, Appearance.GetSource());
-                mRenderer.SetShift(Vector2(Sector - mOrigin));   // TODO: No Cast
+                mRenderer.SetShift(static_cast<Vector2>(Sector - mOrigin));
                 mRenderer.DrawSprite(Command, Worldspace, 0.0f); // TODO: Depth
             });
 
@@ -206,40 +231,40 @@ namespace Tileon
                 const IntColor8 Color = Tint ? (* Tint) : IntColor8::White();
 
                 const Render::Text Command(Typeface.GetFont(), Typeface.GetSize(), Color, Text.GetSpacing());
-                mRenderer.SetShift(Vector2(Sector - mOrigin)); // TODO: No Cast
+                mRenderer.SetShift(static_cast<Vector2>(Sector - mOrigin));
                 mRenderer.DrawText(Command, Text.GetContent(), Worldspace, 0.0f, Text.GetEffect()); // TODO: Depth
+            });
+
+        // System that renders region entities.
+        Scene.CreateSystem<Scene::DSL::In<const Region, Palette>>(
+            "Renderer::RenderRegion",
+            EcsOnRender,
+            Scene::Execution::Default,
+            [this](ConstRef<Region> Region, Ref<Palette> Palette)
+            {
+                const SInt32 WorldRegionX = Region.GetX() * Region::kTilesPerX;
+                const SInt32 WorldRegionY = Region.GetY() * Region::kTilesPerY;
+
+                const IntRect Boundaries(
+                    WorldRegionX,
+                    WorldRegionY,
+                    WorldRegionX + Region::kTilesPerX,
+                    WorldRegionY + Region::kTilesPerY);
+
+                if (const IntRect Overlap = IntRect::Intersection(Boundaries, mFrustum); !Overlap.IsAlmostZero())
+                {
+                    const IntRect Tiles = Overlap - IntRect(WorldRegionX, WorldRegionY, WorldRegionX, WorldRegionY);
+                    DrawRegion(Region, Palette, Tiles);
+                }
             });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Renderer::ApplyProperty(Property Mask, Bool Enable)
+    void Renderer::DrawRegion(ConstRef<Region> Region, Ref<Palette> Palette, IntRect Boundaries)
     {
-        Scene::Entity Entity;
-
-        switch (Mask)
-        {
-        case Property::DrawGuide:
-            Entity = GetService<Scene::Service>().GetEntity("Renderer::RenderGuide");
-            break;
-        case Property::DrawVolumes:
-            Entity = GetService<Scene::Service>().GetEntity("Renderer::RenderVolumes");
-            break;
-        default:
-            return;
-        }
-
-        LOG_ASSERT(Entity.IsValid(), "Failed to find entity for property mask: %s", Enum::Name(Mask));
-
-        if (Enable)
-        {
-            Entity.Awake();
-        }
-        else
-        {
-            Entity.Sleep();
-        }
+        // TODO
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -247,6 +272,7 @@ namespace Tileon
 
     void Renderer::DrawGuide()
     {
+        // TODO: Redo in shader (supporting dynamic zoom levels and colors)
         constexpr IntColor8 Tint = IntColor8::Gray();
 
         const Real32 MinY = mFrustum.GetMinimumY();
@@ -259,13 +285,13 @@ namespace Tileon
         for (SInt32 X = mFrustum.GetMinimumX(); X < mFrustum.GetMaximumX(); ++X)
         {
             const Real32 Thickness = (X % Region::kTilesPerX == 0) ? 0.1f : 0.05f;
-            mRenderer.DrawLine(Line(Vector2(X, MinY), Vector2(X, MaxY)), 0.0f, Tint, Thickness);
+            mRenderer.DrawLine(Line(Vector2(X, MinY), Vector2(X, MaxY)), 0.0f, Tint, Thickness); // TODO: Depth
         }
 
         for (SInt32 Y = mFrustum.GetMinimumY(); Y < mFrustum.GetMaximumY(); ++Y)
         {
             const Real32 Thickness = (Y % Region::kTilesPerY == 0) ? 0.1f : 0.05f;
-            mRenderer.DrawLine(Line(Vector2(MinX, Y), Vector2(MaxX, Y)), 0.0f, Tint, Thickness);
+            mRenderer.DrawLine(Line(Vector2(MinX, Y), Vector2(MaxX, Y)), 0.0f, Tint, Thickness); // TODO: Depth
         }
     }
 }

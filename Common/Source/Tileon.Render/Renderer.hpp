@@ -13,6 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Component.hpp"
+#include "Tileon.World/Region.hpp"
 #include <Zyphryon.Render/Renderer/Canvas.hpp>
 #include <Zyphryon.Scene/Service.hpp>
 
@@ -45,13 +46,7 @@ namespace Tileon
         ///
         /// \param Mask   The property to set or clear.
         /// \param Enable `true` to set the property, `false` to clear it
-        ZYPHRYON_INLINE void SetProperty(Property Mask, Bool Enable)
-        {
-            mProperties = SetOrClearBit(mProperties, Enum::Cast(Mask), Enable);
-
-            // Apply the property change immediately to update the renderer's state.
-            ApplyProperty(Mask, Enable);
-        }
+        void SetProperty(Property Mask, Bool Enable);
 
         /// \brief Checks if a specific property is enabled for the renderer.
         ///
@@ -102,11 +97,12 @@ namespace Tileon
         /// \param Scene The scene service to register with.
         void OnRegister(Ref<Scene::Service> Scene);
 
-        /// \brief Apply the specified property change to the renderer, enabling or disabling the corresponding system or feature.
+        /// \brief Draws a specific region of the world.
         ///
-        /// \param Mask   The property mask representing the system or feature to toggle.
-        /// param Enable `true` to enable the system or feature, `false` to disable it.
-        void ApplyProperty(Property Mask, Bool Enable);
+        /// \param Region     The region of the world to draw.
+        /// \param Palette    The palette to use for drawing the region.
+        /// \param Boundaries The boundaries within which to draw the region, typically representing the visible.
+        void DrawRegion(ConstRef<Region> Region, Ref<Palette> Palette, IntRect Boundaries);
 
         /// \brief Draws guide lines for debugging purposes within the specified boundaries.
         void DrawGuide();
