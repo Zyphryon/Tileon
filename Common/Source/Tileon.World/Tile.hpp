@@ -30,46 +30,36 @@ namespace Tileon
 
         /// \brief Constructs an empty tile with no layers set.
         ZYPHRYON_INLINE Tile()
-            : mLayers { 0 }
+            : mLayers { }
         {
         }
 
         /// \brief Sets the properties of a specific layer in the tile.
         ///
-        /// \param Type    The type of layer to set.
-        /// \param Handle  The terrain identifier associated with this layer.
-        /// \param Weight  The rendering weight of this layer.
-        /// \param Palette The palette index to use for this layer.
-        ZYPHRYON_INLINE void SetLayer(Layer Type, UInt16 Handle, UInt8 Weight, UInt8 Palette)
+        /// \param Type   The type of layer to set.
+        /// \param Handle The unique identifier for the terrain type of the layer.
+        /// \param Weight The weight of the layer, used for multi-span terrains.
+        ZYPHRYON_INLINE void SetLayer(Layer Type, UInt16 Handle, UInt8 Weight)
         {
-            mLayers[Enum::Cast(Type)] = Unit(Handle, Weight, Palette);
+            mLayers[Enum::Cast(Type)] = Unit(Handle, Weight);
         }
 
-        /// \brief Gets the terrain identifier of a specific layer in the tile.
+        /// \brief Gets the unique identifier for the terrain type of a specific layer in the tile.
         ///
-        /// \param Type The type of layer to query.
-        /// \return The terrain identifier.
+        /// \param Type The type of layer to retrieve the handle for.
+        /// \return The unique identifier for the terrain type of the specified layer.
         ZYPHRYON_INLINE UInt16 GetHandle(Layer Type) const
         {
             return mLayers[Enum::Cast(Type)].Handle;
         }
 
-        /// \brief Gets the rendering weight of a specific layer in the tile.
+        /// \brief Gets the weight of a specific layer in the tile, used for multi-span terrains.
         ///
-        /// \param Type The type of layer to query.
-        /// \return The weight value.
+        /// \param Type The type of layer to retrieve the weight for.
+        /// \return The weight of the specified layer.
         ZYPHRYON_INLINE UInt8 GetWeight(Layer Type) const
         {
             return mLayers[Enum::Cast(Type)].Weight;
-        }
-
-        /// \brief Retrieves the palette index of a specific layer in the tile.
-        ///
-        /// \param Type The type of layer to query.
-        /// \return The palette index.
-        ZYPHRYON_INLINE UInt8 GetPalette(Layer Type) const
-        {
-            return mLayers[Enum::Cast(Type)].Palette;
         }
 
         /// \brief Serializes the state of the object to or from the specified archive.
@@ -86,14 +76,11 @@ namespace Tileon
         /// \brief Represents a single layer unit within the tile.
         struct Unit final
         {
-            /// \brief Terrain handle identifier for this layer.
+            /// \brief The unique identifier for the terrain type of this layer unit.
             UInt16 Handle;
 
-            /// \brief Rendering weight for this layer (0-255).
+            /// \brief The weight of the layer unit, used for multi-span terrains.
             UInt8  Weight;
-
-            /// \brief Rendering palette index for this layer (0-255).
-            UInt8  Palette;
 
             /// \brief Serializes the state of the object to or from the specified archive.
             ///
@@ -103,7 +90,6 @@ namespace Tileon
             {
                 Archive.SerializeUInt(Handle);
                 Archive.SerializeUInt8(Weight);
-                Archive.SerializeUInt8(Palette);
             }
         };
 

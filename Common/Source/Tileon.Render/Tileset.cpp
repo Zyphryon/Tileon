@@ -10,7 +10,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Controller.hpp"
+#include "Tileset.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -21,74 +21,84 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Controller::Controller(Ref<Service::Host> Host)
-        : Locator   { Host },
-          mWorld    { Host },
-          mRenderer { Host }
+    Tileset::Tileset(Ref<Service::Host> Host)
+        : Locator(Host)
     {
-        OnRegister(GetService<Scene::Service>());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Controller::Teardown()
+    void Tileset::Load()
     {
-        mWorld.Teardown();
+        if (!LoadDatabase())
+        {
+            LOG_WARNING("Failed to load tileset from '{}'", kFilename);
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Controller::Load()
+    void Tileset::Save()
     {
-        // Load the world, which includes loading the regions, terrains, and archetypes from their respective files.
-        mWorld.Load();
-
-        // Load the renderer, which includes loading the tileset.
-        mRenderer.Load();
+        SaveDatabase();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Controller::Save()
+    void Tileset::Tick(Real64 Time)
     {
-        // Save the state of the world, which includes any relevant data such as the regions, terrains, and archetypes.
-        mWorld.Save();
-
-        // Save the renderer's state, which includes any relevant data such as the tileset.
-        mRenderer.Save();
+        // TODO: Only tick entries that have animations.
+        mRegistry.ForEach([&](Ref<Entry> Data)
+        {
+            Data.Tick(Time);
+        });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Controller::Present()
+    Ref<Tileset::Entry> Tileset::CreateEntry(ConstRef<Terrain> Terrain)
     {
-        const Placement  Position = mDirector.GetPosition();
-        const IntVector2 Origin(Position.GetBaseX(), Position.GetBaseY());
-
-        mRenderer.Present(mDirector.GetProjection(), mDirector.GetFrustum(), Origin);
+        mRegistry.Acquire(Terrain.GetID());
+        return mRegistry[Terrain.GetID()];
     }
 
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Controller::OnRegister(Ref<Scene::Service> Scene)
+    void Tileset::DeleteEntry(ConstRef<Terrain> Terrain)
     {
-        // System to update the camera and navigate the world based on camera's frustum.
-        Scene.CreateSystem<Scene::DSL::In<const Time>>(
-            "Controller::UpdateVisibility",
-            EcsOnLoad,
-            Scene::Execution::Immediate,
-            [this](Time Time)
-            {
-                if (mDirector.Tick(Time.GetDelta()))
-                {
-                    const IntRect Frustum = Coordinate::GetRegionCell(mDirector.GetFrustum());
-                    mWorld.GetSupervisor().Navigate(Frustum.Expand(1));
-                }
-            });
+        mRegistry.Free(Terrain.GetID());
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    Bool Tileset::LoadDatabase()
+    {
+        if (Blob File = GetService<Content::Service>().Find(Content::Uri(kFilename)); File)
+        {
+            Reader Input(File.GetSpan<UInt8>());
+            mRegistry.OnSerialize(Archive(Input));
+        }
+        else
+        {
+            return false;
+        }
+        return true;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Tileset::SaveDatabase()
+    {
+        Writer Output;
+        mRegistry.OnSerialize(Archive(Output));
+
+        GetService<Content::Service>().Save(kFilename, Output.GetData());
     }
 }

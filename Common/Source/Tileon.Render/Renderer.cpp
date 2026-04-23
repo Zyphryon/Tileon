@@ -26,10 +26,27 @@ namespace Tileon
     Renderer::Renderer(Ref<Service::Host> Host)
         : Locator     { Host },
           mRenderer   { Host },
-          mProperties { 0u }
+          mProperties { 0u },
+          mTileset    { Host }
     {
         OnLoad(GetService<Content::Service>());
         OnRegister(GetService<Scene::Service>());
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Renderer::Load()
+    {
+        mTileset.Load();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Renderer::Save()
+    {
+        mTileset.Save();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -51,8 +68,6 @@ namespace Tileon
         case Property::DrawVolumes:
             Scene.GetEntity("Renderer::RenderVolumes").SetActive(Enable);
             break;
-        default:
-            return;
         }
     }
 
@@ -61,7 +76,6 @@ namespace Tileon
 
     void Renderer::Present(ConstRef<Matrix4x4> Projection, IntRect Frustum, IntVector2 Origin)
     {
-        // Update the renderer's state with the current frustum, and origin for rendering.
         mFrustum = Frustum;
         mOrigin  = Origin;
 
@@ -95,7 +109,6 @@ namespace Tileon
         Scene.GetComponent<Sprite>("Sprite").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Text>("Text").AddTrait(Scene::Trait::Serializable);
         Scene.GetComponent<Typeface>("Typeface").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Palette>("Palette");
 
         // Create the rendering phases for the scene, defining the order of execution for rendering systems.
         EcsOnRender = Scene.CreatePhase<"OnRender", Scene::Empty>();
@@ -160,6 +173,16 @@ namespace Tileon
                     Actor.Set(Extent { AABB.GetPosition(), AABB.GetSize() });
                     Actor.Set(Origin { Anchor });
                 }
+            });
+
+        // System that advances the animations of tilesets.
+        Scene.CreateSystem<Scene::DSL::In<const Time>>(
+            "Render::ComputeTilesetAnimations",
+            EcsOnUpdate,
+            Scene::Execution::Immediate,
+            [this](Time Time)
+            {
+                mTileset.Tick(Time.GetAbsolute());
             });
 
         // System that advances animations and updates sprite appearances.
@@ -236,11 +259,11 @@ namespace Tileon
             });
 
         // System that renders region entities.
-        Scene.CreateSystem<Scene::DSL::In<const Region, Palette>>(
+        Scene.CreateSystem<Scene::DSL::In<const Region>>(
             "Renderer::RenderRegion",
             EcsOnRender,
             Scene::Execution::Default,
-            [this](ConstRef<Region> Region, Ref<Palette> Palette)
+            [this](ConstRef<Region> Region)
             {
                 const SInt32 WorldRegionX = Region.GetX() * Region::kTilesPerX;
                 const SInt32 WorldRegionY = Region.GetY() * Region::kTilesPerY;
@@ -254,7 +277,7 @@ namespace Tileon
                 if (const IntRect Overlap = IntRect::Intersection(Boundaries, mFrustum); !Overlap.IsAlmostZero())
                 {
                     const IntRect Tiles = Overlap - IntRect(WorldRegionX, WorldRegionY, WorldRegionX, WorldRegionY);
-                    DrawRegion(Region, Palette, Tiles);
+                    DrawRegion(Region, Tiles);
                 }
             });
     }
@@ -262,9 +285,158 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Renderer::DrawRegion(ConstRef<Region> Region, Ref<Palette> Palette, IntRect Boundaries)
+    void Renderer::DrawRegion(ConstRef<Region> Region, IntRect Boundaries)
     {
-        // TODO
+        const SInt32 RegionX = Region.GetX() * Region::kTilesPerX;
+        const SInt32 RegionY = Region.GetY() * Region::kTilesPerY;
+
+        // Calculate bitmasks for efficiently determining which tiles to render based on the visible boundaries.
+        const UInt32 TileYMask = ((1ull << (Boundaries.GetWidth())) - 1ull) << Boundaries.GetX();
+
+        // Iterate through each layer of the region and draw the visible tiles within the specified boundaries.
+        for (const Tile::Layer Layer : Enum::Values<Tile::Layer>())
+        {
+            Array<UInt32, Region::kTilesPerX> Resolution { };
+
+            const Real32 Depth = 1.0f - Enum::Cast(Layer) * 0.01f; // TODO: Depth
+
+            for (UInt32 TileY = Boundaries.GetMinimumY(); TileY < Boundaries.GetMaximumY(); ++TileY)
+            {
+                // Skip rows that have no visible tiles based on the precomputed bitmask for the current Y coordinate.
+                if (HasBit(Resolution[TileY], TileYMask))
+                {
+                    continue;
+                }
+
+                for (UInt32 TileX = Boundaries.GetMinimumX(); TileX < Boundaries.GetMaximumX(); ++TileX)
+                {
+                    // Skip tiles that are empty based on the precomputed bitmask for the current X coordinate within the row.
+                    if (HasBit(Resolution[TileY], 1u << TileX))
+                    {
+                        continue;
+                    }
+
+                    // Fetches the tile at the specified coordinates within the region.
+                    ConstRef<Tile> Tile = Region.GetTile(TileX, TileY);
+                    const UInt16 Handle = Tile.GetHandle(Layer);
+                    const UInt8  Weight = Tile.GetWeight(Layer);
+
+                    if (Handle == 0)
+                    {
+                        continue;
+                    }
+
+                    // Fetches the tileset entry corresponding to the terrain handle for the current layer of the tile.
+                    Ref<Tileset::Entry> Entry = mTileset.GetEntry(Handle);
+
+                    if (Entry.IsValid())
+                    {
+                        const UInt32 MaxInnerX = Min(Boundaries.GetMaximumX(), TileX + (Entry.Columns - Weight % Entry.Columns));
+                        const UInt32 MaxInnerY = Boundaries.GetMaximumY();
+                        UInt8        CountX    = 1;
+                        UInt8        CountY    = 1;
+
+                        // Try to expand horizontally to adjacent columns that share the same terrain.
+                        for (UInt32 InnerX = TileX + 1; InnerX < MaxInnerX; ++InnerX, ++CountX)
+                        {
+                            if (HasBit(Resolution[TileY], 1u << InnerX))
+                            {
+                                break;
+                            }
+
+                            const UInt8 ExpectedWeight = Weight + (InnerX - TileX);
+
+                            ConstRef<Tileon::Tile> InnerTile = Region.GetTile(InnerX, TileY);
+
+                            if (InnerTile.GetHandle(Layer) != Handle || InnerTile.GetWeight(Layer) != ExpectedWeight)
+                            {
+                                break;
+                            }
+                        }
+
+                        const UInt32 Mask = ((1u << CountX) - 1) << TileX;
+                        Resolution[TileY] |= Mask;
+
+                        // Try to expand vertically to adjacent rows that share the same terrain.
+                        UInt8 RowWeight = Weight + Entry.Columns;
+
+                        for (UInt32 InnerY = TileY + 1; InnerY < MaxInnerY; ++InnerY, ++CountY, RowWeight += Entry.Columns)
+                        {
+                            Bool Merge = true;
+
+                            for (UInt32 InnerX = TileX; InnerX < TileX + CountX; ++InnerX)
+                            {
+                                if (HasBit(Resolution[InnerY], 1u << InnerX))
+                                {
+                                    Merge = false;
+                                    break;
+                                }
+
+                                ConstRef<Tileon::Tile> InnerTile = Region.GetTile(InnerX, InnerY);
+
+                                const UInt8 ExpectedWeight = RowWeight + (InnerX - TileX);
+
+                                if (InnerTile.GetHandle(Layer) != Handle || InnerTile.GetWeight(Layer) != ExpectedWeight)
+                                {
+                                    Merge = false;
+                                    break;
+                                }
+                            }
+
+                            if (Merge)
+                            {
+                                Resolution[InnerY] |= Mask;
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+
+                        // TODO: Remove this from here and cache it at start.
+                        if (Entry.Material == nullptr)
+                        {
+                            Entry.Material = GetMaterial(Entry.Path);
+                        }
+
+                        // Draw all merged tiles as a single sprite.
+                        const Vector3 Position(RegionX + TileX, RegionY + TileY, Depth);
+                        DrawTile(Position, IntVector2(CountX, CountY), Weight, Entry);
+
+                        // Advance the X coordinate by the number of merged tiles to skip over them in the iteration.
+                        TileX += CountX - 1;
+                    }
+                    else
+                    {
+                        // TODO: Draw Default Material?
+                    }
+                }
+            }
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Renderer::DrawTile(Vector3 Position, IntVector2 Span, UInt8 Weight, ConstRef<Tileset::Entry> Visual)
+    {
+        const Rect Frame = Visual.Animation.GetFrameData(Visual.Keyframe);
+
+        const Real32 UCoordPerTile = Frame.GetWidth()  / Visual.Columns;
+        const Real32 VCoordPerTile = Frame.GetHeight() / Visual.Rows;
+
+        const Real32 OffsetX = (Weight % Visual.Columns) * UCoordPerTile;
+        const Real32 OffsetY = (Weight / Visual.Rows) * VCoordPerTile;
+
+        const Rect Displacement(
+            Frame.GetX() + OffsetX,
+            Frame.GetY() + OffsetY + Span.GetY() * VCoordPerTile,
+            Frame.GetX() + OffsetX + Span.GetX() * UCoordPerTile,
+            Frame.GetY() + OffsetY);
+
+        const Render::Sprite Command(Visual.Material, static_cast<Vector2>(Span), Tint::White(), Displacement);
+        mRenderer.SetShift(Vector2(Position.GetX() - mOrigin.GetX(), Position.GetY() - mOrigin.GetY()));
+        mRenderer.DrawSprite(Command, Matrix3x2::Identity(), Position.GetZ());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

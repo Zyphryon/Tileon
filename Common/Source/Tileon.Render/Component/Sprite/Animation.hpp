@@ -30,14 +30,6 @@ namespace Tileon
 
     public:
 
-        /// \brief Gets the total number of frames currently stored in the sequence.
-        ///
-        /// \return The number of frames in the sequence.
-        ZYPHRYON_INLINE UInt32 GetCount() const
-        {
-            return mFrames.size();
-        }
-
         /// \brief Gets the total duration of the sequence by summing the durations of all frames.
         ///
         /// \return The total duration of the sequence in seconds.
@@ -52,11 +44,19 @@ namespace Tileon
             return Total;
         }
 
+        /// \brief Gets the total number of frames currently stored in the sequence.
+        ///
+        /// \return The number of frames in the sequence.
+        ZYPHRYON_INLINE UInt8 GetCount() const
+        {
+            return mFrames.size();
+        }
+
         /// \brief Retrieves the keyframe index corresponding to a given time in the animation sequence.
         ///
         /// \param Time The time in seconds for which to retrieve the keyframe index.
         /// \return The index of the keyframe that corresponds to the specified time in the animation sequence.
-        ZYPHRYON_INLINE UInt32 GetKeyframe(Real64 Time) const
+        ZYPHRYON_INLINE UInt8 GetKeyframe(Real64 Time) const
         {
             Real64 Elapsed = 0.0;
 
@@ -84,7 +84,7 @@ namespace Tileon
         /// \brief Removes a frame from the sequence at the specified keyframe index.
         ///
         /// \param Keyframe The index of the keyframe to remove from the sequence.
-        ZYPHRYON_INLINE void Remove(UInt32 Keyframe)
+        ZYPHRYON_INLINE void Remove(UInt8 Keyframe)
         {
             mFrames.erase(mFrames.begin() + Keyframe);
         }
@@ -99,7 +99,7 @@ namespace Tileon
         ///
         /// \param Keyframe The index of the keyframe to update.
         /// \param Data     The new coordinates to assign to the frame at the specified keyframe index.
-        ZYPHRYON_INLINE void SetFrameData(UInt32 Keyframe, Rect Data)
+        ZYPHRYON_INLINE void SetFrameData(UInt8 Keyframe, Rect Data)
         {
             mFrames[Keyframe].Data = Data;
         }
@@ -108,7 +108,7 @@ namespace Tileon
         ///
         /// \param Keyframe The index of the keyframe to retrieve the coordinates from.
         /// \return The coordinates of the frame at the specified keyframe index.
-        ZYPHRYON_INLINE Rect GetFrameData(UInt32 Keyframe) const
+        ZYPHRYON_INLINE Rect GetFrameData(UInt8 Keyframe) const
         {
             return mFrames[Keyframe].Data;
         }
@@ -117,7 +117,7 @@ namespace Tileon
         ///
         /// \param Keyframe The index of the keyframe to update.
         /// \param Duration The new duration to assign to the frame at the specified keyframe index
-        ZYPHRYON_INLINE void SetFrameDuration(UInt32 Keyframe, Real32 Duration)
+        ZYPHRYON_INLINE void SetFrameDuration(UInt8 Keyframe, Real32 Duration)
         {
             mFrames[Keyframe].Duration = Duration;
         }
@@ -126,7 +126,7 @@ namespace Tileon
         ///
         /// \param Keyframe The index of the keyframe to retrieve the duration from.
         /// \return The duration of the frame at the specified keyframe index.
-        ZYPHRYON_INLINE Real32 GetFrameDuration(UInt32 Keyframe) const
+        ZYPHRYON_INLINE Real32 GetFrameDuration(UInt8 Keyframe) const
         {
             return mFrames[Keyframe].Duration;
         }

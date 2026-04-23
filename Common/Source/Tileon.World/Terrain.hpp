@@ -32,9 +32,7 @@ namespace Tileon
         /// \param ID The unique identifier for the terrain.
         ZYPHRYON_INLINE Terrain(UInt16 ID)
             : mID         { ID },
-              mProperties { 0 },
-              mColumns    { 1 },
-              mRows       { 1 }
+              mProperties { 0 }
         {
         }
 
@@ -86,32 +84,6 @@ namespace Tileon
             return HasBit(mProperties, Enum::Cast(Mask));
         }
 
-        /// \brief Sets the size of the terrain in terms of columns and rows.
-        ///
-        /// \param Columns The number of columns in the terrain.
-        /// \param Rows    The number of rows in the terrain.
-        ZYPHRYON_INLINE void SetSize(UInt8 Columns, UInt8 Rows)
-        {
-            mColumns = Columns;
-            mRows = Rows;
-        }
-
-        /// \brief Gets the number of columns in the terrain.
-        ///
-        /// \return The number of columns in the terrain.
-        ZYPHRYON_INLINE UInt8 GetColumns() const
-        {
-            return mColumns;
-        }
-
-        /// \brief Gets the number of rows in the terrain.
-        ///
-        /// \return The number of rows in the terrain.
-        ZYPHRYON_INLINE UInt8 GetRows() const
-        {
-            return mRows;
-        }
-
         /// \brief Serializes the state of the object to or from the specified archive.
         ///
         /// \param Archive The archive to serialize the object with.
@@ -121,8 +93,6 @@ namespace Tileon
             Archive.SerializeUInt(mID);
             Archive.SerializeUInt(mProperties);
             Archive.SerializeText(mName);
-            Archive.SerializeUInt8(mColumns);
-            Archive.SerializeUInt8(mRows);
         }
 
     private:
@@ -133,7 +103,5 @@ namespace Tileon
         Str8   mName;
         UInt16 mID;
         UInt16 mProperties;
-        UInt8  mColumns;
-        UInt8  mRows;
     };
 }
