@@ -68,8 +68,8 @@ namespace Tileon
 
             const Real32 ClampedX = Clamp(LocalX, 0.0f, static_cast<Real32>(Frustum.GetWidth()));
             const Real32 ClampedY = Clamp(LocalY, 0.0f, static_cast<Real32>(Frustum.GetHeight()));
-            const Real32 NormY    =        ClampedY / static_cast<Real32>(Frustum.GetHeight());
             const Real32 NormX    = 1.0f - ClampedX / static_cast<Real32>(Frustum.GetWidth());
+            const Real32 NormY    =        ClampedY / static_cast<Real32>(Frustum.GetHeight());
 
             return kMidground + NormY * kRange * 0.999f + NormX * kRange * 0.0009f + Bias * 0.00001f;
         }
