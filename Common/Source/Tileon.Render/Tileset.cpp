@@ -50,10 +50,9 @@ namespace Tileon
 
     void Tileset::Tick(Real64 Time)
     {
-        // TODO: Only tick entries that have animations.
         mRegistry.ForEach([&](Ref<Entry> Data)
         {
-            Data.Tick(Time);
+            Data.Tick(Time); // TODO: Only tick entries that have animations.
         });
     }
 

@@ -32,7 +32,7 @@ namespace Tileon
         static constexpr UInt8  kTilesPerY      = 32;
 
         /// \brief Total number of tiles in a region.
-        static constexpr SInt16 kTilesPerRegion = kTilesPerX * kTilesPerY;
+        static constexpr UInt16 kTilesPerRegion = kTilesPerX * kTilesPerY;
 
     public:
 

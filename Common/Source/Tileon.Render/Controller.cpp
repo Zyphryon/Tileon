@@ -69,7 +69,7 @@ namespace Tileon
         const Placement  Position = mDirector.GetPosition();
         const IntVector2 Origin(Position.GetBaseX(), Position.GetBaseY());
 
-        mRenderer.Present(mDirector.GetProjection(), mDirector.GetFrustum(), Origin);
+        mRenderer.Execute(mDirector.GetProjection(), mDirector.GetFrustum(), Origin);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

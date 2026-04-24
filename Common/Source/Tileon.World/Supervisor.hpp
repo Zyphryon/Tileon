@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Component.hpp"
+#include "Component/Spatial.hpp"
 #include "Coordinate.hpp"
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Scene/Service.hpp>

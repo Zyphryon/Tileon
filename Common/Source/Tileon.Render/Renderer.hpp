@@ -16,7 +16,6 @@
 #include "Tileset.hpp"
 #include "Tileon.World/Region.hpp"
 #include <Zyphryon.Render/Renderer/Canvas.hpp>
-#include <Zyphryon.Scene/Service.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -29,11 +28,11 @@ namespace Tileon
     {
     public:
 
-        /// \brief Properties that can be toggled for the renderer.
-        enum class Property : UInt8
+        /// \brief Options that can be toggled for the renderer.
+        enum class Option : UInt8
         {
-            DrawGuide   = 0b00000001,   ///< Draws guide lines for debugging purposes.
-            DrawVolumes = 0b00000010,   ///< Draws collision volumes for debugging purposes.
+            DrawGuide,   ///< Draws guide lines for debugging purposes.
+            DrawVolumes, ///< Draws collision volumes for debugging purposes.
         };
 
     public:
@@ -49,27 +48,24 @@ namespace Tileon
         /// \brief Saves any necessary data or state related to the renderer.
         void Save();
 
-        /// \brief Sets or clears a specific property for the renderer.
+        /// \brief Executes the rendering pipeline to compose the scene.
         ///
-        /// \param Mask   The property to set or clear.
-        /// \param Enable `true` to set the property, `false` to clear it
-        void SetProperty(Property Mask, Bool Enable);
+        /// \param Projection The projection matrix to use for rendering the scene.
+        /// \param Frustum    The frustum rectangle defining the visible area of the scene.
+        /// \param Origin     The origin point for rendering, representing the camera's position in world space.
+        void Execute(ConstRef<Matrix4x4> Projection, IntRect Frustum, IntVector2 Origin);
 
-        /// \brief Checks if a specific property is enabled for the renderer.
+        /// \brief Enables or disables a specific rendering option.
         ///
-        /// \param Mask The property to check.
-        /// \return `true` if the property is enabled, `false` otherwise.
-        ZYPHRYON_INLINE Bool HasProperty(Property Mask) const
-        {
-            return HasBit(mProperties, Enum::Cast(Mask));
-        }
+        /// \param Option  The rendering option to enable or disable.
+        /// \param Enabled `true` to enable the option, `false` to disable it
+        void SetOption(Option Option, Bool Enabled);
 
-        /// \brief Presents the rendered scene to the display, executing the rendering pipeline.
+        /// \brief Checks if a specific rendering option is currently enabled.
         ///
-        /// \param Projection The projection matrix to use for rendering.
-        /// \param Frustum    The frustum rectangle defining the visible area for rendering.
-        /// \param Origin     The origin point for rendering, typically representing the camera's position in world space.
-        void Present(ConstRef<Matrix4x4> Projection, IntRect Frustum, IntVector2 Origin);
+        /// \param Option The rendering option to check.
+        /// \return `true` if the option is enabled, `false` otherwise.
+        Bool HasOption(Option Option) const;
 
         /// \brief Gets the tileset associated with the renderer, which manages the rendering data for different terrains.
         ///
@@ -101,6 +97,9 @@ namespace Tileon
         }
 
     private:
+
+        static constexpr Symbol kDrawGuideSystem  = "Renderer::DrawGuide";
+        static constexpr Symbol kDrawVolumeSystem = "Renderer::DrawVolumes";
 
         /// \brief Loads necessary resources and initializes the renderer when the content service is loaded.
         ///
@@ -134,9 +133,8 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Render::Canvas  mRenderer;
+        Render::Canvas  mCanvas;
         Scene::Pipeline mPipeline;
-        UInt32          mProperties;
         Tileset         mTileset;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -146,4 +144,3 @@ namespace Tileon
         IntVector2      mOrigin;
     };
 }
-

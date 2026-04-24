@@ -29,13 +29,13 @@ namespace Tileon
     public:
 
         /// \brief The delay duration for camera movements and zoom transitions, in seconds.
-        static constexpr Real32 kDelay       = 0.25f;
+        static constexpr Real32 kDelay   = 0.25f;
 
-        /// \brief The minimum zoom level for the camera, which limits how far in or out the camera can zoom.
-        static constexpr Real32 kMinimumZoom = 0.05f;
+        /// \brief The minimum zoom value, representing the furthest the camera can zoom in.
+        static constexpr Real32 kMinZoom = 0.125f;
 
-        /// \brief The maximum zoom level for the camera, which limits how far in or out the camera can zoom.
-        static constexpr Real32 kMaximumZoom = 24.0f;
+        /// \brief The maximum zoom value, representing the furthest the camera can zoom out.
+        static constexpr Real32 kMaxZoom = 16.0f;
 
     public:
 
@@ -105,7 +105,7 @@ namespace Tileon
             // Reset any active zoom tween to immediately apply the new zoom.
             mTweenZoom = Tween<Real32>();
 
-            mZoom = Clamp(Magnitude, kMinimumZoom, kMaximumZoom);
+            mZoom = Clamp(Magnitude, kMinZoom, kMaxZoom);
             SetViewport(mViewport.GetX(), mViewport.GetY(), mDensity);
         }
 
@@ -149,7 +149,7 @@ namespace Tileon
         {
             if (mTweenZoom.IsComplete())
             {
-                mTweenZoom = Tween(mZoom, Clamp(mZoom + Magnitude, kMinimumZoom, kMaximumZoom), kDelay);
+                mTweenZoom = Tween(mZoom, Clamp(mZoom + Magnitude, kMinZoom, kMaxZoom), kDelay);
             }
         }
 
