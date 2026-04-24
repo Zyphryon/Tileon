@@ -133,6 +133,48 @@ namespace Tileon
             return (mRegionY * Region::kTilesPerY) + mOffsetY;
         }
 
+        /// \brief Adds two placements together.
+        ///
+        /// \param Other The other placement to add.
+        /// \return A new normalized placement representing the sum.
+        ZYPHRYON_INLINE constexpr Placement operator+(Placement Other) const
+        {
+            return FromAbsolute(
+                GetAbsoluteX() + Other.GetAbsoluteX(),
+                GetAbsoluteY() + Other.GetAbsoluteY());
+        }
+
+        /// \brief Subtracts another placement from this one.
+        ///
+        /// \param Other The other placement to subtract.
+        /// \return A new normalized placement representing the difference.
+        ZYPHRYON_INLINE constexpr Placement operator-(Placement Other) const
+        {
+            return FromAbsolute(
+                GetAbsoluteX() - Other.GetAbsoluteX(),
+                GetAbsoluteY() - Other.GetAbsoluteY());
+        }
+
+        /// \brief Adds another placement to this one in place.
+        ///
+        /// \param Other The other placement to add.
+        /// \return A reference to this placement after addition.
+        ZYPHRYON_INLINE constexpr Ref<Placement> operator+=(Placement Other)
+        {
+            (* this) = (* this) + Other;
+            return (*this);
+        }
+
+        /// \brief Subtracts another placement from this one in place.
+        ///
+        /// \param Other The other placement to subtract.
+        /// \return A reference to this placement after subtraction.
+        ZYPHRYON_INLINE constexpr Ref<Placement> operator-=(Placement Other)
+        {
+            (* this) = (* this) - Other;
+            return (*this);
+        }
+
         /// \brief Equality operator to compare two placements for equivalence.
         ///
         /// \param Other The other placement to compare against.

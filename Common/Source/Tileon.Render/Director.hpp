@@ -169,6 +169,35 @@ namespace Tileon
             return mFrustum;
         }
 
+        /// \brief Converts screen pixel coordinates to world coordinates.
+        ///
+        /// \param Pixel The screen pixel coordinates to convert, where (0, 0) is the top-left corner of the viewport.
+        /// \return The corresponding world coordinates, including region coordinates and sub-region offset.
+        ZYPHRYON_INLINE Placement GetWorldCoordinates(Vector2 Pixel) const
+        {
+            const Graphic::Viewport Viewport(0, 0, mViewport.GetX(), mViewport.GetY());
+
+            const Vector2 Tile(Pixel.GetX() / mDensity, Pixel.GetY() / mDensity);
+            const Vector2 Local = mCamera.GetWorldCoordinates<Graphic::Coordinates::Northwest>(Tile, Viewport);
+
+            return Placement::Clamp(Placement(mPosition.GetRegionX(), mPosition.GetRegionY(), Local.GetX(), Local.GetY()));
+        }
+
+        /// \brief Converts world coordinates to screen pixel coordinates.
+        ///
+        /// \param World The world coordinates to convert, including region coordinates and sub-region offset.
+        /// \return The corresponding screen pixel coordinates, where (0, 0) is the top-left corner of the viewport.
+        ZYPHRYON_INLINE Vector2 GetScreenCoordinates(Placement World) const
+        {
+            const Graphic::Viewport Viewport(0, 0, mViewport.GetX(), mViewport.GetY());
+
+            const Placement Local = World - mPosition;
+            const Vector2 Absolute(Local.GetAbsoluteX(), Local.GetAbsoluteY());
+
+            const Vector2 Tile = mCamera.GetScreenCoordinates<Graphic::Coordinates::Northwest>(Absolute, Viewport);
+            return Tile * mDensity;
+        }
+
     private:
 
         /// \brief Snaps a value to the nearest pixel grid based on the current density to prevent sub-pixel artifacts.
