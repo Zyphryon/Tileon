@@ -52,7 +52,7 @@ namespace Tileon
         /// \return The calculated depth value for the background layer.
         ZYPHRYON_INLINE static constexpr Real32 Background(UInt8 Bias = 0)
         {
-            return kBackground + Bias * 0.01f;
+            return 1.0f - Bias * 0.01f;
         }
 
         /// \brief Calculates the depth value for the midground layer based on the position within the frustum.
