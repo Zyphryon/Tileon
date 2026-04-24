@@ -19,7 +19,7 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Client
+namespace Tileon::Editor
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -30,6 +30,11 @@ namespace Tileon::Client
         ConstTracker<Content::Service> Content = GetService<Content::Service>();
         Content->AddMount("Resources", Tracker<Content::Disk>::Create("Resources"));
 
+        // Initialize the ImGui frontend for rendering the user interface.
+        mFrontend.Initialize(* this, GetDevice());
+
+        // Create the main context for the editor, which provides access to various services.
+        mContext = Unique<Context>::Create(* this);
         return true;
     }
 
@@ -44,9 +49,16 @@ namespace Tileon::Client
 
         Graphics->Prepare(Graphic::kDisplay, Viewport, Graphic::Clear::All, Color::Black(), 1.0f, 0);
         {
-
+            mFrontend.Begin(Time);
+            {
+                DrawInterface(Time);
+            }
+            mFrontend.End();
         }
         Graphics->Commit(Graphic::kDisplay);
+
+        // Draw the game-view in a separate pass to ensure that it is rendered inside a interface window.
+        DrawGame(Time);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -54,6 +66,82 @@ namespace Tileon::Client
 
     void Application::OnTeardown()
     {
+        mContext->Teardown();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Application::DrawInterface(Time Time)
+    {
+        // Draw the main menu bar at the top of the interface.
+        if (ImGui::BeginMainMenuBar())
+        {
+            // Draw the "File" menu.
+            if (ImGui::BeginMenu("File"))
+            {
+                if (ImGui::MenuItem("Save", "Ctrl+S"))
+                {
+                    mContext->GetController().Save();
+                }
+
+                ImGui::Separator();
+
+                if (ImGui::MenuItem("Exit"))
+                {
+                    Exit();
+                }
+
+                ImGui::EndMenu();
+            }
+
+            // Draw the "View" menu.
+            if (ImGui::BeginMenu("View"))
+            {
+                for (ConstTracker<Activity> Activity : mActivities)
+                {
+                    Bool Visibility = Activity->IsVisible();
+
+                    if (mPresenter.Checkbox(Activity->GetTitle(), Visibility))
+                    {
+                        Activity->SetVisible(Visibility);
+                    }
+                }
+
+                ImGui::EndMenu();
+            }
+
+            // Draw the "Help" menu.
+            if (ImGui::BeginMenu("Help"))
+            {
+                if (ImGui::MenuItem("Reset", "Ctrl+Alt+R"))
+                {
+                    // TODO: Reset the editor to its default state
+                }
+
+                if (ImGui::MenuItem("About"))
+                {
+                    // TODO: Show an about dialog with information about the editor
+                }
+
+                ImGui::EndMenu();
+            }
+
+            ImGui::EndMainMenuBar();
+        }
+
+        // TODO: Content Browser
+        // TODO: Viewport
+        // TODO: Hierarchy Browser
+        // TODO: Inspector
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Application::DrawGame(Time Time)
+    {
+        // TODO: Draw
     }
 }
 
@@ -73,7 +161,7 @@ int main([[maybe_unused]] int Argc, [[maybe_unused]] Ptr<Char> Argv[])
     Properties.SetVideoDriver("D3D11");
 
     // Initialize 'Zyphryon Engine' and enter main loop.
-    const Unique<Tileon::Client::Application> Application = Unique<Tileon::Client::Application>::Create();
+    const Unique<Tileon::Editor::Application> Application = Unique<Tileon::Editor::Application>::Create();
     Application->Initialize(Service::Host::Mode::Client, Move(Properties));
     Application->Run();
 

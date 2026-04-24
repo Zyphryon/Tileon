@@ -12,15 +12,17 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+#include "Activity.hpp"
+#include <ImGuiSystem.hpp>
 #include <Zyphryon.Engine/Kernel.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Client
+namespace Tileon::Editor
 {
-    // -=(Undocumented)=-
+    /// \brief Represents the main application kernel for the Tileon editor.
     class Application final : public Engine::Kernel
     {
     public:
@@ -33,5 +35,27 @@ namespace Tileon::Client
 
         /// \copydoc Kernel::OnTick
         void OnTick(Time Time) override;
+
+    private:
+
+        /// \brief Draws the user interface, rendering any relevant information and controls for the user.
+        ///
+        /// \param Time The time elapsed since the last tick.
+        void DrawInterface(Time Time);
+
+        /// \brief Draws the main game view, rendering the world and any relevant information for the user.
+        ///
+        /// \param Time The time elapsed since the last tick.
+        void DrawGame(Time Time);
+
+    private:
+
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        Unique<Context>           mContext;
+        Plugin::ImGuiSystem       mFrontend;
+        Presenter                 mPresenter;
+        Vector<Tracker<Activity>> mActivities;
     };
 }
