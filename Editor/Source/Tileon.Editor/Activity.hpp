@@ -13,7 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Context.hpp"
-#include "Presenter.hpp"
+#include "Tileon.Editor.UI/Composer.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -28,6 +28,7 @@ namespace Tileon::Editor
 
         /// \brief Constructs an activity with the specified title and visibility.
         ///
+        /// \param Context The context associated with this activity.
         /// \param Title   The title of the activity.
         /// \param Visible `true` to make the activity visible, `false` to hide it. Defaults to `false`.
         ZYPHRYON_INLINE Activity(Ref<Context> Context, ConstStr8 Title, Bool Visible = false)
@@ -80,22 +81,10 @@ namespace Tileon::Editor
             return mVisible;
         }
 
-    public:
-
-        /// \brief Called when the activity is activated and should perform any necessary setup operations.
-        virtual void OnActivate()
-        {
-        }
-
         /// \brief Called when the activity is active and should perform its drawing operations.
         ///
-        /// \param Presenter The presenter to use for drawing the activity's content.
-        virtual void OnPresent(Ref<Presenter> Presenter)
-        {
-        }
-
-        /// \brief Called when the activity is deactivated and should perform any necessary cleanup operations.
-        virtual void OnDeactive()
+        /// \param Composer The composer to use for drawing the activity's user interface.
+        virtual void OnDraw(Ref<UI::Composer> Composer)
         {
         }
 

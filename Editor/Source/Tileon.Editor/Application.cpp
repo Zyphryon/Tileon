@@ -11,9 +11,10 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Application.hpp"
+#include "View/Browser/Browser.hpp"
+#include "View/Inspector/Inspector.hpp"
+#include "View/Scene/Scene.hpp"
 #include <Zyphryon.Content/Mount/Disk.hpp>
-#include <Zyphryon.Content/Service.hpp>
-#include <Zyphryon.Graphic/Service.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -35,6 +36,12 @@ namespace Tileon::Editor
 
         // Create the main context for the editor, which provides access to various services.
         mContext = Unique<Context>::Create(* this);
+
+        // Add editor activities to the list of activities, which will be rendered in the interface.
+        mActivities.push_back(Tracker<View::Browser>::Create(* mContext));
+        mActivities.push_back(Tracker<View::Inspector>::Create(* mContext));
+        mActivities.push_back(Tracker<View::Scene>::Create(* mContext));
+
         return true;
     }
 
@@ -47,7 +54,7 @@ namespace Tileon::Editor
 
         const Graphic::Viewport Viewport(0.0f, 0.0f, GetDevice().GetWidth(), GetDevice().GetHeight());
 
-        Graphics->Prepare(Graphic::kDisplay, Viewport, Graphic::Clear::All, Color::Black(), 1.0f, 0);
+        Graphics->Prepare(Graphic::kDisplay, Viewport, Color::Black(), 1.0f, 0);
         {
             mFrontend.Begin(Time);
             {
@@ -58,7 +65,7 @@ namespace Tileon::Editor
         Graphics->Commit(Graphic::kDisplay);
 
         // Draw the game-view in a separate pass to ensure that it is rendered inside a interface window.
-        DrawGame(Time);
+        DrawGame();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -74,74 +81,83 @@ namespace Tileon::Editor
 
     void Application::DrawInterface(Time Time)
     {
-        // Draw the main menu bar at the top of the interface.
-        if (ImGui::BeginMainMenuBar())
+        UI::Composer Composer;
+
+        // Draw the main menu bar at the top.
+        if (Composer.BeginMainMenuBar())
         {
             // Draw the "File" menu.
-            if (ImGui::BeginMenu("File"))
+            if (Composer.BeginMenu("File"))
             {
-                if (ImGui::MenuItem("Save", "Ctrl+S"))
+                if (Composer.MenuItem("Save", "Ctrl+S"))
                 {
                     mContext->GetController().Save();
                 }
 
-                ImGui::Separator();
+                Composer.Separator();
 
-                if (ImGui::MenuItem("Exit"))
+                if (Composer.MenuItem("Exit"))
                 {
                     Exit();
                 }
 
-                ImGui::EndMenu();
+                Composer.EndMenu();
             }
 
             // Draw the "View" menu.
-            if (ImGui::BeginMenu("View"))
+            if (Composer.BeginMenu("View"))
             {
                 for (ConstTracker<Activity> Activity : mActivities)
                 {
                     Bool Visibility = Activity->IsVisible();
 
-                    if (mPresenter.Checkbox(Activity->GetTitle(), Visibility))
+                    if (Composer.Checkbox(Activity->GetTitle(), Visibility))
                     {
                         Activity->SetVisible(Visibility);
                     }
                 }
 
-                ImGui::EndMenu();
+                Composer.EndMenu();
             }
 
             // Draw the "Help" menu.
-            if (ImGui::BeginMenu("Help"))
+            if (Composer.BeginMenu("Help"))
             {
-                if (ImGui::MenuItem("Reset", "Ctrl+Alt+R"))
+                if (Composer.MenuItem("Reset", "Ctrl+Alt+R"))
                 {
                     // TODO: Reset the editor to its default state
                 }
 
-                if (ImGui::MenuItem("About"))
+                if (Composer.MenuItem("About"))
                 {
                     // TODO: Show an about dialog with information about the editor
                 }
 
-                ImGui::EndMenu();
+                Composer.EndMenu();
             }
 
-            ImGui::EndMainMenuBar();
+            Composer.EndMainMenuBar();
         }
 
-        // TODO: Content Browser
-        // TODO: Viewport
-        // TODO: Hierarchy Browser
-        // TODO: Inspector
+        // Draw each visible activity, allowing them to render their respective user interfaces.
+        for (ConstTracker<Activity> Activity : mActivities)
+        {
+            if (Activity->IsVisible())
+            {
+                Activity->OnDraw(Composer);
+            }
+        }
+
+        // TODO: Draw scene
+        // TODO: Draw bottom bar
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Application::DrawGame(Time Time)
+    void Application::DrawGame()
     {
-        // TODO: Draw
+        // TODO: Draw to render-pass
     }
 }
 

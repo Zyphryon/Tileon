@@ -44,9 +44,7 @@ namespace Tileon::Editor
         void DrawInterface(Time Time);
 
         /// \brief Draws the main game view, rendering the world and any relevant information for the user.
-        ///
-        /// \param Time The time elapsed since the last tick.
-        void DrawGame(Time Time);
+        void DrawGame();
 
     private:
 
@@ -55,7 +53,6 @@ namespace Tileon::Editor
 
         Unique<Context>           mContext;
         Plugin::ImGuiSystem       mFrontend;
-        Presenter                 mPresenter;
         Vector<Tracker<Activity>> mActivities;
     };
 }
