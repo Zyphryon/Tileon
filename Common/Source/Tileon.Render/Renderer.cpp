@@ -232,7 +232,6 @@ namespace Tileon
             {
                 if (!Volume.IsAlmostZero())
                 {
-                    mCanvas.SetShift(Vector2::Zero());
                     mCanvas.DrawStrokeRect(Rect(Volume - mOrigin), Depth::Foreground(1), IntColor8::Green(), 0.1f);
                 }
             }).Disable();
@@ -246,12 +245,12 @@ namespace Tileon
             Scene::Execution::Default,
             [this](Sector Sector, ConstRef<Worldspace> Worldspace, ConstRef<Extent> Extent, ConstRef<Appaerance> Appearance, ConstPtr<Tint> Tint)
             {
-                const IntColor8 Color = Tint ? (* Tint) : IntColor8::White();
-                const Real32    Depth = Depth::Midground(mFrustum, Sector, Worldspace.GetTranslation());
+                const IntColor8 Color  = Tint ? (* Tint) : IntColor8::White();
+                const Real32    Depth  = Depth::Midground(mFrustum, Sector, Worldspace.GetTranslation());
+                const Vector2   Offset(Sector - mOrigin);
 
                 const Render::Sprite Command(Appearance.GetMaterial(), Extent.GetSize(), Color, Appearance.GetSource());
-                mCanvas.SetShift(static_cast<Vector2>(Sector - mOrigin));
-                mCanvas.DrawSprite(Command, Worldspace, Depth);
+                mCanvas.DrawSprite(Command, Worldspace::WithTranslation(Worldspace, Offset), Depth);
             });
 
         // System that renders text entities.
@@ -265,10 +264,10 @@ namespace Tileon
             {
                 const IntColor8 Color = Tint ? (* Tint) : IntColor8::White();
                 const Real32    Depth = Depth::Midground(mFrustum, Sector, Worldspace.GetTranslation());
+                const Vector2   Offset(Sector - mOrigin);
 
                 const Render::Text Command(Typeface.GetFont(), Typeface.GetSize(), Color, Text.GetSpacing());
-                mCanvas.SetShift(static_cast<Vector2>(Sector - mOrigin));
-                mCanvas.DrawText(Command, Text.GetContent(), Worldspace, Depth, Text.GetEffect());
+                mCanvas.DrawText(Command, Text.GetContent(), Worldspace::WithTranslation(Worldspace, Offset), Depth, Text.GetEffect());
             });
 
         // System that renders region entities.
@@ -447,9 +446,12 @@ namespace Tileon
             Frame.GetX() + OffsetX + Span.GetX() * UCoordPerTile,
             Frame.GetY() + OffsetY);
 
+        const Vector2 Translation(
+            Position.GetX() - mOrigin.GetX(),
+            Position.GetY() - mOrigin.GetY());
+
         const Render::Sprite Command(Visual.Material, static_cast<Vector2>(Span), Tint::White(), Displacement);
-        mCanvas.SetShift(Vector2(Position.GetX() - mOrigin.GetX(), Position.GetY() - mOrigin.GetY()));
-        mCanvas.DrawSprite(Command, Matrix3x2::Identity(), Position.GetZ());
+        mCanvas.DrawSprite(Command, Matrix3x2::FromTranslation(Translation), Position.GetZ());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -465,18 +467,22 @@ namespace Tileon
         const Real32 MinX = mFrustum.GetMinimumX();
         const Real32 MaxX = mFrustum.GetMaximumX();
 
-        mCanvas.SetShift(Vector2(-mOrigin));
+        const Vector2 Offset(-mOrigin);
 
         for (SInt32 X = mFrustum.GetMinimumX(); X < mFrustum.GetMaximumX(); ++X)
         {
             const Real32 Thickness = (X % Region::kTilesPerX == 0) ? 0.1f : 0.05f;
-            mCanvas.DrawLine(Line(Vector2(X, MinY), Vector2(X, MaxY)), Depth::Foreground(0), Tint, Thickness);
+            mCanvas.DrawLine(Line(
+                Vector2(X, MinY) + Offset,
+                Vector2(X, MaxY) + Offset), Depth::Foreground(0), Tint, Thickness);
         }
 
         for (SInt32 Y = mFrustum.GetMinimumY(); Y < mFrustum.GetMaximumY(); ++Y)
         {
             const Real32 Thickness = (Y % Region::kTilesPerY == 0) ? 0.1f : 0.05f;
-            mCanvas.DrawLine(Line(Vector2(MinX, Y), Vector2(MaxX, Y)), Depth::Foreground(0), Tint, Thickness);
+            mCanvas.DrawLine(Line(
+                Vector2(MinX, Y) + Offset,
+                Vector2(MaxX, Y) + Offset), Depth::Foreground(0), Tint, Thickness);
         }
     }
 }
