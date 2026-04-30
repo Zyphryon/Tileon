@@ -53,23 +53,23 @@ namespace Tileon
         /// \param Width   The width of the viewport in logical units (e.g., world units).
         /// \param Height  The height of the viewport in logical units (e.g., world units).
         /// \param Density The pixel density of the viewport (e.g., pixels per logical unit).
-        ZYPHRYON_INLINE void SetViewport(UInt16 Width, UInt16 Height, UInt16 Density)
+        ZYPHRYON_INLINE void SetViewport(Real32 Width, Real32 Height, UInt16 Density)
         {
             mViewport.Set(Width, Height);
 
             mDensity = Density;
 
-            const Real32 HalfWidth  = (static_cast<Real32>(mViewport.GetX()) * 0.5f) * mZoom;
-            const Real32 HalfHeight = (static_cast<Real32>(mViewport.GetY()) * 0.5f) * mZoom;
+            const Real32 HalfWidth  = (mViewport.GetX() * 0.5f) * mZoom;
+            const Real32 HalfHeight = (mViewport.GetY() * 0.5f) * mZoom;
             mCamera.SetOrthographic(-HalfWidth, HalfWidth, -HalfHeight, HalfHeight, 0.0f, 1.0f);
         }
 
-        /// \brief Gets the view-projection matrix of the camera.
+        /// \brief Gets the current viewport dimensions of the camera.
         ///
-        /// \return The view-projection matrix of the camera.
-        ZYPHRYON_INLINE ConstRef<Matrix4x4> GetProjection() const
+        /// \return The current viewport dimensions of the camera, in logical units (e.g., world units).
+        ZYPHRYON_INLINE Vector2 GetViewport() const
         {
-            return mCamera.GetViewProjection();
+            return mViewport;
         }
 
         /// \brief Sets the camera's position to a specific placement, immediately applying the change.
@@ -161,6 +161,14 @@ namespace Tileon
             return !mTweenZoom.IsComplete();
         }
 
+        /// \brief Gets the view-projection matrix of the camera.
+        ///
+        /// \return The view-projection matrix of the camera.
+        ZYPHRYON_INLINE ConstRef<Matrix4x4> GetProjection() const
+        {
+            return mCamera.GetViewProjection();
+        }
+
         /// \brief Gets the current frustum of the camera's view in logical units (e.g., world units).
         ///
         /// \return The current frustum of the camera's view.
@@ -218,7 +226,7 @@ namespace Tileon
 
         Graphic::Camera  mCamera;
         Real32           mZoom;
-        UIntVector2      mViewport;
+        Vector2          mViewport;
         UInt16           mDensity;
         IntRect          mFrustum;
         Placement        mPosition;

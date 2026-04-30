@@ -179,7 +179,7 @@ namespace Tileon
             Scene::Execution::Immediate,
             [this]
             {
-                GetService<Scene::Service>().Clear<Stale>();
+                GetService<Scene::Service>().Purge<Stale>();
             });
     }
 

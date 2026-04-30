@@ -12,8 +12,8 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Director.hpp"
-#include "Renderer.hpp"
+#include "Tileon.Render/Director.hpp"
+#include "Tileon.Render/Renderer.hpp"
 #include "Tileon.World/World.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -25,6 +25,8 @@ namespace Tileon
     /// \brief Represents the controller responsible for coordinating the world.
     class Controller final : public Locator<Scene::Service>
     {
+        // TODO: Split into common, client and server orquestrator
+
     public:
 
         /// \brief Constructs a Controller instance with the specified service host.
