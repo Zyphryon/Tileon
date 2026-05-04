@@ -43,6 +43,12 @@ namespace Tileon::Editor
         /// \param Time The time elapsed since the last tick.
         void DrawInterface(Time Time);
 
+        /// \brief Draws the game view, rendering the current state of the game world.
+        ///
+        /// \param Width  The width of the game view in pixels.
+        /// \param Height The height of the game view in pixels.
+        void DrawGame(UInt16 Width, UInt16 Height);
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

@@ -70,7 +70,12 @@ namespace Tileon::Editor
         Graphics->Commit();
 
         // Draw the game-view in a separate pass to ensure that it is rendered inside a interface window.
-        mContext->GetController().Present(false);
+        const ConstPtr<ImGuiWindow> Window = ImGui::FindWindowByName(View::Scene::kTitle);
+
+        if (Window && Window->Active)
+        {
+            DrawGame(static_cast<UInt16>(Window->ContentSize.x), static_cast<UInt16>(Window->ContentSize.y));
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -153,8 +158,27 @@ namespace Tileon::Editor
             }
         }
 
-        // TODO: Draw scene
         // TODO: Draw bottom bar
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Application::DrawGame(UInt16 Width, UInt16 Height)
+    {
+        static IntVector2 LastViewportSize = { 0, 0 };
+
+        if (LastViewportSize.GetX() != Width && LastViewportSize.GetY() != Height)
+        {
+            if (Width != 0 && Height != 0)
+            {
+                LastViewportSize.Set(Width, Height);
+
+                mContext->GetController().Resize(Width, Height);
+            }
+        }
+
+        mContext->GetController().Present(false);
     }
 }
 

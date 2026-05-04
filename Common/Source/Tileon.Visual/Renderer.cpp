@@ -54,23 +54,22 @@ namespace Tileon::Visual
     {
         Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
 
-        // Destroy existing render targets and passes, as they are no longer valid after a resize.
-        for (Ref<Graphic::Object> Phase : mPhases)
+        for (SInt32 Index = Enum::Count<Phase>() - 1; Index >= 0; --Index)
         {
-            if (Phase)
+            if (Ref<Graphic::Object> Pass = mPhases[Index])
             {
-                Graphics.DeletePass(Phase);
+                Graphics.DeletePass(Pass);
 
-                Phase = 0;
+                Pass = 0;
             }
         }
-        for (Ref<Graphic::Object> Frame : mFrames)
+        for (SInt32 Index = Enum::Count<Frame>() - 1; Index >= 0; --Index)
         {
-            if (Frame)
+            if (Ref<Graphic::Object> Texture = mFrames[Index])
             {
-                Graphics.DeleteTexture(Frame);
+                Graphics.DeleteTexture(Texture);
 
-                Frame = 0;
+                Texture = 0;
             }
         }
 

@@ -25,6 +25,11 @@ namespace Tileon::Editor::View
     {
     public:
 
+        /// \brief Static name identifier for the scene activity.
+        static constexpr auto kTitle = "Scene";
+
+    public:
+
         /// \brief Constructs an scene activity with the specified context.
         ///
         /// \param Context The context associated with this scene activity.
@@ -32,5 +37,12 @@ namespace Tileon::Editor::View
 
         /// \copydoc Activity::OnDraw(Ref<UI::Composer>)
         void OnDraw(Ref<UI::Composer> Composer) override;
+
+    private:
+
+        /// \brief Draws the toolbar for the scene activity.
+        ///
+        /// \param Composer The UI composer used to render the toolbar elements.
+        void DrawToolbar(Ref<UI::Composer> Composer);
     };
 }

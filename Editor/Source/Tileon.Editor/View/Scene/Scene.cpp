@@ -22,7 +22,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Scene::Scene(Ref<Context> Context)
-        : Activity(Context, "Scene", true)
+        : Activity(Context, kTitle, true)
     {
     }
 
@@ -33,11 +33,20 @@ namespace Tileon::Editor::View
     {
         if (Composer.Begin(GetTitle(), mVisible))
         {
+            DrawToolbar(Composer);
+            Composer.Separator();
+
             const Graphic::Object Texture = GetContext().GetRenderer().GetFrame(Visual::Renderer::Frame::Final);
             Composer.Image(Texture, Composer.GetContentRegionAvail());
-
-            // TODO: Resize
         }
         Composer.End();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Scene::DrawToolbar(Ref<UI::Composer> Composer)
+    {
+
     }
 }
