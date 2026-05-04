@@ -90,16 +90,6 @@ namespace Tileon
                 Actor.Add<Stale>();
             });
 
-        // System that propagates dirty state to children (for static entities).
-        Scene.CreateSystem<Scene::DSL::Not<Stale>, Scene::DSL::Cascade<Stale>, Scene::DSL::Out<Stale>>(
-            "World::PropagateDirtyStates",
-            EcsPreUpdate,
-            Scene::Execution::Concurrent,
-            [](Scene::Entity Actor)
-            {
-                Actor.Add<Stale>();
-            });
-
         // System that computes motion integration.
         Scene.CreateSystem<Scene::DSL::In<const Time, const Velocity, Pose>>(
             "World::ComputeMotion",
@@ -109,6 +99,64 @@ namespace Tileon
             {
                 Pose.Translate(Velocity.GetLinear() * Time.GetDelta());
                 Pose.Rotate(Velocity.GetAngular() * Time.GetDelta());
+            });
+
+        // System that migrates entities to a neighbouring region when they cross a region boundary.
+        // TODO: Revise (Can't be added efficiently until flecs supports direct parent queries in systems).
+        Scene.CreateSystem<Scene::DSL::In<Pose>, Kinetic>(
+            "World::RegionMigration",
+            EcsPreUpdate,
+            Scene::Execution::Concurrent,
+            [this](Scene::Entity Actor, Ref<Pose> Pose)
+            {
+                ConstPtr<Region> Region = nullptr;
+
+                if (const Scene::Entity Parent = Actor.GetParent(); Parent.IsValid())
+                {
+                    Region = Parent.TryGet<Tileon::Region>();
+                }
+
+                if (Region)
+                {
+                    const Vector2 Position = Pose.GetTranslation();
+                    const Vector2 Distance = Vector2(
+                        Math::Floor(Position.GetX() / static_cast<Real32>(Tileon::Region::kTilesPerX)),
+                        Math::Floor(Position.GetY() / static_cast<Real32>(Tileon::Region::kTilesPerY)));
+
+                    if (Distance.IsAlmostZero())
+                    {
+                        return;
+                    }
+
+                    // Try to migrate to the new region and update the parent-child relationship if successful.
+                    const Scene::Entity Parent = mSupervisor.GetRegion(
+                        static_cast<SInt16>(Region->GetX() + static_cast<SInt32>(Distance.GetX())),
+                        static_cast<SInt16>(Region->GetY() + static_cast<SInt32>(Distance.GetY())));
+
+                    if (Parent.IsValid())
+                    {
+                        Actor.SetParent(Parent);
+
+                        // Remap the pose to be local to the new region so the entity appears at exactly
+                        // the same world position after the parent change.
+                        Pose.SetTranslation(Vector2(
+                            Position.GetX() - Distance.GetX() * static_cast<Real32>(Tileon::Region::kTilesPerX),
+                            Position.GetY() - Distance.GetY() * static_cast<Real32>(Tileon::Region::kTilesPerY)));
+
+                        // Cascades Stale to all static children, making them Kinetic this frame.
+                        Actor.Add<Stale>();
+                    }
+                }
+            });
+
+        // System that propagates dirty state to children (for static entities).
+        Scene.CreateSystem<Scene::DSL::Not<Stale>, Scene::DSL::Cascade<Stale>, Scene::DSL::Out<Stale>>(
+            "World::PropagateDirtyStates",
+            EcsPreUpdate,
+            Scene::Execution::Concurrent,
+            [](Scene::Entity Actor)
+            {
+                Actor.Add<Stale>();
             });
 
         // System that computes world matrices from local transforms of kinetic entities.
@@ -164,8 +212,6 @@ namespace Tileon
             {
                 mSupervisor.UpdateHierarchy();
             });
-
-        // TODO: Parent Migration (Can't be added efficiently until flecs supports direct parent queries in systems).
 
         /// System that disposes of entities marked for disposal.
         Scene.CreateSystem<Scene::DSL::In<ConstPtr<Bounds>, const Dispose>>(
