@@ -48,7 +48,7 @@ namespace Tileon
         /// \return A new world-space transformation matrix that is rebased to the specified origin.
         ZYPHRYON_INLINE Matrix3x2 Rebase(IntVector2 Origin) const
         {
-            return Matrix3x2::WithTranslation(mWorldspace, Vector2(Origin - mOrigin));
+            return Matrix3x2::WithTranslation(mWorldspace, Vector2(mOrigin - Origin));
         }
 
         /// \brief Rebases only the translation component of the world-space transformation matrix to a new origin.
@@ -57,7 +57,7 @@ namespace Tileon
         /// \return A new translation vector that is rebased to the specified origin.
         ZYPHRYON_INLINE Vector2 RebaseOnlyTranslation(IntVector2 Origin) const
         {
-            return mWorldspace.GetTranslation() + Vector2(Origin - mOrigin);
+            return mWorldspace.GetTranslation() + Vector2(mOrigin - Origin);
         }
 
         /// \brief Sets the world-space transformation matrix for the transform.
