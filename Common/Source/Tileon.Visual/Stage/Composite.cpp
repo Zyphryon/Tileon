@@ -10,38 +10,44 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Context.hpp"
+#include "Composite.hpp"
+#include <Zyphryon.Graphic/Encoder.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Editor
+namespace Tileon::Visual::Stage
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Context::Context(Ref<Service::Host> Host, ConstRef<Profile> Profile)
-        : Locator     { Host },
-          mController { Host }
+    Composite::Composite(Ref<Service::Host> Host)
     {
-        mController.Init(Profile);
-        mController.Load();
+        OnLoad(* Host.GetService<Content::Service>());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Context::Teardown()
+    void Composite::Run(Ref<Graphic::Encoder> Encoder, Graphic::Object Albedo, Graphic::Object Radiance)
     {
-        mController.Teardown();
+        Encoder.SetPipeline(mPipelines[Enum::Cast(Technique::Composite)]->GetID());
+        Encoder.SetTexture(0, Albedo,   Graphic::Sampler());
+        Encoder.SetTexture(1, Radiance, Graphic::Sampler());
+        Encoder.Draw(3, 0, 0);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Context::Poll()
+    void Composite::OnLoad(Ref<Content::Service> Content)
     {
-        // TODO
+        for (const Technique Type : Enum::Values<Technique>())
+        {
+            const ConstStr8 Path = Format("Resources://Pipeline/Composite/{}.effect", Enum::Name(Type));
+
+            mPipelines[Enum::Cast(Type)] = Content.Load<Graphic::Pipeline>(Path);
+        }
     }
 }

@@ -140,6 +140,14 @@ namespace Tileon::Editor::UI
             ImGui::Image(ID, ImVec2(Width, Height), UV0, UV1);
         }
 
+        /// \brief Renders an image using the specified texture ID, dimensions, and optional UV coordinates for texture mapping.
+        ZYPHRYON_INLINE void Image(Graphic::Object ID, ImVec2 Size, ImVec4 UV = ImVec4(0, 0, 1, 1))
+        {
+            const ImVec2 UV0(UV.x, UV.y);
+            const ImVec2 UV1(UV.z, UV.w);
+            ImGui::Image(ID, ImVec2(Size.x, Size.y), UV0, UV1);
+        }
+
         /// \brief Gets the available size of the content region within the current window.
         ZYPHRYON_INLINE ImVec2 GetContentRegionAvail() const
         {

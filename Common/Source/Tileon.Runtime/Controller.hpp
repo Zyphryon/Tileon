@@ -12,8 +12,9 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Render/Director.hpp"
-#include "Tileon.Render/Renderer.hpp"
+#include "Profile.hpp"
+#include "Tileon.Visual/Director.hpp"
+#include "Tileon.Visual/Renderer.hpp"
 #include "Tileon.World/World.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -37,14 +38,27 @@ namespace Tileon
         /// \brief Tears down the controller, releasing any allocated resources.
         void Teardown();
 
+        /// \brief Initializes the controller with the provided configuration profile.
+        ///
+        /// \param Configuration The profile containing configuration settings for the controller.
+        void Init(ConstRef<Profile> Configuration);
+
         /// \brief Loads the world and initializes necessary resources for rendering.
         void Load();
 
         /// \brief Saves the current state of the world and any relevant data.
         void Save();
 
+        /// \brief Resizes the rendering viewport to the specified dimensions.
+        ///
+        /// \param Width  The new width of the viewport in pixels.
+        /// \param Height The new height of the viewport in pixels.
+        void Resize(UInt16 Width, UInt16 Height);
+
         /// \brief Presents the rendered scene to the display, executing the rendering pipeline.
-        void Present();
+        ///
+        /// \param Immediate If `true`, renders directly to the display; if `false`, renders to an off-screen texture.
+        void Present(Bool Immediate);
 
         /// \brief Gets the World instance associated with the controller.
         ///
@@ -57,7 +71,7 @@ namespace Tileon
         /// \brief Gets the Director instance associated with the controller.
         ///
         /// \return The director instance managed by the controller.
-        ZYPHRYON_INLINE Ref<Director> GetDirector()
+        ZYPHRYON_INLINE Ref<Visual::Director> GetDirector()
         {
             return mDirector;
         }
@@ -65,7 +79,7 @@ namespace Tileon
         /// \brief Gets the Renderer instance associated with the controller.
         ///
         /// \return The renderer instance managed by the controller.
-        ZYPHRYON_INLINE Ref<Renderer> GetRenderer()
+        ZYPHRYON_INLINE Ref<Visual::Renderer> GetRenderer()
         {
             return mRenderer;
         }
@@ -82,8 +96,8 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        World    mWorld;
-        Director mDirector;
-        Renderer mRenderer;
+        World            mWorld;
+        Visual::Director mDirector;
+        Visual::Renderer mRenderer;
     };
 }

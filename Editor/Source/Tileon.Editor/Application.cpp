@@ -29,19 +29,24 @@ namespace Tileon::Editor
     {
         // Set up resource management system and asset path.
         ConstTracker<Content::Service> Content = GetService<Content::Service>();
-        Content->AddMount("Resources", Tracker<Content::Disk>::Create("Resources"));
+        Content->AddMount("Resources", Tracker<Content::Disk>::Create("C:\\Users\\Wolftein\\Workspace\\Aurora-Game-Resources"));
 
         // Initialize the ImGui frontend for rendering the user interface.
         mFrontend.Initialize(* this, GetDevice());
 
         // Create the main context for the editor, which provides access to various services.
-        mContext = Unique<Context>::Create(* this);
+        Profile Configuration;
+        Configuration.SetDisplay(GetDevice().GetWidth(), GetDevice().GetHeight(), 32.0f); // TODO: Configurable
+
+        mContext = Unique<Context>::Create(* this, Configuration);
 
         // Add editor activities to the list of activities, which will be rendered in the interface.
         mActivities.push_back(Tracker<View::Browser>::Create(* mContext));
         mActivities.push_back(Tracker<View::Inspector>::Create(* mContext));
         mActivities.push_back(Tracker<View::Scene>::Create(* mContext));
 
+        // Wait for all content to finish loading before allowing the editor to run.
+        Content->Wait();
         return true;
     }
 
@@ -62,10 +67,10 @@ namespace Tileon::Editor
             }
             mFrontend.End();
         }
-        Graphics->Commit(Graphic::kDisplay);
+        Graphics->Commit();
 
         // Draw the game-view in a separate pass to ensure that it is rendered inside a interface window.
-        DrawGame();
+        mContext->GetController().Present(false);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -150,14 +155,6 @@ namespace Tileon::Editor
 
         // TODO: Draw scene
         // TODO: Draw bottom bar
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Application::DrawGame()
-    {
-        // TODO: Draw to render-pass
     }
 }
 

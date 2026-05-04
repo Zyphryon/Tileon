@@ -40,6 +40,21 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    void Controller::Init(ConstRef<Profile> Configuration)
+    {
+        // Initialize the director with the display dimensions and density specified in the configuration.
+        mDirector.SetDensity(Configuration.GetDisplayDensity());
+        mDirector.SetViewport(
+            Configuration.GetDisplayWidth()  / static_cast<Real32>(Configuration.GetDisplayDensity()),
+            Configuration.GetDisplayHeight() / static_cast<Real32>(Configuration.GetDisplayDensity()));
+
+        // Resize the renderer to match the display dimensions specified in the configuration.
+        mRenderer.Resize(Configuration.GetDisplayWidth(), Configuration.GetDisplayHeight());
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void Controller::Load()
     {
         // Load the world, which includes loading the regions, terrains, and archetypes from their respective files.
@@ -64,12 +79,23 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Controller::Present()
+    void Controller::Resize(UInt16 Width, UInt16 Height)
     {
-        const Placement  Position = mDirector.GetPosition();
-        const IntVector2 Origin(Position.GetBaseX(), Position.GetBaseY());
+        // Update the director's viewport dimensions based on the new output size.
+        mDirector.SetViewport(
+            Width  / static_cast<Real32>(mDirector.GetDensity()),
+            Height / static_cast<Real32>(mDirector.GetDensity()));
 
-        mRenderer.Execute(mDirector.GetProjection(), mDirector.GetFrustum(), Origin);
+        // Resize the renderer to match the new output dimensions.
+        mRenderer.Resize(Width, Height);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Controller::Present(Bool Immediate)
+    {
+        mRenderer.Present(mDirector, Immediate);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -77,7 +103,7 @@ namespace Tileon
 
     void Controller::OnRegister(Ref<Scene::Service> Scene)
     {
-        // System to update the camera and navigate the world based on camera's frustum.
+        // System to update the camera's position and view based on the director's state.
         Scene.CreateSystem<Scene::DSL::In<const Time>>(
             "Controller::UpdateVisibility",
             EcsOnLoad,

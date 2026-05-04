@@ -27,8 +27,9 @@ namespace Tileon::Editor
 
         /// \brief Constructs a context instance with the specified service host.
         ///
-        /// \param Host The service host to associate with the context.
-        explicit Context(Ref<Service::Host> Host);
+        /// \param Host    The service host to associate with the context.
+        /// \param Profile The profile containing configuration settings for the context.
+        explicit Context(Ref<Service::Host> Host, ConstRef<Profile> Profile);
 
         /// \brief Tears down the context, releasing any resources it holds.
         void Teardown();
@@ -63,7 +64,7 @@ namespace Tileon::Editor
         /// \brief Gets a reference to the director from the controller.
         ///
         /// \return A reference to the director from the controller.
-        ZYPHRYON_INLINE Ref<Director> GetDirector()
+        ZYPHRYON_INLINE Ref<Visual::Director> GetDirector()
         {
             return mController.GetDirector();
         }
@@ -71,7 +72,7 @@ namespace Tileon::Editor
         /// \brief Gets a reference to the renderer from the controller.
         ///
         /// \return A reference to the renderer from the controller.
-        ZYPHRYON_INLINE Ref<Renderer> GetRenderer()
+        ZYPHRYON_INLINE Ref<Visual::Renderer> GetRenderer()
         {
             return mController.GetRenderer();
         }

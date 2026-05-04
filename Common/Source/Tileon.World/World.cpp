@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "World.hpp"
+#include "Component.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -123,6 +124,7 @@ namespace Tileon
             });
 
         // System that computes world-space volumes from local-space volumes and updates spatial partitioning.
+        // TODO: Remove Up(Sector)
         Scene.CreateSystem<Scene::DSL::Up<const Sector>, Scene::DSL::In<const Worldspace, const Extent, Volume>, Kinetic>(
             "World::ComputeHierarchy",
             EcsOnUpdate,
@@ -188,7 +190,6 @@ namespace Tileon
 
     void World::OnTeardown(Ref<Scene::Service> Scene)
     {
-        // Forward teardown to supervisor sub module.
         mSupervisor.Teardown();
     }
 }

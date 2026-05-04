@@ -33,9 +33,11 @@ namespace Tileon::Editor::View
     {
         if (Composer.Begin(GetTitle(), mVisible))
         {
+            const Graphic::Object Texture = GetContext().GetRenderer().GetFrame(Visual::Renderer::Frame::Final);
+            Composer.Image(Texture, Composer.GetContentRegionAvail());
 
+            // TODO: Resize
         }
         Composer.End();
     }
-
 }

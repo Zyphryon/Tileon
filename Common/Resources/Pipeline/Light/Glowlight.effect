@@ -1,0 +1,45 @@
+[Properties.Blend]  # Additive light accumulation
+
+    SrcColor        = "One"
+    DstColor        = "One"
+    SrcAlpha        = "Zero"
+    DstAlpha        = "One"
+
+[Properties.Depth]  # No depth write or test for light volumes
+
+    Mask            = 0
+    Condition       = "Always"
+
+[Properties.Rasterizer]
+
+    Cull            = "None"
+
+[Properties.Layout]
+
+    Attributes      = [
+        ["CUSTOM0",  "Float32x4",  0,  0, 1],
+        ["COLOR0",   "Float32x4",  0, 16, 1],
+    ]
+
+    Primitive       = "TriangleStrip"
+
+[Program.Textures]
+
+    Albedo          = 0
+
+[Program.Vertex]
+
+    Entry           = "vertex"
+    Filename        = "Light.shader"
+    Defines         = [
+        "LIGHT_GLOW",
+    ]
+
+[Program.Fragment]
+
+    Entry           = "fragment"
+    Filename        = "Light.shader"
+    Defines         = [
+        "LIGHT_GLOW", "ENABLE_NORMAL_MAPPING"
+    ]
+

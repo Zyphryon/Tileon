@@ -23,7 +23,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Supervisor::Supervisor(Ref<Service::Host> Host)
-        : Locator(Host)
+        : Locator { Host }
     {
     }
 

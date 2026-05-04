@@ -1,0 +1,22 @@
+[Properties.Depth]
+
+    Mask            = 0
+    Condition       = "Always"
+
+[Properties.Rasterizer]
+
+    Cull      		= "None"
+
+[Properties.Layout]
+
+    Primitive 		= "TriangleList"
+
+[Program.Vertex]
+
+    Entry           = "vertex"
+    Filename        = "Composite.shader"
+
+[Program.Fragment]
+
+    Entry           = "fragment"
+    Filename        = "Composite.shader"
