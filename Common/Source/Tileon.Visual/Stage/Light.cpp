@@ -44,6 +44,27 @@ namespace Tileon::Visual::Stage
         // TODO: Frustum Culling
         mGlowlightData.clear();
 
+        mQrDrawEnvironment.Run<const Environment>([&](ConstRef<Environment> Environment)
+        {
+            // TODO: Prettier
+            AmbientLayout Effect;
+
+            const Vector2 SunDirection = Environment.GetSunDirection();
+
+            Effect.SunColor    = Math::Color::FromColor8(Environment.GetSunTint())
+                .WithIntensity(Environment.GetBrightness(), SunDirection.GetX());
+            Effect.SkyColor    = Math::Color::FromColor8(Environment.GetSkyTint())
+                .WithIntensity(Environment.GetBrightness(), SunDirection.GetY());
+            Effect.GroundColor = Math::Color::FromColor8(Environment.GetGroundTint())
+                .WithIntensity(Environment.GetBrightness(), 0.0f);
+
+            Encoder.SetPipeline(mPipelines[Enum::Cast(Technique::Environment)]->GetID());
+            Encoder.SetTexture(0, Normal, Graphic::Sampler());
+            Encoder.SetUniform(0, Graphics.AllocateTransientBuffer<AmbientLayout>(Graphic::Usage::Uniform, Spanify(Effect)));
+            Encoder.Draw(3, 0, 0);
+            Encoder.ResetBindings();
+        });
+
         mQrDrawGlowlights.Run<const Sector, const Worldspace, const Glowlight, ConstPtr<Tint>>([&](
             Sector               Sector,
             ConstRef<Worldspace> Worldspace,
@@ -120,6 +141,7 @@ namespace Tileon::Visual::Stage
     {
         Scene.GetComponent<Spotlight>("Spotlight").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Glowlight>("Glowlight").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<Environment>("Environment").AddTrait(Scene::Trait::Serializable, Scene::Trait::Singleton);
 
         // Observes changes to the light radial component and updates the corresponding spatial properties of the actor.
         Scene.CreateObserver<Scene::DSL::In<const Glowlight>>(
@@ -186,6 +208,10 @@ namespace Tileon::Visual::Stage
             Scene::DSL::Up<const Sector>,           // TODO: Remove Sector
             Scene::DSL::In<const Worldspace, const Spotlight, ConstPtr<Tint>>
         >("Visual::Light::DrawSpotlights", Scene::Cache::Auto);
+
+        mQrDrawEnvironment = Scene.CreateQuery<
+            Scene::DSL::In<const Environment>
+        >("Visual::Light::DrawEnvironment", Scene::Cache::Auto);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

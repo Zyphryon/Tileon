@@ -87,11 +87,6 @@ namespace Tileon::Visual
             return mFrames[Enum::Cast(Type)];
         }
 
-        ZYPHRYON_INLINE ConstRef<Graphic::Viewport> GetViewport() const
-        {
-            return mViewport;
-        }
-
     private:
 
         /// \brief Represents the rendering pipeline, which manages the sequence of rendering stages.

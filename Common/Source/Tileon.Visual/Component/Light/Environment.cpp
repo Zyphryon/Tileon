@@ -6,18 +6,8 @@
 // For a copy, see <https://opensource.org/licenses/MIT>.
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#pragma once
-
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Component/Light/Environment.hpp"
-#include "Component/Light/Spotlight.hpp"
-#include "Component/Light/Glowlight.hpp"
-#include "Component/Material/Tint.hpp"
-#include "Component/Sprite/Animator.hpp"
-#include "Component/Sprite/Appaerance.hpp"
-#include "Component/Sprite/Sprite.hpp"
-#include "Component/Typography/Text.hpp"
-#include "Component/Typography/Typeface.hpp"
+#include "Environment.hpp"

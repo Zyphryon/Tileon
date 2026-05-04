@@ -1,0 +1,30 @@
+[Properties.Blend]  # Additive light accumulation
+
+    SrcColor        = "One"
+    DstColor        = "One"
+    SrcAlpha        = "Zero"
+    DstAlpha        = "One"
+
+[Properties.Depth]  # No depth write or test for light volumes
+
+    Mask            = 0
+    Condition       = "Always"
+
+[Properties.Rasterizer]
+
+    Cull            = "None"
+
+[Program.Textures]
+
+    Normal          = 0
+
+[Program.Vertex]
+
+    Entry           = "vertex"
+    Filename        = "Environment.shader"
+
+[Program.Fragment]
+
+    Entry           = "fragment"
+    Filename        = "Environment.shader"
+
