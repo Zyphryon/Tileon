@@ -35,7 +35,7 @@ struct ps_Input
 {
     float4 Position  : SV_POSITION;
     float4 World     : TEXCOORD0;   // world.xy, screen.xy
-	float4 Light     : TEXCOORD1;   // center.xy, radius || range, falloff
+    float4 Light     : TEXCOORD1;   // center.xy, radius || range, falloff
     float4 Color     : COLOR0;
 
 #if   defined(LIGHT_SPOT) 
@@ -55,11 +55,29 @@ float2 TessellateRect(uint VertexID)
     return kUnitRectCorners[VertexID];
 }
 
+float2 TessellateTriangle(uint VertexID)
+{
+    static const float2 kTriangleCorners[3] = {
+        float2(0,  0),
+        float2(1,  1),
+        float2(1, -1)
+    };
+    return kTriangleCorners[VertexID];
+}
+
 ps_Input vertex(vs_Input Input)
 {
     ps_Input Result;
 
+#if defined(LIGHT_SPOT)
+
+    const float2 Corner = TessellateTriangle(Input.VertexID);
+	
+#else
+
     const float2 Corner = TessellateRect(Input.VertexID);
+	
+#endif
 
 #if defined(LIGHT_SPOT)
 
@@ -86,21 +104,21 @@ ps_Input vertex(vs_Input Input)
 
 #endif
 
-	return Result;
+    return Result;
 }
 
 float4 fragment(ps_Input Input) : SV_Target0
 {
-	const float2 Relative   = Input.Light.xy - Input.World.xy;
-	const float  Distance   = length(Relative);
-	const float2 Distance2D = (Distance > 0.0001) ? Relative / Distance : float2(0.0, 0.0);
+    const float2 Relative   = Input.Light.xy - Input.World.xy;
+    const float  Distance   = length(Relative);
+    const float2 Distance2D = (Distance > 0.0001) ? Relative / Distance : float2(0.0, 0.0);
 
     float Attenuation = saturate(1.0 - pow(saturate(Distance / Input.Light.z), Input.Light.w));
 
 #if   defined(LIGHT_SPOT) 
 
     const float CosAngle = (Distance > 0.0001) ? dot(-Distance2D, Input.Spot.xy) : 1.0;
-	Attenuation	= Attenuation * smoothstep(Input.Spot.w, Input.Spot.z, CosAngle);
+    Attenuation	= Attenuation * smoothstep(Input.Spot.w, Input.Spot.z, CosAngle);
 
 #endif
 
@@ -113,7 +131,7 @@ float4 fragment(ps_Input Input) : SV_Target0
 	
     const float  NormalDotL = saturate(dot(Normal, normalize(float3(Distance2D, 0.5))));
 #else
-	const float  NormalDotL = 1.0;
+    const float  NormalDotL = 1.0;
 #endif
 
     return float4(Input.Color.rgb * (Attenuation * NormalDotL), Attenuation);

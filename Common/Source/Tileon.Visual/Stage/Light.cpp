@@ -12,8 +12,9 @@
 
 #include "Light.hpp"
 #include "Tileon.Visual/Component.hpp"
-#include "Tileon.World/Component/Extent.hpp"
-#include "Tileon.World/Component/Spatial.hpp"
+#include "Tileon.World/Component/Kinematic/Transform.hpp"
+#include "Tileon.World/Component/Spatial/Anchor.hpp"
+#include "Tileon.World/Component/Spatial/Extent.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -38,101 +39,84 @@ namespace Tileon::Visual::Stage
     {
         Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
 
-        const IntVector2 Origin(Director.GetPosition().GetBaseX(), Director.GetPosition().GetBaseY());
+        // Calculate the origin of the light stage based on the director's position.
+        const IntVector2 Origin(
+            Director.GetPosition().GetBaseX(),
+            Director.GetPosition().GetBaseY());
 
-        // Accumulate glow lights into the instance buffer.
-        // TODO: Frustum Culling
+        // Reset the light data for the current frame.
         mGlowlightData.clear();
+        mSpotlightData.clear();
 
+        // Apply the environment settings for the current frame.
         mQrDrawEnvironment.Run<const Environment>([&](ConstRef<Environment> Environment)
         {
-            // TODO: Prettier
-            AmbientLayout Effect;
-
-            const Vector2 SunDirection = Environment.GetSunDirection();
-
-            Effect.SunColor    = Math::Color::FromColor8(Environment.GetSunTint())
-                .WithIntensity(Environment.GetBrightness(), SunDirection.GetX());
-            Effect.SkyColor    = Math::Color::FromColor8(Environment.GetSkyTint())
-                .WithIntensity(Environment.GetBrightness(), SunDirection.GetY());
-            Effect.GroundColor = Math::Color::FromColor8(Environment.GetGroundTint())
+            auto [Data, Effect] =  Graphics.AllocateTransientBuffer<GpuAmbientLayout>(Graphic::Usage::Uniform, 1);
+            Data->SunColor    = Math::Color::FromColor8(Environment.GetSunTint())
+                .WithIntensity(Environment.GetBrightness(), Environment.GetSunDirection().GetX());
+            Data->SkyColor    = Math::Color::FromColor8(Environment.GetSkyTint())
+                .WithIntensity(Environment.GetBrightness(), Environment.GetSunDirection().GetY());
+            Data->GroundColor = Math::Color::FromColor8(Environment.GetGroundTint())
                 .WithIntensity(Environment.GetBrightness(), 0.0f);
 
             Encoder.SetPipeline(mPipelines[Enum::Cast(Technique::Environment)]->GetID());
             Encoder.SetTexture(0, Normal, Graphic::Sampler());
-            Encoder.SetUniform(1, Graphics.AllocateTransientBuffer<AmbientLayout>(Graphic::Usage::Uniform, Spanify(Effect)));
+            Encoder.SetUniform(1, Effect);
             Encoder.Draw(3, 0, 0);
             Encoder.ResetBindings();
         });
 
-        Encoder.SetUniform(
-            0, Graphics.AllocateTransientBuffer<Matrix4x4>(Graphic::Usage::Uniform, Spanify(Director.GetProjection())));
-
-        mQrDrawGlowlights.Run<const Sector, const Worldspace, const Glowlight, ConstPtr<Tint>>([&](
-            Sector               Sector,
-            ConstRef<Worldspace> Worldspace,
-            ConstRef<Glowlight>  Light,
-            ConstPtr<Tint>       Tint)
-        {
-            const Vector2 Offset(Sector - Origin);
-
-            const Color Color = Tint ? Math::Color::FromColor8(* Tint) : Color::White();
-
-            // TODO: Prettier
-            mGlowlightData.emplace_back(
-                Worldspace.GetTranslation() + Offset,
-                Light.GetRadius(),
-                Light.GetFalloff(),
-                Color * Light.GetIntensity());
-        });
-
-        // Accumulate spot lights into the instance buffer.
+        // Accumulate the glowlights in the scene and render them in a single batch.
         // TODO: Frustum Culling
-        mSpotlightData.clear();
-
-        mQrDrawSpotlights.Run<const Sector, const Worldspace, const Spotlight, ConstPtr<Tint>>([&](
-            Sector               Sector,
-            ConstRef<Worldspace> Worldspace,
-            ConstRef<Spotlight>  Light,
-            ConstPtr<Tint>       Tint)
+        mQrDrawGlowlights.Run<const Transform, const Glowlight, ConstPtr<IntColor8>>([&](
+            ConstRef<Transform> Transform,
+            ConstRef<Glowlight> Light,
+            ConstPtr<IntColor8> Tint)
         {
-            const Vector2 Offset(Sector - Origin);
+            const Vector2 Center = Transform.RebaseOnlyTranslation(Origin);
+            const Color   Color  = (Tint ? Math::Color::FromColor8(* Tint) : Color::White()) * Light.GetIntensity();
 
-            const Color Color = Tint ? Math::Color::FromColor8(* Tint) : Color::White();
-
-            // TODO: Prettier
-            mSpotlightData.emplace_back(
-                Worldspace.GetTranslation() + Offset,
-                Light.GetRange(),
-                Light.GetFalloff(),
-                Vector2::Normalize(Worldspace.GetBasisX()),
-                Vector2(Angle::Cosine(Light.GetInnerAngle()), Angle::Cosine(Light.GetOuterAngle())),
-                Color * Light.GetIntensity());
+            mGlowlightData.emplace_back(Center, Light.GetRadius(), Light.GetFalloff(), Color);
         });
 
-        // Draw the glow lights using the accumulated instance data.
-        if (!mGlowlightData.empty())
+        // Accumulate the spotlights in the scene and render them in a single batch.
+        // TODO: Frustum Culling
+        mQrDrawSpotlights.Run<const Transform, const Spotlight, ConstPtr<IntColor8>>([&](
+            ConstRef<Transform> Transform,
+            ConstRef<Spotlight> Light,
+            ConstPtr<IntColor8> Tint)
         {
-            const Graphic::Stream Instances
-                = Graphics.AllocateTransientBuffer<GlowlightLayout>(Graphic::Usage::Vertex, mGlowlightData);
+            const Vector2 Center = Transform.RebaseOnlyTranslation(Origin);
+            const Color   Color  = (Tint ? Math::Color::FromColor8(* Tint) : Color::White()) * Light.GetIntensity();
 
+            const Vector2 Direction = Vector2::Normalize(Transform.GetWorldspace().GetBasisX());
+            const Vector2 Angles    = Vector2(Angle::Cosine(Light.GetInnerAngle()), Angle::Cosine(Light.GetOuterAngle()));
+
+            mSpotlightData.emplace_back(Center, Light.GetRange(), Light.GetFalloff(), Direction, Angles, Color);
+        });
+
+        // Set the projection matrix for the light stage based on the director's position and viewport size.
+        const Graphic::Stream Projection = Graphics.AllocateTransientBuffer(
+            Graphic::Usage::Uniform, Spanify(Director.GetProjection()));
+        Encoder.SetUniform(0, Projection);
+
+        // Render the accumulated glowlights in batches to minimize draw calls and state changes.
+        if (const ConstSpan<GpuGlowlightLayout> Data = mGlowlightData; !Data.empty())
+        {
             Encoder.SetPipeline(mPipelines[Enum::Cast(Technique::Glowlight)]->GetID());
             Encoder.SetTexture(0, Normal, Graphic::Sampler());
-            Encoder.SetVertices(0, Instances);
-            Encoder.Draw(4, 0, 0, mGlowlightData.size());
+            Encoder.SetVertices(0, Graphics.AllocateTransientBuffer(Graphic::Usage::Vertex, Data));
+            Encoder.Draw(4, 0, 0, Data.size());
             Encoder.ResetBindings();
         }
 
-        // Draw the spot lights using the accumulated instance data.
-        if (!mSpotlightData.empty())
+        // Render the accumulated spotlights in batches to minimize draw calls and state changes.
+        if (const ConstSpan<GpuSpotlightLayout> Data = mSpotlightData; !Data.empty())
         {
-            const Graphic::Stream Instances
-                = Graphics.AllocateTransientBuffer<SpotlightLayout>(Graphic::Usage::Vertex, mSpotlightData);
-
             Encoder.SetPipeline(mPipelines[Enum::Cast(Technique::Spotlight)]->GetID());
             Encoder.SetTexture(0, Normal, Graphic::Sampler());
-            Encoder.SetVertices(0, Instances);
-            Encoder.Draw(4, 0, 0, mSpotlightData.size());
+            Encoder.SetVertices(0, Graphics.AllocateTransientBuffer(Graphic::Usage::Vertex, Data));
+            Encoder.Draw(3, 0, 0, Data.size());
             Encoder.ResetBindings();
         }
     }
@@ -154,16 +138,16 @@ namespace Tileon::Visual::Stage
             {
                 const Real32 Radius = Light.GetRadius();
                 Actor.Set(Extent { Vector2(-Radius, -Radius), Vector2(Radius * 2.0f, Radius * 2.0f) });
-                Actor.Set(Origin { Vector2(0.0f, 0.0f) });
+                Actor.Set(Anchor { Vector2(0.0f, 0.0f) });
             });
 
         // Observes changes to the light cone component and updates the corresponding spatial properties of the actor.
-        Scene.CreateObserver<Scene::DSL::In<const Worldspace, const Spotlight>>(
+        Scene.CreateObserver<Scene::DSL::In<const Transform, const Spotlight>>(
             "Visual::Light::ObsUpdateSpotlightBoundaries",
             EcsOnSet,
-            [](Scene::Entity Actor, ConstRef<Worldspace> Worldspace, ConstRef<Spotlight> Light)
+            [](Scene::Entity Actor, ConstRef<Transform> Transform, ConstRef<Spotlight> Light)
             {
-                const Angle  Theta = Vector2::Normalize(Worldspace.GetBasisX()).GetAngle();
+                const Angle  Theta = Vector2::Normalize(Transform.GetWorldspace().GetBasisX()).GetAngle();
                 const Real32 Range = Light.GetRange();
 
                 const Angle A1 = Theta - Light.GetOuterAngle();
@@ -198,18 +182,16 @@ namespace Tileon::Visual::Stage
                 }
 
                 Actor.Set(Extent { Vector2(MinX, MinY), Vector2(MaxX - MinX, MaxY - MinY) });
-                Actor.Set(Origin { Vector2(0.0f, 0.0f) });
+                Actor.Set(Anchor { Vector2(0.0f, 0.0f) });
             });
 
         // Creates the queries for the light stage.
         mQrDrawGlowlights = Scene.CreateQuery<
-            Scene::DSL::Up<const Sector>,           // TODO: Remove Sector
-            Scene::DSL::In<const Worldspace, const Glowlight, ConstPtr<Tint>>
+            Scene::DSL::In<const Transform, const Glowlight, ConstPtr<IntColor8>>
         >("Visual::Light::DrawGlowlights", Scene::Cache::Auto);
 
         mQrDrawSpotlights = Scene.CreateQuery<
-            Scene::DSL::Up<const Sector>,           // TODO: Remove Sector
-            Scene::DSL::In<const Worldspace, const Spotlight, ConstPtr<Tint>>
+            Scene::DSL::In<const Transform, const Spotlight, ConstPtr<IntColor8>>
         >("Visual::Light::DrawSpotlights", Scene::Cache::Auto);
 
         mQrDrawEnvironment = Scene.CreateQuery<

@@ -12,7 +12,10 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Component/Extent.hpp"
-#include "Component/Lifecycle.hpp"
-#include "Component/Spatial.hpp"
-#include "Component/Velocity.hpp"
+#include "Component/Condition/Lifecycle.hpp"
+#include "Component/Kinematic/Pose.hpp"
+#include "Component/Kinematic/Transform.hpp"
+#include "Component/Kinematic/Velocity.hpp"
+#include "Component/Spatial/Anchor.hpp"
+#include "Component/Spatial/Bounds.hpp"
+#include "Component/Spatial/Extent.hpp"

@@ -11,7 +11,8 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Supervisor.hpp"
-#include "Component/Lifecycle.hpp"
+#include "Component/Condition/Lifecycle.hpp"
+#include "Component/Kinematic/Transform.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -85,7 +86,7 @@ namespace Tileon
 
                         Actor.Children([this](Scene::Entity Child)
                         {
-                            RemoveEntityOnCell(Child, Child.Get<Volume>().GetCenter());
+                            RemoveEntityOnCell(Child, Child.Get<Bounds>().GetRect().GetCenter());
                         });
                         Actor.Destruct();
                     }
@@ -188,7 +189,8 @@ namespace Tileon
 
             if (Actor.IsValid())
             {
-                Actor.Emplace<Sector>(RegionX * Region::kTilesPerX, RegionY * Region::kTilesPerY);
+                const IntVector2 Origin(RegionX * Region::kTilesPerX, RegionY * Region::kTilesPerY);
+                Actor.Emplace<Transform>(Matrix3x2::Identity(), Origin);
             }
         }
         return Actor;

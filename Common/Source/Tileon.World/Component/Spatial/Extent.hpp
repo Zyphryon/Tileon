@@ -20,54 +20,54 @@
 
 namespace Tileon
 {
-    /// \brief Encapsulates the linear and angular velocity of an entity in the world.
-    class Velocity final
+    /// \brief Represents the spatial extent of an entity in the world, defined by an offset and size.
+    class Extent final
     {
     public:
 
-        /// \brief Default constructor initializing linear and angular velocity to zero.
-        ZYPHRYON_INLINE Velocity() = default;
+        /// \brief Default constructor initializing the extent with zero offset and size.
+        ZYPHRYON_INLINE Extent() = default;
 
-        /// \brief Constructs a velocity with the specified linear and angular velocities.
+        /// \brief Constructs an extent with the specified offset and size.
         ///
-        /// \param Linear  The linear velocity vector, representing movement in the x and y directions.
-        /// \param Angular The angular velocity, representing rotation.
-        ZYPHRYON_INLINE Velocity(Vector2 Linear, Angle Angular)
-            : mLinear  { Linear },
-              mAngular { Angular }
+        /// \param Offset The offset to set for the extent, representing the position of the entity relative to its placement.
+        /// \param Size   The size to set for the extent, representing the dimensions of the entity in the world.
+        ZYPHRYON_INLINE Extent(Vector2 Offset, Vector2 Size)
+            : mOffset { Offset },
+              mSize   { Size }
         {
         }
 
-        /// \brief Sets the linear velocity of the entity.
+        /// \brief Sets the offset of the extent.
         ///
-        /// \param Linear The linear velocity to set.
-        ZYPHRYON_INLINE void SetLinear(Vector2 Linear)
+        /// \param Offset The offset to set for the extent.
+        ZYPHRYON_INLINE void SetOffset(Vector2 Offset)
         {
-            mLinear = Linear;
+            mOffset = Offset;
         }
 
-        /// \brief Gets the linear velocity of the entity.
+        /// \brief Gets the offset of the extent.
         ///
-        /// \return The linear velocity.
-        ZYPHRYON_INLINE Vector2 GetLinear() const
+        /// \return The offset of the extent.
+        ZYPHRYON_INLINE Vector2 GetOffset() const
         {
-            return mLinear;
+            return mOffset;
         }
 
-        /// \brief Sets the angular velocity of the entity.
+        /// \brief Sets the size of the extent.
         ///
-        /// \param Angular The angular velocity to set.
-        ZYPHRYON_INLINE void SetAngular(Angle Angular)
+        /// \param Size The size to set for the extent.
+        ZYPHRYON_INLINE void SetSize(Vector2 Size)
         {
-            mAngular = Angular;
+            mSize = Size;
         }
 
-        /// \brief Gets the angular velocity of the entity.
+        /// \brief Gets the size of the extent.
         ///
-        /// \return The angular velocity.
-        ZYPHRYON_INLINE Angle GetAngular() const
+        /// \return The size of the extent.
+        ZYPHRYON_INLINE Vector2 GetSize() const
         {
-            return mAngular;
+            return mSize;
         }
 
         /// \brief Serializes the state of the object to or from the specified archive.
@@ -76,8 +76,8 @@ namespace Tileon
         template<typename Serializer>
         ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
         {
-            Archive.SerializeObject(mLinear);
-            Archive.SerializeObject(mAngular);
+            Archive.SerializeObject(mOffset);
+            Archive.SerializeObject(mSize);
         }
 
     private:
@@ -85,7 +85,7 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Vector2 mLinear;
-        Angle   mAngular;
+        Vector2 mOffset;
+        Vector2 mSize;
     };
 }

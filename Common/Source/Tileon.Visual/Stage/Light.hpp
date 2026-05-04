@@ -65,7 +65,7 @@ namespace Tileon::Visual::Stage
         void OnLoad(Ref<Content::Service> Content);
 
         /// \brief Represents the per-instance data for the environment lighting.
-        struct AmbientLayout final
+        struct GpuAmbientLayout final
         {
             /// The color of the sun, represented as RGB + intensity, A = SunDirection.X.
             Color SunColor;
@@ -78,7 +78,7 @@ namespace Tileon::Visual::Stage
         };
 
         /// \brief Represents the per-instance data for a glow light.
-        struct GlowlightLayout final
+        struct GpuGlowlightLayout final
         {
             /// The center position of the radial light in world space.
             Vector2 Center;
@@ -94,7 +94,7 @@ namespace Tileon::Visual::Stage
         };
 
         /// \brief Represents the per-instance data for a spot light.
-        struct SpotlightLayout final
+        struct GpuSpotlightLayout final
         {
             /// The center position of the cone light in world space.
             Vector2   Center;
@@ -120,15 +120,15 @@ namespace Tileon::Visual::Stage
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Pipelines               mPipelines;
-        Vector<GlowlightLayout> mGlowlightData;
-        Vector<SpotlightLayout> mSpotlightData;
+        Pipelines                  mPipelines;
+        Vector<GpuGlowlightLayout> mGlowlightData;
+        Vector<GpuSpotlightLayout> mSpotlightData;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Scene::Query            mQrDrawGlowlights;
-        Scene::Query            mQrDrawSpotlights;
-        Scene::Query            mQrDrawEnvironment;
+        Scene::Query               mQrDrawGlowlights;
+        Scene::Query               mQrDrawSpotlights;
+        Scene::Query               mQrDrawEnvironment;
     };
 }

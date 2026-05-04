@@ -12,8 +12,8 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Component/Spatial.hpp"
 #include "Coordinate.hpp"
+#include "Component/Spatial/Bounds.hpp"
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Scene/Service.hpp>
 
@@ -33,10 +33,10 @@ namespace Tileon
         /// \brief Default filename format for storing region data.
         static constexpr ConstStr8 kRegionFilename       = "Resources://World/{}_{}.region";
 
-        /// \brief Maximum depth of the cell hierarchy (in tiles).
+        /// \brief Extent of the cell hierarchy for loose spatial partitioning (in tiles).
         static constexpr UInt32    kHierarchyLooseExtent = 8;
 
-        /// \brief Origin offset for the cell hierarchy (in tiles).
+        /// \brief Extent of the cell hierarchy for tight spatial partitioning (in tiles).
         static constexpr UInt32    kHierarchyTightExtent = 4;
 
     public:
@@ -119,11 +119,11 @@ namespace Tileon
 
             ForEachEntity(Hitbox, [&](Scene::Entity Actor)
             {
-                const Volume Volume = Actor.Get<Tileon::Volume>();
+                const IntRect AABB = Actor.Get<Bounds>().GetRect();
 
-                if (const SInt32 ActorMaxY = Volume.GetMaximumY(); ActorMaxY > MaxY)
+                if (const SInt32 ActorMaxY = AABB.GetMaximumY(); ActorMaxY > MaxY)
                 {
-                    if (Volume.Test(Hitbox))
+                    if (AABB.Test(Hitbox))
                     {
                         MaxY = ActorMaxY;
                         Result = Actor;
@@ -185,7 +185,7 @@ namespace Tileon
                         ForEach([&](UInt64 ID)
                         {
                             const Scene::Entity Actor = Scene.GetEntity(ID);
-                            AABB = IntRect::Union(AABB, Actor.Get<Volume>());
+                            AABB = IntRect::Union(AABB, Actor.Get<Bounds>().GetRect());
                         });
                         Boundaries = AABB;
                     }

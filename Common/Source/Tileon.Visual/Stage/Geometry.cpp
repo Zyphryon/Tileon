@@ -13,8 +13,9 @@
 #include "Geometry.hpp"
 #include "Tileon.Visual/Component.hpp"
 #include "Tileon.Visual/Depth.hpp"
-#include "Tileon.World/Component/Extent.hpp"
-#include "Tileon.World/Component/Spatial.hpp"
+#include "Tileon.World/Component/Kinematic/Transform.hpp"
+#include "Tileon.World/Component/Spatial/Anchor.hpp"
+#include "Tileon.World/Component/Spatial/Extent.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -46,36 +47,32 @@ namespace Tileon::Visual::Stage
             // Draw sprite entities.
             // TODO: Frustum Culling
             mCanvas.SetPipeline(mPipelines[Enum::Cast(Technique::SpriteOpaqueWithNormal)]);
-            mQrDrawSprites.Run<const Sector, const Worldspace, const Extent, const Appaerance, ConstPtr<Tint>>([&](
-                Sector               Sector,
-                ConstRef<Worldspace> Worldspace,
+            mQrDrawSprites.Run<const Transform, const Extent, const Appaerance, ConstPtr<IntColor8>>([&](
+                ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
                 ConstRef<Appaerance> Appearance,
-                ConstPtr<Tint>       Tint)
+                ConstPtr<IntColor8>  Tint)
             {
                 const IntColor8 Color  = Tint ? (* Tint) : IntColor8::White();
-                const Real32    Depth  = Depth::Midground(Frustum, Sector, Worldspace.GetTranslation());
-                const Vector2   Offset(Sector - Origin);
+                const Real32    Depth = Depth::Midground(Frustum, Transform.GetOrigin(), Transform.GetWorldspace());
 
                 const Render::Sprite Command(Appearance.GetMaterial(), Extent.GetSize(), Color, Appearance.GetSource());
-                mCanvas.DrawSprite(Command, Worldspace::WithTranslation(Worldspace, Offset), Depth);
+                mCanvas.DrawSprite(Command, Transform.Rebase(Origin), Depth);
             });
 
             // Draw text entities.
             // TODO: Frustum Culling
-            mQrDrawTexts.Run<const Sector, const Worldspace, const Typeface, const Text, ConstPtr<Tint>>([&](
-                Sector               Sector,
-                ConstRef<Worldspace> Worldspace,
-                ConstRef<Typeface>   Typeface,
-                ConstRef<Text>       Text,
-                ConstPtr<Tint>       Tint)
+            mQrDrawTexts.Run<const Transform, const Typeface, const Text, ConstPtr<IntColor8>>([&](
+                ConstRef<Transform> Transform,
+                ConstRef<Typeface>  Typeface,
+                ConstRef<Text>      Text,
+                ConstPtr<IntColor8> Tint)
             {
                 const IntColor8 Color = Tint ? (* Tint) : IntColor8::White();
-                const Real32    Depth = Depth::Midground(Frustum, Sector, Worldspace.GetTranslation());
-                const Vector2   Offset(Sector - Origin);
+                const Real32    Depth = Depth::Midground(Frustum, Transform.GetOrigin(), Transform.GetWorldspace());
 
                 const Render::Text Command(Typeface.GetFont(), Typeface.GetSize(), Color, Text.GetSpacing());
-                mCanvas.DrawText(Command, Text.GetContent(), Worldspace::WithTranslation(Worldspace, Offset), Depth, Text.GetEffect());
+                mCanvas.DrawText(Command, Text.GetContent(), Transform.Rebase(Origin), Depth, Text.GetEffect());
             });
 
             // Draw tile regions, culling against the view frustum to minimize overdraw.
@@ -106,7 +103,7 @@ namespace Tileon::Visual::Stage
 
     void Geometry::OnRegister(Ref<Scene::Service> Scene)
     {
-        Scene.GetComponent<Tint>("Tint").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<IntColor8>("Tint").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Animator>("Animator");
         Scene.GetComponent<Appaerance>("Appaerance");
         Scene.GetComponent<Animation>("Animation").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
@@ -163,13 +160,13 @@ namespace Tileon::Visual::Stage
             {
                 if (ConstTracker<::Render::Font> Font = Typeface.GetFont(); Font && Font->HasFinished())
                 {
-                    const Pivot Pivot     = Text.GetPivot();
+                    const Pivot   Pivot   = Text.GetPivot();
                     const Vector2 Measure = Font->Measure(Text.GetContent(), Typeface.GetSize(), Text.GetSpacing());
-                    const Vector2 Anchor(Measure.GetX() * Pivot.GetX(), Measure.GetY() * Pivot.GetY());
+                    const Vector2 Value(Measure.GetX() * Pivot.GetX(), Measure.GetY() * Pivot.GetY());
 
                     const Rect AABB = Font->Enclose(Text.GetContent(), Typeface.GetSize(), Text.GetSpacing());
                     Actor.Set(Extent { AABB.GetPosition(), AABB.GetSize() });
-                    Actor.Set(Origin { Anchor });
+                    Actor.Set(Anchor { Value });
                 }
             });
 
@@ -189,13 +186,11 @@ namespace Tileon::Visual::Stage
 
         // Create the queries for retrieving renderable components.
         mQrDrawSprites = Scene.CreateQuery<
-            Scene::DSL::Up<const Sector>,           // TODO: Remove Sector
-            Scene::DSL::In<const Worldspace, const Extent, const Appaerance, ConstPtr<Tint>>
+            Scene::DSL::In<const Transform, const Extent, const Appaerance, ConstPtr<IntColor8>>
         >("Visual::Geometry::DrawSprites", Scene::Cache::Auto);
 
         mQrDrawTexts = Scene.CreateQuery<
-            Scene::DSL::Up<const Sector>,           // TODO: Remove Sector
-            Scene::DSL::In<const Worldspace, const Typeface, const Text, ConstPtr<Tint>>
+            Scene::DSL::In<const Transform, const Typeface, const Text, ConstPtr<IntColor8>>
         >("Visual::Geometry::DrawTexts", Scene::Cache::Auto);
 
         mQrDrawRegions = Scene.CreateQuery<

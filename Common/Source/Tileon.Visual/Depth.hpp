@@ -76,13 +76,16 @@ namespace Tileon::Visual
 
         /// \brief Calculates the depth value for the midground layer based on the position within the frustum.
         ///
-        /// \param Frustum The rectangular area representing the current view frustum.
-        /// \param Shift   The integer shift representing the position within the frustum, typically in tile coordinates.
-        /// \param Offset  The offset to apply to the shift, allowing for sub-tile adjustments.
-        /// \param Bias    An optional bias value to slightly adjust the depth, allowing for fine tuning of rendering order.
+        /// \param Frustum    The rectangular area representing the current view frustum.
+        /// \param Shift      The integer shift representing the position within the frustum, typically in tile coordinates.
+        /// \param Worldspace The worldspace transformation matrix, used to calculate the offset for the position within the frustum.
+        /// \param Bias       An optional bias value to slightly adjust the depth, allowing for fine tuning of rendering order.
         /// \return The calculated depth value for the midground layer.
-        ZYPHRYON_INLINE static constexpr Real32 Midground(IntRect Frustum, IntVector2 Shift, Vector2 Offset, UInt8 Bias = 0)
+        ZYPHRYON_INLINE static constexpr Real32 Midground(
+            IntRect Frustum, IntVector2 Shift, ConstRef<Matrix3x2> Worldspace, UInt8 Bias = 0)
         {
+            const Vector2 Offset = Worldspace.GetTranslation();
+
             const Real32 LocalX = static_cast<Real32>(Shift.GetX() - Frustum.GetMinimumX()) + Offset.GetX();
             const Real32 LocalY = static_cast<Real32>(Shift.GetY() - Frustum.GetMinimumY()) + Offset.GetY();
             return Midground(Frustum, LocalX, LocalY, Bias);

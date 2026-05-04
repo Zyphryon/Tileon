@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Visual/Component/Material/Tint.hpp"
+#include <Zyphryon.Math/Color.hpp>
 #include <Zyphryon.Math/Vector2.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -29,9 +29,9 @@ namespace Tileon::Visual
         /// \brief Default constructor initializing the environment with default values.
         ZYPHRYON_INLINE Environment()
             : mSunDirection { Vector2::UnitY() },
-              mSunTint      { Tint::White() },
-              mSkyTint      { Tint::White() },
-              mGroundTint   { Tint::White() },
+              mSunTint      { IntColor8::White() },
+              mSkyTint      { IntColor8::White() },
+              mGroundTint   { IntColor8::White() },
               mBrightness   { 1.0f }
         {
         }
@@ -39,11 +39,11 @@ namespace Tileon::Visual
         /// \brief Constructs an environment with the specified parameters.
         ///
         /// \param SunDirection The direction of the sun, defining the angle of sunlight in the scene.
-        /// \param SunTint      The tint of the sun, defining the color of direct sunlight in the scene.
-        /// \param SkyTint      The tint of the sky, defining the color of ambient light coming from the sky in the scene.
-        /// \param GroundTint   The tint of the ground, defining the color of ambient light reflected from the ground in the scene.
+        /// \param SunTint      The tint of direct sunlight in the scene.
+        /// \param SkyTint      The tint of ambient light coming from the sky in the scene.
+        /// \param GroundTint   The tint of ambient light reflected from the ground in the scene.
         /// \param Brightness   The overall brightness of the environment, defining the intensity of all lighting effects in the scene.
-        ZYPHRYON_INLINE Environment(Vector2 SunDirection, Tint SunTint, Tint SkyTint, Tint GroundTint, Real32 Brightness)
+        ZYPHRYON_INLINE Environment(Vector2 SunDirection, IntColor8 SunTint, IntColor8 SkyTint, IntColor8 GroundTint, Real32 Brightness)
             : mSunDirection { SunDirection },
               mSunTint      { SunTint },
               mSkyTint      { SkyTint },
@@ -71,7 +71,7 @@ namespace Tileon::Visual
         /// \brief Sets the tint of the sun.
         ///
         /// \param Tint The new tint of the sun.
-        ZYPHRYON_INLINE void SetSunTint(Tint Tint)
+        ZYPHRYON_INLINE void SetSunTint(IntColor8 Tint)
         {
             mSunTint = Tint;
         }
@@ -79,7 +79,7 @@ namespace Tileon::Visual
         /// \brief Gets the current tint of the sun.
         ///
         /// \return The current tint of the sun.
-        ZYPHRYON_INLINE Tint GetSunTint() const
+        ZYPHRYON_INLINE IntColor8 GetSunTint() const
         {
             return mSunTint;
         }
@@ -87,7 +87,7 @@ namespace Tileon::Visual
         /// \brief Sets the tint of the sky.
         ///
         /// \param Tint The new tint of the sky.
-        ZYPHRYON_INLINE void SetSkyTint(Tint Tint)
+        ZYPHRYON_INLINE void SetSkyTint(IntColor8 Tint)
         {
             mSkyTint = Tint;
         }
@@ -95,7 +95,7 @@ namespace Tileon::Visual
         /// \brief Gets the current tint of the sky.
         ///
         /// \return The current tint of the sky.
-        ZYPHRYON_INLINE Tint GetSkyTint() const
+        ZYPHRYON_INLINE IntColor8 GetSkyTint() const
         {
             return mSkyTint;
         }
@@ -103,7 +103,7 @@ namespace Tileon::Visual
         /// \brief Sets the tint of the ground.
         ///
         /// \param Tint The new tint of the ground.
-        ZYPHRYON_INLINE void SetGroundTint(Tint Tint)
+        ZYPHRYON_INLINE void SetGroundTint(IntColor8 Tint)
         {
             mGroundTint = Tint;
         }
@@ -111,7 +111,7 @@ namespace Tileon::Visual
         /// \brief Gets the current tint of the ground.
         ///
         /// \return The current tint of the ground.
-        ZYPHRYON_INLINE Tint GetGroundTint() const
+        ZYPHRYON_INLINE IntColor8 GetGroundTint() const
         {
             return mGroundTint;
         }
@@ -150,10 +150,10 @@ namespace Tileon::Visual
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Vector2 mSunDirection;
-        Tint    mSunTint;
-        Tint    mSkyTint;
-        Tint    mGroundTint;
-        Real32  mBrightness;
+        Vector2   mSunDirection;
+        IntColor8 mSunTint;
+        IntColor8 mSkyTint;
+        IntColor8 mGroundTint;
+        Real32    mBrightness;
     };
 }

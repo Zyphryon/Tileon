@@ -13,9 +13,9 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Component/Sprite/Animator.hpp"
-#include "Component/Material/Tint.hpp"
 #include "Tileon.World/Repository.hpp"
 #include <Zyphryon.Graphic/Material.hpp>
+#include <Zyphryon.Math/Color.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -50,7 +50,7 @@ namespace Tileon::Visual
             UInt8                       Keyframe { 0 };
 
             /// \brief The tint color applied to the terrain when rendering.
-            Tint                        Tint     { Tint::White() };
+            IntColor8                   Tint     { IntColor8::White() };
 
             /// \brief The material cache used for rendering the terrain.
             Tracker<Graphic::Material>  Material;
