@@ -34,15 +34,12 @@ struct vs_Input
 struct ps_Input
 {
     float4 Position  : SV_POSITION;
-    float2 World     : TEXCOORD0;
-	float2 Center    : TEXCOORD1;
+    float4 World     : TEXCOORD0;   // world.xy, screen.xy
+	float4 Light     : TEXCOORD1;   // center.xy, radius || range, falloff
     float4 Color     : COLOR0;
-    float2 Screen    : TEXCOORD2;
-	float2 Extra     : TEXCOORD3;	// radius || range, falloff
-	
+
 #if   defined(LIGHT_SPOT) 
-    float2 Direction : TEXCOORD4;
-    float2 Cone      : TEXCOORD5;
+    float4 Spot      : TEXCOORD2;   // direction.xy, angles.xy
 #endif
 
 };
@@ -63,19 +60,29 @@ ps_Input vertex(vs_Input Input)
     ps_Input Result;
 
     const float2 Corner = TessellateRect(Input.VertexID);
-    const float2 World  = Input.Params0.xy + (Corner * 2.0 - 1.0) * Input.Params0.z;
+
+#if defined(LIGHT_SPOT)
+
+    const float Spread = Input.Params0.z * sqrt(1.0 - Input.Params1.w * Input.Params1.w) / Input.Params1.w;
+
+    const float2 Axis  = Input.Params1.xy * (Corner.x * Input.Params0.z);
+    const float2 Side  = float2(-Input.Params1.y, Input.Params1.x) * (Corner.y * 2.0 - 1.0) * (Spread * Corner.x);
+    const float2 World = Input.Params0.xy + Axis + Side;
+
+#else
+
+    const float2 World = Input.Params0.xy + (Corner * 2.0 - 1.0) * Input.Params0.z;
+
+#endif
 
     Result.Position = mul(u_Camera, float4(World, 0.0, 1.0));
-    Result.World    = World;
-    Result.Center   = Input.Params0.xy;
+    Result.World    = float4(World, Result.Position.xy * float2(0.5, -0.5) + 0.5);
+    Result.Light    = Input.Params0;
     Result.Color    = Input.Color;
-    Result.Screen   = Result.Position.xy * float2(0.5, -0.5) + 0.5;
-    Result.Extra    = Input.Params0.zw;
 		
 #if   defined(LIGHT_SPOT) 
 
-    Result.Direction = Input.Params1.xy;
-    Result.Cone      = Input.Params1.zw;
+    Result.Spot     = Input.Params1;
 
 #endif
 
@@ -84,23 +91,23 @@ ps_Input vertex(vs_Input Input)
 
 float4 fragment(ps_Input Input) : SV_Target0
 {
-	const float2 Relative   = Input.Center - Input.World;
+	const float2 Relative   = Input.Light.xy - Input.World.xy;
 	const float  Distance   = length(Relative);
 	const float2 Distance2D = (Distance > 0.0001) ? Relative / Distance : float2(0.0, 0.0);
 
-    float Attenuation = saturate(1.0 - pow(saturate(Distance / Input.Extra.x), Input.Extra.y));
+    float Attenuation = saturate(1.0 - pow(saturate(Distance / Input.Light.z), Input.Light.w));
 
 #if   defined(LIGHT_SPOT) 
 
-    const float CosAngle = (Distance > 0.0001) ? dot(-Distance2D, Input.Direction) : 1.0;
-	Attenuation	= Attenuation * smoothstep(Input.Cone.y, Input.Cone.x, CosAngle);
+    const float CosAngle = (Distance > 0.0001) ? dot(-Distance2D, Input.Spot.xy) : 1.0;
+	Attenuation	= Attenuation * smoothstep(Input.Spot.w, Input.Spot.z, CosAngle);
 
 #endif
 
     clip(Attenuation - 0.001);
-	
+
 #if   defined(ENABLE_NORMAL_MAPPING)
-    const float2 NormalXY   = NormalTexture.Sample(LinearSampler, Input.Screen).rg * 2.0 - 1.0;
+    const float2 NormalXY   = NormalTexture.Sample(LinearSampler, Input.World.zw).rg * 2.0 - 1.0;
     const float  NormalZ    = sqrt(saturate(1.0 - dot(NormalXY, NormalXY)));
     const float3 Normal     = normalize(float3(NormalXY, NormalZ));
 	
