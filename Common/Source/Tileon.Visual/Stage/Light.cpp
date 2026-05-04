@@ -60,10 +60,13 @@ namespace Tileon::Visual::Stage
 
             Encoder.SetPipeline(mPipelines[Enum::Cast(Technique::Environment)]->GetID());
             Encoder.SetTexture(0, Normal, Graphic::Sampler());
-            Encoder.SetUniform(0, Graphics.AllocateTransientBuffer<AmbientLayout>(Graphic::Usage::Uniform, Spanify(Effect)));
+            Encoder.SetUniform(1, Graphics.AllocateTransientBuffer<AmbientLayout>(Graphic::Usage::Uniform, Spanify(Effect)));
             Encoder.Draw(3, 0, 0);
             Encoder.ResetBindings();
         });
+
+        Encoder.SetUniform(
+            0, Graphics.AllocateTransientBuffer<Matrix4x4>(Graphic::Usage::Uniform, Spanify(Director.GetProjection())));
 
         mQrDrawGlowlights.Run<const Sector, const Worldspace, const Glowlight, ConstPtr<Tint>>([&](
             Sector               Sector,

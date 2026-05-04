@@ -14,7 +14,6 @@
 
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Graphic/Encoder.hpp>
-#include <Zyphryon.Graphic/Service.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]

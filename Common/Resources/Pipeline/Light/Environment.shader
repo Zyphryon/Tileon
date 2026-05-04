@@ -13,7 +13,7 @@ SamplerState LinearSampler : register(s0);
 
 // Parameters
 
-cbuffer cb_Effect : register(b0)
+cbuffer cb_Effect : register(b1)
 {
     float4 u_SunColor;      // RGB = Color * Intensity, A = Sun Direction X
 	float4 u_SkyColor;		// RGB = Color * Intensity, A = Sun Direction Y
