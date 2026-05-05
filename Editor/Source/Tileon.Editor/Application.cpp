@@ -30,7 +30,7 @@ namespace Tileon::Editor
     {
         // Set up resource management system and asset path.
         ConstTracker<Content::Service> Content = GetService<Content::Service>();
-        Content->AddMount("Resources", Tracker<Content::Disk>::Create("C:\\Users\\Wolftein\\Workspace\\Aurora-Game-Resources"));
+        Content->AddMount("Resources", Tracker<Content::Disk>::Create("Resources"));
 
         // Initialize the ImGui frontend for rendering the user interface.
         mFrontend.Initialize(* this, GetDevice());
