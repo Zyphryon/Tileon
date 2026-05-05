@@ -38,6 +38,15 @@ namespace Tileon::Editor
 
     private:
 
+        /// \brief Initializes the user interface theme, setting up colors and styles for the editor's appearance.
+        void InitializeTheme();
+
+        /// \brief Sets the dark theme for the user interface.
+        void SetDarkTheme();
+
+        /// \brief Sets the light theme for the user interface.
+        void SetLightTheme();
+
         /// \brief Draws the user interface, rendering any relevant information and controls for the user.
         ///
         /// \param Time The time elapsed since the last tick.

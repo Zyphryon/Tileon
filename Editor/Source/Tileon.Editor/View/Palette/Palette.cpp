@@ -22,7 +22,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Palette::Palette(Ref<Context> Context)
-        : Activity    { Context, "Palette", true },
+        : Activity    { Context, "Palette" },
           mRepository { Context.GetRepository() },
           mTileset    { Context.GetTileset() },
           mSelection  { 0 }
@@ -39,7 +39,7 @@ namespace Tileon::Editor::View
 
         if (Composer.Begin(GetTitle(), mVisible))
         {
-            const Real32 Padding = -(ImGui::GetFrameHeightWithSpacing() + 8.0f);
+            const Real32 Padding = -(Composer.GetFrameHeightWithSpacing() + 8.0f);
 
             Composer.BeginChild("##list_panel", ImVec2(180.0f, Padding), ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders);
             DrawListPanel(Composer);
@@ -191,23 +191,9 @@ namespace Tileon::Editor::View
         Ref<Animation> Animation = Entry.Animation;
 
         // Draw the add frame button for the animation, and disable it when the animation is full.
-        const Bool WasFull = Animation.IsFull();
-
-        if (WasFull)
-        {
-            Composer.PushStyleColor(ImGuiCol_Button,        ImVec4(0.30f, 0.30f, 0.30f, 1.0f));
-            Composer.PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.30f, 0.30f, 1.0f));
-            Composer.PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.30f, 0.30f, 0.30f, 1.0f));
-        }
-
-        if (Composer.Button("+ Add Frame", -1.0f) && !WasFull)
+        if (Composer.DisabledButton("+ Add Frame", Animation.IsFull(), -1.0f))
         {
             Animation.Insert(Rect(0.0f, 0.0f, 0.0f, 0.0f), 0.1f);
-        }
-
-        if (WasFull)
-        {
-            Composer.PopStyleColor(3);
         }
 
         Composer.Spacing();
@@ -374,15 +360,14 @@ namespace Tileon::Editor::View
 
     void Palette::DrawBottomBar(Ref<UI::Composer> Composer)
     {
-        const Real32     BarHeight = ImGui::GetFrameHeightWithSpacing() + 4.0f;
-        constexpr ImVec4 BarColor  = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
+        const Real32 BarHeight = Composer.GetFrameHeightWithSpacing() + 4.0f;
 
-        Composer.PushStyleColor(ImGuiCol_ChildBg, BarColor);
+        Composer.PushStyleColor(ImGuiCol_ChildBg, Composer.GetStyleColorVec4(ImGuiCol_MenuBarBg));
         Composer.BeginChild("##status_bar", ImVec2(0.0f, BarHeight), ImGuiChildFlags_None);
         Composer.PopStyleColor();
 
         // Vertically center text inside the bar.
-        const Real32 PadY = (BarHeight - ImGui::GetTextLineHeight()) * 0.5f - Composer.GetStyle().ItemSpacing.y * 0.5f;
+        const Real32 PadY = (BarHeight - Composer.GetTextLineHeight()) * 0.5f - Composer.GetStyle().ItemSpacing.y * 0.5f;
         Composer.SetCursorPosY(PadY);
 
         if (mRepository.HasTerrain(mSelection))
@@ -443,3 +428,4 @@ namespace Tileon::Editor::View
         Composer.TextDisabled(Message);
     }
 }
+

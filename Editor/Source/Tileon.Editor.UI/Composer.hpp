@@ -12,6 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+#include "Icon.hpp"
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <Zyphryon.Graphic/Common.hpp>
@@ -108,6 +109,11 @@ namespace Tileon::Editor::UI
             return ImGui::GetCursorScreenPos();
         }
 
+        ZYPHRYON_INLINE Real32 GetFrameHeightWithSpacing() const
+        {
+            return ImGui::GetFrameHeightWithSpacing();
+        }
+
         ZYPHRYON_INLINE Real32 GetTextLineHeight() const
         {
             return ImGui::GetTextLineHeight();
@@ -193,6 +199,16 @@ namespace Tileon::Editor::UI
             return ImGui::GetWindowDrawList();
         }
 
+        ZYPHRYON_INLINE void BeginDisabled(Bool Disabled = true)
+        {
+            ImGui::BeginDisabled(Disabled);
+        }
+
+        ZYPHRYON_INLINE void EndDisabled()
+        {
+            ImGui::EndDisabled();
+        }
+
         ZYPHRYON_INLINE void Header(ConstStr8 Label)
         {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.70f, 0.85f, 1.0f));
@@ -271,6 +287,7 @@ namespace Tileon::Editor::UI
 
         ZYPHRYON_INLINE void PushStyleColor(ImGuiCol Index, ImVec4 Color)
         {
+
             ImGui::PushStyleColor(Index, Color);
         }
 
@@ -287,6 +304,17 @@ namespace Tileon::Editor::UI
         ZYPHRYON_INLINE Bool Button(ConstStr8 Label, Real32 Width = 0.0f, Real32 Height = 0.0f)
         {
             return ImGui::Button(Label.data(), ImVec2(Width, Height));
+        }
+
+        ZYPHRYON_INLINE Bool DisabledButton(ConstStr8 Label, Bool Disable, Real32 Width = 0.0f, Real32 Height = 0.0f)
+        {
+            ImGui::BeginDisabled(Disable);
+
+            const Bool Result = Button(Label, Width, Height) && !Disable;
+
+            ImGui::EndDisabled();
+
+            return Result;
         }
 
         ZYPHRYON_INLINE Bool SmallButton(ConstStr8 Label)
