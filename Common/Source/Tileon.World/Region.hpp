@@ -99,11 +99,11 @@ namespace Tileon
         /// \param Offset The starting offset within the terrain atlas in tiles, used for calculating the atlas index.
         ZYPHRYON_INLINE void Fill(IntRect Area, Tile::Layer Layer, UInt16 Handle, IntVector2 Span, IntVector2 Offset)
         {
-            UInt8 AtlasY = Offset.GetY();
+            UInt16 AtlasY = Offset.GetY();
 
             for (UInt8 Y = Area.GetMinimumY(); Y < Area.GetMaximumY(); ++Y)
             {
-                UInt8 AtlasX = Offset.GetX();
+                UInt16 AtlasX = Offset.GetX();
 
                 for (UInt8 X = Area.GetMinimumX(); X < Area.GetMaximumX(); ++X)
                 {

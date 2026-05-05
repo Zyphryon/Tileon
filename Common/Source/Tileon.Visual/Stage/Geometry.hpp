@@ -76,7 +76,7 @@ namespace Tileon::Stage
         /// \param Span     The span of the tile in terms of tile columns and rows.
         /// \param Weight   The weight of the tile, which may affect its visual representation.
         /// \param Tile     The tile entry containing the rendering data for the tile to be drawn.
-        void DrawTile(Vector3 Position, IntVector2 Span, UInt8 Weight, ConstRef<Tileset::Entry> Tile);
+        void DrawTile(Vector3 Position, IntVector2 Span, UInt16 Weight, ConstRef<Tileset::Entry> Tile);
 
     private:
 

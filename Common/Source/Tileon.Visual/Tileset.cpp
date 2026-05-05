@@ -61,6 +61,7 @@ namespace Tileon
 
     void Tileset::Preload()
     {
+        // TODO: Remove in the future.
         mRegistry.ForEach([this](Ref<Entry> Data)
         {
             if (Data.Path.IsValid())

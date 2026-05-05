@@ -248,7 +248,7 @@ namespace Tileon::Stage
                     // Fetches the tile at the specified coordinates within the region.
                     ConstRef<Tile> Tile = Region.GetTile(TileX, TileY);
                     const UInt16 Handle = Tile.GetHandle(Layer);
-                    const UInt8  Weight = Tile.GetWeight(Layer);
+                    const UInt16 Weight = Tile.GetWeight(Layer);
 
                     if (Handle == 0)
                     {
@@ -273,7 +273,7 @@ namespace Tileon::Stage
                                 break;
                             }
 
-                            const UInt8 ExpectedWeight = Weight + (InnerX - TileX);
+                            const UInt16 ExpectedWeight = Weight + (InnerX - TileX);
 
                             ConstRef<Tileon::Tile> InnerTile = Region.GetTile(InnerX, TileY);
 
@@ -287,7 +287,7 @@ namespace Tileon::Stage
                         Resolution[TileY] |= Mask;
 
                         // Try to expand vertically to adjacent rows that share the same terrain.
-                        UInt8 RowWeight = Weight + Entry.Columns;
+                        UInt16 RowWeight = Weight + Entry.Columns;
 
                         for (UInt32 InnerY = TileY + 1; InnerY < MaxInnerY; ++InnerY, ++CountY, RowWeight += Entry.Columns)
                         {
@@ -303,7 +303,7 @@ namespace Tileon::Stage
 
                                 ConstRef<Tileon::Tile> InnerTile = Region.GetTile(InnerX, InnerY);
 
-                                const UInt8 ExpectedWeight = RowWeight + (InnerX - TileX);
+                                const UInt16 ExpectedWeight = RowWeight + (InnerX - TileX);
 
                                 if (InnerTile.GetHandle(Layer) != Handle || InnerTile.GetWeight(Layer) != ExpectedWeight)
                                 {
@@ -339,7 +339,7 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Geometry::DrawTile(Vector3 Position, IntVector2 Span, UInt8 Weight, ConstRef<Tileset::Entry> Tile)
+    void Geometry::DrawTile(Vector3 Position, IntVector2 Span, UInt16 Weight, ConstRef<Tileset::Entry> Tile)
     {
         const Rect Frame = Tile.Animation.GetFrameData(Tile.Keyframe);
 
@@ -347,7 +347,7 @@ namespace Tileon::Stage
         const Real32 VCoordPerTile = Frame.GetHeight() / Tile.Rows;
 
         const Real32 OffsetX = (Weight % Tile.Columns) * UCoordPerTile;
-        const Real32 OffsetY = (Weight / Tile.Rows) * VCoordPerTile;
+        const Real32 OffsetY = (Weight / Tile.Columns) * VCoordPerTile;
 
         const Rect Displacement(
             Frame.GetX() + OffsetX,

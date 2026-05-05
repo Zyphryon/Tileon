@@ -39,7 +39,7 @@ namespace Tileon
         /// \param Type   The type of layer to set.
         /// \param Handle The unique identifier for the terrain type of the layer.
         /// \param Weight The weight of the layer, used for multi-span terrains.
-        ZYPHRYON_INLINE void SetLayer(Layer Type, UInt16 Handle, UInt8 Weight)
+        ZYPHRYON_INLINE void SetLayer(Layer Type, UInt16 Handle, UInt16 Weight)
         {
             mLayers[Enum::Cast(Type)] = Unit(Handle, Weight);
         }
@@ -57,7 +57,7 @@ namespace Tileon
         ///
         /// \param Type The type of layer to retrieve the weight for.
         /// \return The weight of the specified layer.
-        ZYPHRYON_INLINE UInt8 GetWeight(Layer Type) const
+        ZYPHRYON_INLINE UInt16 GetWeight(Layer Type) const
         {
             return mLayers[Enum::Cast(Type)].Weight;
         }
@@ -80,7 +80,7 @@ namespace Tileon
             UInt16 Handle;
 
             /// \brief The weight of the layer unit, used for multi-span terrains.
-            UInt8  Weight;
+            UInt16 Weight;
 
             /// \brief Serializes the state of the object to or from the specified archive.
             ///
@@ -89,7 +89,7 @@ namespace Tileon
             ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
             {
                 Archive.SerializeUInt(Handle);
-                Archive.SerializeUInt8(Weight);
+                Archive.SerializeUInt(Weight);
             }
         };
 
