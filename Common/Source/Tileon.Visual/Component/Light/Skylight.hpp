@@ -19,15 +19,15 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Visual
+namespace Tileon
 {
-    /// \brief Represents the component that contains runtime data for the lighting and ambient conditions of a scene.
-    class Environment final
+    /// \brief Represents a skylight component that contains data for simulating outdoor lighting conditions in a scene.
+    class Skylight final
     {
     public:
 
-        /// \brief Default constructor initializing the environment with default values.
-        ZYPHRYON_INLINE Environment()
+        /// \brief Default constructor initializing the skylight with default values.
+        ZYPHRYON_INLINE Skylight()
             : mSunDirection { Vector2::UnitY() },
               mSunTint      { IntColor8::White() },
               mSkyTint      { IntColor8::White() },
@@ -36,14 +36,14 @@ namespace Tileon::Visual
         {
         }
 
-        /// \brief Constructs an environment with the specified parameters.
+        /// \brief Constructs a skylight with the specified parameters.
         ///
         /// \param SunDirection The direction of the sun, defining the angle of sunlight in the scene.
         /// \param SunTint      The tint of direct sunlight in the scene.
         /// \param SkyTint      The tint of ambient light coming from the sky in the scene.
         /// \param GroundTint   The tint of ambient light reflected from the ground in the scene.
         /// \param Brightness   The overall brightness of the environment, defining the intensity of all lighting effects in the scene.
-        ZYPHRYON_INLINE Environment(Vector2 SunDirection, IntColor8 SunTint, IntColor8 SkyTint, IntColor8 GroundTint, Real32 Brightness)
+        ZYPHRYON_INLINE Skylight(Vector2 SunDirection, IntColor8 SunTint, IntColor8 SkyTint, IntColor8 GroundTint, Real32 Brightness)
             : mSunDirection { SunDirection },
               mSunTint      { SunTint },
               mSkyTint      { SkyTint },

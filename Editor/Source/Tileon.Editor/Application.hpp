@@ -57,5 +57,6 @@ namespace Tileon::Editor
         Unique<Context>           mContext;
         Plugin::ImGuiSystem       mFrontend;
         Vector<Tracker<Activity>> mActivities;
+        IntVector2                mViewport;
     };
 }

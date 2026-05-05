@@ -71,7 +71,7 @@ namespace Tileon
         /// \brief Gets the Director instance associated with the controller.
         ///
         /// \return The director instance managed by the controller.
-        ZYPHRYON_INLINE Ref<Visual::Director> GetDirector()
+        ZYPHRYON_INLINE Ref<Director> GetDirector()
         {
             return mDirector;
         }
@@ -79,7 +79,7 @@ namespace Tileon
         /// \brief Gets the Renderer instance associated with the controller.
         ///
         /// \return The renderer instance managed by the controller.
-        ZYPHRYON_INLINE Ref<Visual::Renderer> GetRenderer()
+        ZYPHRYON_INLINE Ref<Renderer> GetRenderer()
         {
             return mRenderer;
         }
@@ -96,8 +96,8 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        World            mWorld;
-        Visual::Director mDirector;
-        Visual::Renderer mRenderer;
+        World    mWorld;
+        Director mDirector;
+        Renderer mRenderer;
     };
 }

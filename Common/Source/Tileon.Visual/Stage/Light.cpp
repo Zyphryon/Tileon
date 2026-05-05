@@ -20,7 +20,7 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Visual::Stage
+namespace Tileon::Stage
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -49,9 +49,9 @@ namespace Tileon::Visual::Stage
         mSpotlightData.clear();
 
         // Apply the environment settings for the current frame.
-        mQrDrawEnvironment.Run<const Environment>([&](ConstRef<Environment> Environment)
+        mQrDrawSkylight.Run<const Skylight>([&](ConstRef<Skylight> Environment)
         {
-            auto [Data, Effect] =  Graphics.AllocateTransientBuffer<GpuAmbientLayout>(Graphic::Usage::Uniform, 1);
+            auto [Data, Effect] =  Graphics.AllocateTransientBuffer<GpuSkylightLayout>(Graphic::Usage::Uniform, 1);
             Data->SunColor    = Math::Color::FromColor8(Environment.GetSunTint())
                 .WithIntensity(Environment.GetBrightness(), Environment.GetSunDirection().GetX());
             Data->SkyColor    = Math::Color::FromColor8(Environment.GetSkyTint())
@@ -59,7 +59,7 @@ namespace Tileon::Visual::Stage
             Data->GroundColor = Math::Color::FromColor8(Environment.GetGroundTint())
                 .WithIntensity(Environment.GetBrightness(), 0.0f);
 
-            Encoder.SetPipeline(mPipelines[Enum::Cast(Technique::Environment)]->GetID());
+            Encoder.SetPipeline(mPipelines[Enum::Cast(Technique::Skylight)]->GetID());
             Encoder.SetTexture(0, Normal, Graphic::Sampler());
             Encoder.SetUniform(1, Effect);
             Encoder.Draw(3, 0, 0);
@@ -126,9 +126,9 @@ namespace Tileon::Visual::Stage
 
     void Light::OnRegister(Ref<Scene::Service> Scene)
     {
-        Scene.GetComponent<Spotlight>("Spotlight").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Glowlight>("Glowlight").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Environment>("Environment").AddTrait(Scene::Trait::Serializable, Scene::Trait::Singleton);
+        Scene.GetComponent<Skylight>("Skylight").AddTrait(Scene::Trait::Serializable, Scene::Trait::Singleton);
+        Scene.GetComponent<Spotlight>("Spotlight").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
 
         // Observes changes to the light radial component and updates the corresponding spatial properties of the actor.
         Scene.CreateObserver<Scene::DSL::In<const Glowlight>>(
@@ -194,9 +194,9 @@ namespace Tileon::Visual::Stage
             Scene::DSL::In<const Transform, const Spotlight, ConstPtr<IntColor8>>
         >("Visual::Light::DrawSpotlights", Scene::Cache::Auto);
 
-        mQrDrawEnvironment = Scene.CreateQuery<
-            Scene::DSL::In<const Environment>
-        >("Visual::Light::DrawEnvironment", Scene::Cache::Auto);
+        mQrDrawSkylight = Scene.CreateQuery<
+            Scene::DSL::In<const Skylight>
+        >("Visual::Light::DrawSkylight", Scene::Cache::Auto);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

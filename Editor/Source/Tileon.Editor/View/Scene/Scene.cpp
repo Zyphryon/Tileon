@@ -22,7 +22,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Scene::Scene(Ref<Context> Context)
-        : Activity(Context, kTitle, true)
+        : Activity { Context, kTitle, true }
     {
     }
 
@@ -36,7 +36,7 @@ namespace Tileon::Editor::View
             DrawToolbar(Composer);
             Composer.Separator();
 
-            const Graphic::Object Texture = GetContext().GetRenderer().GetFrame(Visual::Renderer::Frame::Final);
+            const Graphic::Object Texture = GetContext().GetRenderer().GetFrame(Renderer::Frame::Final);
             Composer.Image(Texture, Composer.GetContentRegionAvail());
         }
         Composer.End();

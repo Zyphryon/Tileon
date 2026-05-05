@@ -25,9 +25,9 @@ namespace Tileon::Editor::View
     {
     public:
 
-        /// \brief Constructs an inspector activity with the specified context.
+        /// \brief Constructs the activity with the specified context.
         ///
-        /// \param Context The context associated with this inspector activity.
+        /// \param Context The context associated with this activity.
         Inspector(Ref<Context> Context);
 
         /// \copydoc Activity::OnDraw(Ref<UI::Composer>)

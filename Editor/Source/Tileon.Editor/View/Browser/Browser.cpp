@@ -22,7 +22,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Browser::Browser(Ref<Context> Context)
-        : Activity(Context, "Content Browser", true)
+        : Activity { Context, "Content Browser" }
     {
     }
 

@@ -21,10 +21,10 @@
 [Program.Vertex]
 
     Entry           = "vertex"
-    Filename        = "Environment.shader"
+    Filename        = "Skylight.shader"
 
 [Program.Fragment]
 
     Entry           = "fragment"
-    Filename        = "Environment.shader"
+    Filename        = "Skylight.shader"
 

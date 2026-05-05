@@ -20,7 +20,7 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Visual
+namespace Tileon
 {
     /// \brief Represents the renderer responsible for rendering the scene using a deferred rendering pipeline.
     class Renderer final : public Locator<Graphic::Service, Content::Service>

@@ -20,7 +20,7 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Visual::Stage
+namespace Tileon::Stage
 {
     /// \brief Represents the geometry stage of the rendering pipeline, responsible for rendering objects.
     class Geometry final : public Locator<Content::Service>

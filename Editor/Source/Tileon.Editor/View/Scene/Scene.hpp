@@ -30,9 +30,9 @@ namespace Tileon::Editor::View
 
     public:
 
-        /// \brief Constructs an scene activity with the specified context.
+        /// \brief Constructs the activity with the specified context.
         ///
-        /// \param Context The context associated with this scene activity.
+        /// \param Context The context associated with this activity.
         Scene(Ref<Context> Context);
 
         /// \copydoc Activity::OnDraw(Ref<UI::Composer>)

@@ -12,9 +12,9 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Component/Light/Environment.hpp"
-#include "Component/Light/Spotlight.hpp"
 #include "Component/Light/Glowlight.hpp"
+#include "Component/Light/Skylight.hpp"
+#include "Component/Light/Spotlight.hpp"
 #include "Component/Sprite/Animator.hpp"
 #include "Component/Sprite/Appaerance.hpp"
 #include "Component/Sprite/Sprite.hpp"

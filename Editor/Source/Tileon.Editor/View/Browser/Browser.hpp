@@ -25,9 +25,9 @@ namespace Tileon::Editor::View
     {
     public:
 
-        /// \brief Constructs a browser activity with the specified context.
+        /// \brief Constructs the activity with the specified context.
         ///
-        /// \param Context The context associated with this browser activity.
+        /// \param Context The context associated with this activity.
         Browser(Ref<Context> Context);
 
         /// \copydoc Activity::OnDraw(Ref<UI::Composer>)

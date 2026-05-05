@@ -18,7 +18,7 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Visual
+namespace Tileon
 {
     /// \brief Represents an animation consisting of multiple frames, each with its own coordinates and duration.
     class Animation final
@@ -29,6 +29,22 @@ namespace Tileon::Visual
         static constexpr UInt8 kMaxFrames = 12;
 
     public:
+
+        /// \brief Checks if the animation sequence has reached its maximum capacity of frames.
+        ///
+        /// \return `true` if the animation sequence is full, `false` otherwise.
+        ZYPHRYON_INLINE Bool IsFull() const
+        {
+            return mFrames.size() >= kMaxFrames;
+        }
+
+        /// \brief Checks if the animation sequence is empty, meaning it contains no frames.
+        ///
+        /// \return `true` if the animation sequence is empty, `false` otherwise.
+        ZYPHRYON_INLINE Bool IsEmpty() const
+        {
+            return  mFrames.empty();
+        }
 
         /// \brief Gets the total duration of the sequence by summing the durations of all frames.
         ///

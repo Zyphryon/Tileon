@@ -22,7 +22,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Inspector::Inspector(Ref<Context> Context)
-        : Activity(Context, "Inspector", true)
+        : Activity { Context, "Inspector" }
     {
     }
 

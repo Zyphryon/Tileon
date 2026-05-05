@@ -64,7 +64,7 @@ namespace Tileon::Editor
         /// \brief Gets a reference to the director from the controller.
         ///
         /// \return A reference to the director from the controller.
-        ZYPHRYON_INLINE Ref<Visual::Director> GetDirector()
+        ZYPHRYON_INLINE Ref<Director> GetDirector()
         {
             return mController.GetDirector();
         }
@@ -72,9 +72,17 @@ namespace Tileon::Editor
         /// \brief Gets a reference to the renderer from the controller.
         ///
         /// \return A reference to the renderer from the controller.
-        ZYPHRYON_INLINE Ref<Visual::Renderer> GetRenderer()
+        ZYPHRYON_INLINE Ref<Renderer> GetRenderer()
         {
             return mController.GetRenderer();
+        }
+
+        /// \brief Gets a reference to the tileset from the renderer associated with the controller.
+        ///
+        /// \return A reference to the tileset from the renderer associated with the controller.
+        ZYPHRYON_INLINE Ref<Tileset> GetTileset()
+        {
+            return mController.GetRenderer().GetTileset();
         }
 
     private:

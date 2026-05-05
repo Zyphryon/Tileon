@@ -14,6 +14,7 @@
 #include "View/Browser/Browser.hpp"
 #include "View/Inspector/Inspector.hpp"
 #include "View/Scene/Scene.hpp"
+#include "View/Sculpt/Sculpt.hpp"
 #include <Zyphryon.Content/Mount/Disk.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -44,6 +45,12 @@ namespace Tileon::Editor
         mActivities.push_back(Tracker<View::Browser>::Create(* mContext));
         mActivities.push_back(Tracker<View::Inspector>::Create(* mContext));
         mActivities.push_back(Tracker<View::Scene>::Create(* mContext));
+        mActivities.push_back(Tracker<View::Sculpt>::Create(* mContext));
+
+        // TODO: Project Management (+ Configuration)
+
+        // Preload the tileset to ensure that all necessary resources are available before the editor starts.
+        mContext->GetTileset().Preload();
 
         // Wait for all content to finish loading before allowing the editor to run.
         Content->Wait();
@@ -166,18 +173,15 @@ namespace Tileon::Editor
 
     void Application::DrawGame(UInt16 Width, UInt16 Height)
     {
-        static IntVector2 LastViewportSize = { 0, 0 };
-
-        if (LastViewportSize.GetX() != Width && LastViewportSize.GetY() != Height)
+        if (mViewport.GetX() != Width && mViewport.GetY() != Height)
         {
             if (Width != 0 && Height != 0)
             {
-                LastViewportSize.Set(Width, Height);
+                mViewport.Set(Width, Height);
 
                 mContext->GetController().Resize(Width, Height);
             }
         }
-
         mContext->GetController().Present(false);
     }
 }

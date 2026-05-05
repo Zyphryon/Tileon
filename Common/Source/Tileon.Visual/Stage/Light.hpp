@@ -22,7 +22,7 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Visual::Stage
+namespace Tileon::Stage
 {
     /// \brief Represents the light stage of the rendering pipeline, responsible for applying lighting effects to the scene.
     class Light final : public Locator<Graphic::Service>
@@ -46,9 +46,9 @@ namespace Tileon::Visual::Stage
         /// \brief Enumerates the different rendering techniques available in the light stage.
         enum class Technique
         {
-            Spotlight,   ///< Technique for rendering cone-shaped light sources.
-            Glowlight,   ///< Technique for rendering radial light sources.
-            Environment, ///< Technique for rendering ambient lighting effects that affect the entire scene.
+            Spotlight, ///< Technique for rendering cone-shaped light sources.
+            Glowlight, ///< Technique for rendering radial light sources.
+            Skylight,  ///< Technique for rendering ambient lighting effects that affect the entire scene.
         };
 
         /// \brief Defines a type alias for a collection of pipeline trackers, one for each rendering technique.
@@ -64,8 +64,8 @@ namespace Tileon::Visual::Stage
         /// \param Content The content service used to load resources for the stage.
         void OnLoad(Ref<Content::Service> Content);
 
-        /// \brief Represents the per-instance data for the environment lighting.
-        struct GpuAmbientLayout final
+        /// \brief Represents the per-instance data for the ambient lighting effect of the skylight technique.
+        struct GpuSkylightLayout final
         {
             /// The color of the sun, represented as RGB + intensity, A = SunDirection.X.
             Color SunColor;
@@ -129,6 +129,6 @@ namespace Tileon::Visual::Stage
 
         Scene::Query               mQrDrawGlowlights;
         Scene::Query               mQrDrawSpotlights;
-        Scene::Query               mQrDrawEnvironment;
+        Scene::Query               mQrDrawSkylight;
     };
 }

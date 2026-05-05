@@ -90,6 +90,15 @@ namespace Tileon
         /// \param Terrain The terrain to delete.
         void DeleteTerrain(Ref<Terrain> Terrain);
 
+        /// \brief Checks if a terrain with the given unique identifier exists in the repository.
+        ///
+        /// \param ID The unique identifier of the terrain to check for existence.
+        /// \return `true` if a terrain with the given ID exists, `false`
+        ZYPHRYON_INLINE Bool HasTerrain(UInt16 ID) const
+        {
+            return mTerrains.IsAllocated(ID);
+        }
+
         /// \brief Gets a terrain by its unique identifier.
         ///
         /// \param ID The unique identifier of the terrain.
