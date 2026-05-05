@@ -13,6 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tile.hpp"
+#include <Zyphryon.Math/Geometry/Rect.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -83,20 +84,71 @@ namespace Tileon
         ///
         /// \param X The x-coordinate of the tile within the region.
         /// \param Y The y-coordinate of the tile within the region.
-        /// \return A reference to the tile at the specified coordinates.
-        ZYPHRYON_INLINE Ref<Tile> GetTile(UInt8 X, UInt8 Y)
-        {
-            return mTiles[Index2D(X, Y, kTilesPerX)];
-        }
-
-        /// \brief Gets a tile at the specified coordinates within the region.
-        ///
-        /// \param X The x-coordinate of the tile within the region.
-        /// \param Y The y-coordinate of the tile within the region.
         /// \return A constant reference to the tile at the specified coordinates.
         ZYPHRYON_INLINE ConstRef<Tile> GetTile(UInt8 X, UInt8 Y) const
         {
             return mTiles[Index2D(X, Y, kTilesPerX)];
+        }
+
+        /// \brief Stamps a terrain onto a rectangular area of tiles on the specified layer.
+        ///
+        /// \param Area   The rectangular area within the region to fill (region-local coordinates).
+        /// \param Layer  The tile layer to fill the terrain on.
+        /// \param Handle The unique identifier for the terrain type to stamp onto the tiles.
+        /// \param Span   The dimensions of the terrain atlas in tiles, used for calculating the atlas index.
+        /// \param Offset The starting offset within the terrain atlas in tiles, used for calculating the atlas index.
+        ZYPHRYON_INLINE void Fill(IntRect Area, Tile::Layer Layer, UInt16 Handle, IntVector2 Span, IntVector2 Offset)
+        {
+            UInt8 AtlasY = Offset.GetY();
+
+            for (UInt8 Y = Area.GetMinimumY(); Y < Area.GetMaximumY(); ++Y)
+            {
+                UInt8 AtlasX = Offset.GetX();
+
+                for (UInt8 X = Area.GetMinimumX(); X < Area.GetMaximumX(); ++X)
+                {
+                    mTiles[Index2D(X, Y, kTilesPerX)].SetLayer(Layer, Handle, AtlasY * Span.GetX() + AtlasX);
+
+                    if (++AtlasX >= Span.GetX())
+                    {
+                        AtlasX = 0;
+                    }
+                }
+
+                if (++AtlasY >= Span.GetY())
+                {
+                    AtlasY = 0;
+                }
+            }
+        }
+
+        /// \brief Erases the specified layer of each tile within the rectangular area.
+        ///
+        /// \param Area  The rectangular area within the region to erase (region-local coordinates).
+        /// \param Layer The tile layer to erase from the tiles.
+        ZYPHRYON_INLINE void Erase(IntRect Area, Tile::Layer Layer)
+        {
+            for (UInt8 Y = Area.GetMinimumY(); Y < Area.GetMaximumY(); ++Y)
+            {
+                for (UInt8 X = Area.GetMinimumX(); X < Area.GetMaximumX(); ++X)
+                {
+                    mTiles[Index2D(X, Y, kTilesPerX)].SetLayer(Layer, 0, 0);
+                }
+            }
+        }
+
+        /// \brief Resets all layers of every tile within the rectangular area to their default state.
+        ///
+        /// \param Area The rectangular area within the region to clear (region-local coordinates).
+        ZYPHRYON_INLINE void Clear(IntRect Area)
+        {
+            for (UInt8 Y = Area.GetMinimumY(); Y < Area.GetMaximumY(); ++Y)
+            {
+                for (UInt8 X = Area.GetMinimumX(); X < Area.GetMaximumX(); ++X)
+                {
+                    SetTile(X, Y, Tile());
+                }
+            }
         }
 
         /// \brief Serializes the state of the object to or from the specified archive.
