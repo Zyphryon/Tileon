@@ -13,6 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Editor/Activity.hpp"
+#include "Tileon.Editor/Workshop.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -45,9 +46,27 @@ namespace Tileon::Editor::View
         /// \param Composer The UI composer used to render the toolbar elements.
         void DrawToolbar(Ref<UI::Composer> Composer);
 
+        /// \brief Draws the tile editing toolbar for the scene activity.
+        ///
+        /// \param Composer The UI composer used to render the tile editing toolbar elements.
+        void DrawTileToolbar(Ref<UI::Composer> Composer);
+
+        /// \brief Draws the entity editing toolbar for the scene activity.
+        ///
+        /// \param Composer The UI composer used to render the entity editing toolbar elements.
+        void DrawEntityToolbar(Ref<UI::Composer> Composer);
+
         /// \brief Draws the viewport for the scene activity, displaying the rendered game world.
         ///
         /// \param Composer The UI composer used to render the viewport elements.
         void DrawViewport(Ref<UI::Composer> Composer);
+
+    private:
+
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        Workshop        mWorkshop;
+        Renderer::Frame mFrame;
     };
 }

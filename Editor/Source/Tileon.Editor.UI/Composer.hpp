@@ -99,6 +99,11 @@ namespace Tileon::Editor::UI
             ImGui::Separator();
         }
 
+        ZYPHRYON_INLINE void SeparatorEx(ImGuiSeparatorFlags Flags = ImGuiSeparatorFlags_None)
+        {
+            ImGui::SeparatorEx(Flags);
+        }
+
         ZYPHRYON_INLINE ImVec2 GetContentRegionAvail() const
         {
             return ImGui::GetContentRegionAvail();
@@ -159,6 +164,16 @@ namespace Tileon::Editor::UI
             ImGui::SetScrollHereY(CenterRatio);
         }
 
+        ZYPHRYON_INLINE ImVec2 GetItemRectMin() const
+        {
+            return ImGui::GetItemRectMin();
+        }
+
+        ZYPHRYON_INLINE ImVec2 GetItemRectSize() const
+        {
+            return ImGui::GetItemRectSize();
+        }
+
         ZYPHRYON_INLINE ImVec2 GetMousePos() const
         {
             return ImGui::GetMousePos();
@@ -172,6 +187,11 @@ namespace Tileon::Editor::UI
         ZYPHRYON_INLINE Real32 GetMouseWheel() const
         {
             return ImGui::GetIO().MouseWheel;
+        }
+
+        ZYPHRYON_INLINE Bool IsMouseClicked(ImGuiMouseButton Button = ImGuiMouseButton_Left, Bool Repeat = false) const
+        {
+            return ImGui::IsMouseClicked(Button, Repeat);
         }
 
         ZYPHRYON_INLINE Bool IsMouseDragging(ImGuiMouseButton Button = ImGuiMouseButton_Left, Real32 LockThreshold = -1.0f) const
@@ -325,6 +345,11 @@ namespace Tileon::Editor::UI
         ZYPHRYON_INLINE Bool Checkbox(ConstStr8 Label, Ref<Bool> State)
         {
             return ImGui::Checkbox(Label.data(), &State);
+        }
+
+        ZYPHRYON_INLINE Bool RadioButton(ConstStr8 Label, Bool Active)
+        {
+            return ImGui::RadioButton(Label.data(), Active);
         }
 
         ZYPHRYON_INLINE Bool Selectable(ConstStr8 Label, Bool Selected = false, ImGuiSelectableFlags Flags = ImGuiSelectableFlags_None)

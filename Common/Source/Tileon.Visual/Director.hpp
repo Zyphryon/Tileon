@@ -166,6 +166,28 @@ namespace Tileon
             }
         }
 
+        /// \brief Focuses the camera on a specific anchor point while transitioning to a new zoom level.
+        ///
+        /// \param Anchor The anchor point to focus on, specified as a placement in the world.
+        /// \param Zoom   The new zoom level to transition to while focusing on the anchor point.
+        ZYPHRYON_INLINE void Focus(Placement Anchor, Real32 Zoom)
+        {
+            if (mTweenZoom.IsComplete() && mTweenPosition.IsComplete())
+            {
+                const Real32 Magnitude   = Clamp(Zoom, kMinZoom, kMaxZoom);
+                const Real32 Scale       = Magnitude / mZoom;
+
+                const Real64 AnchorAbsX  = Anchor.GetAbsoluteX();
+                const Real64 AnchorAbsY  = Anchor.GetAbsoluteY();
+                const Real64 TargetAbsX  = AnchorAbsX + (mPosition.GetAbsoluteX() - AnchorAbsX) * Scale;
+                const Real64 TargetAbsY  = AnchorAbsY + (mPosition.GetAbsoluteY() - AnchorAbsY) * Scale;
+
+                const Placement Target = Placement::FromAbsolute(TargetAbsX, TargetAbsY);
+                mTweenPosition = Tween(mPosition, Target, kDelay);
+                mTweenZoom     = Tween(mZoom, Magnitude, kDelay);
+            }
+        }
+
         /// \brief Checks if the camera is currently zooming due to an active tween.
         ///
         /// \return `true` if the camera is currently zooming, `false` otherwise.
