@@ -65,6 +65,21 @@ namespace Tileon::Editor
     {
         ConstTracker<Graphic::Service> Graphics = GetService<Graphic::Service>();
 
+        // Render the game world to the offscreen texture first so that ImGui picks up
+        // the current frame's content (not the previous frame's).
+        const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(View::Scene::kTitle);
+
+        if (Parent && Parent->Active)
+        {
+            const UInt32    ViewportID   = Parent->GetID("##viewport");
+            const ConstStr8 ViewportName = Format("{}/##viewport_{:08X}", View::Scene::kTitle, ViewportID);
+
+            if (const ConstPtr<ImGuiWindow> Child = ImGui::FindWindowByName(ViewportName.data()); Child)
+            {
+                DrawGame(Child->ContentSize.x, Child->ContentSize.y);
+            }
+        }
+
         const Graphic::Viewport Viewport(0.0f, 0.0f, GetDevice().GetWidth(), GetDevice().GetHeight());
 
         Graphics->Prepare(Graphic::kDisplay, Viewport, Color::Black(), 1.0f, 0);
@@ -76,14 +91,6 @@ namespace Tileon::Editor
             mFrontend.End();
         }
         Graphics->Commit();
-
-        // Draw the game-view in a separate pass to ensure that it is rendered inside a interface window.
-        const ConstPtr<ImGuiWindow> Window = ImGui::FindWindowByName(View::Scene::kTitle);
-
-        if (Window && Window->Active)
-        {
-            DrawGame(static_cast<UInt16>(Window->ContentSize.x), static_cast<UInt16>(Window->ContentSize.y));
-        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -320,16 +327,6 @@ namespace Tileon::Editor
                     Composer.EndMenu();
                 }
 
-                if (Composer.MenuItem("Reset", "Ctrl+Alt+R"))
-                {
-                    // TODO: Reset the editor to its default state
-                }
-
-                if (Composer.MenuItem("About"))
-                {
-                    // TODO: Show an about dialog with information about the editor
-                }
-
                 Composer.EndMenu();
             }
 
@@ -353,7 +350,7 @@ namespace Tileon::Editor
 
     void Application::DrawGame(UInt16 Width, UInt16 Height)
     {
-        if (mViewport.GetX() != Width && mViewport.GetY() != Height)
+        if (mViewport.GetX() != Width || mViewport.GetY() != Height)
         {
             if (Width != 0 && Height != 0)
             {

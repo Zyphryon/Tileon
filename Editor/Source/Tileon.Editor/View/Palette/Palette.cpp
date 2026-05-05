@@ -428,4 +428,3 @@ namespace Tileon::Editor::View
         Composer.TextDisabled(Message);
     }
 }
-

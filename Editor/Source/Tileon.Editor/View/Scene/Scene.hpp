@@ -44,5 +44,10 @@ namespace Tileon::Editor::View
         ///
         /// \param Composer The UI composer used to render the toolbar elements.
         void DrawToolbar(Ref<UI::Composer> Composer);
+
+        /// \brief Draws the viewport for the scene activity, displaying the rendered game world.
+        ///
+        /// \param Composer The UI composer used to render the viewport elements.
+        void DrawViewport(Ref<UI::Composer> Composer);
     };
 }

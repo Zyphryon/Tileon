@@ -36,8 +36,9 @@ namespace Tileon::Editor::View
             DrawToolbar(Composer);
             Composer.Separator();
 
-            const Graphic::Object Texture = GetContext().GetRenderer().GetFrame(Renderer::Frame::Final);
-            Composer.Image(Texture, Composer.GetContentRegionAvail());
+            Composer.BeginChild("##viewport", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
+            DrawViewport(Composer);
+            Composer.EndChild();
         }
         Composer.End();
     }
@@ -48,5 +49,14 @@ namespace Tileon::Editor::View
     void Scene::DrawToolbar(Ref<UI::Composer> Composer)
     {
 
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Scene::DrawViewport(Ref<UI::Composer> Composer)
+    {
+        const Graphic::Object Texture = GetContext().GetRenderer().GetFrame(Renderer::Frame::Final);
+        Composer.Image(Texture, Composer.GetContentRegionAvail());
     }
 }
