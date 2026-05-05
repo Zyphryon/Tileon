@@ -10,7 +10,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Sculpt.hpp"
+#include "Palette.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -21,8 +21,8 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Sculpt::Sculpt(Ref<Context> Context)
-        : Activity    { Context, "Sculpt", true },
+    Palette::Palette(Ref<Context> Context)
+        : Activity    { Context, "Palette", true },
           mRepository { Context.GetRepository() },
           mTileset    { Context.GetTileset() },
           mSelection  { 0 }
@@ -32,7 +32,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Sculpt::OnDraw(Ref<UI::Composer> Composer)
+    void Palette::OnDraw(Ref<UI::Composer> Composer)
     {
         Composer.SetNextWindowSize(1160.0f, 680.0f, ImGuiCond_FirstUseEver);
         Composer.SetNextWindowSizeConstraints(900.0f, 500.0f, 1800.0f, 1400.0f);
@@ -85,7 +85,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Sculpt::DrawListPanel(Ref<UI::Composer> Composer)
+    void Palette::DrawListPanel(Ref<UI::Composer> Composer)
     {
         const Bool WasPlusClicked = Composer.Button("+", -1.0f);
 
@@ -137,7 +137,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Sculpt::DrawLeftPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Tileset::Entry> Entry)
+    void Palette::DrawLeftPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Tileset::Entry> Entry)
     {
         // Draw the editable fields for the terrain identity properties.
         Composer.Section("Identity");
@@ -185,7 +185,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Sculpt::DrawLeftPanelAnimationSection(Ref<UI::Composer> Composer, Ref<Tileset::Entry> Entry)
+    void Palette::DrawLeftPanelAnimationSection(Ref<UI::Composer> Composer, Ref<Tileset::Entry> Entry)
     {
         Ref<Animation> Animation = Entry.Animation;
 
@@ -331,7 +331,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Sculpt::DrawRightPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Tileset::Entry> Entry)
+    void Palette::DrawRightPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Tileset::Entry> Entry)
     {
         if (Composer.BeginTabBar("##right_tabs"))
         {
@@ -369,7 +369,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Sculpt::DrawBottomBar(Ref<UI::Composer> Composer)
+    void Palette::DrawBottomBar(Ref<UI::Composer> Composer)
     {
         const Real32     BarHeight = ImGui::GetFrameHeightWithSpacing() + 4.0f;
         constexpr ImVec4 BarColor  = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
@@ -424,7 +424,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Sculpt::DrawEmptyPanel(Ref<UI::Composer> Composer, ConstStr8 Message)
+    void Palette::DrawEmptyPanel(Ref<UI::Composer> Composer, ConstStr8 Message)
     {
         constexpr ConstStr8 kIcon = "?";
 

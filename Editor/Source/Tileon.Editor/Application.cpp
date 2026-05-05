@@ -13,8 +13,8 @@
 #include "Application.hpp"
 #include "View/Browser/Browser.hpp"
 #include "View/Inspector/Inspector.hpp"
+#include "View/Palette/Palette.hpp"
 #include "View/Scene/Scene.hpp"
-#include "View/Sculpt/Sculpt.hpp"
 #include <Zyphryon.Content/Mount/Disk.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -45,7 +45,7 @@ namespace Tileon::Editor
         mActivities.push_back(Tracker<View::Browser>::Create(* mContext));
         mActivities.push_back(Tracker<View::Inspector>::Create(* mContext));
         mActivities.push_back(Tracker<View::Scene>::Create(* mContext));
-        mActivities.push_back(Tracker<View::Sculpt>::Create(* mContext));
+        mActivities.push_back(Tracker<View::Palette>::Create(* mContext));
 
         // TODO: Project Management (+ Configuration)
 

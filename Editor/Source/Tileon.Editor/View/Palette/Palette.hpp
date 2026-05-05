@@ -21,27 +21,27 @@
 
 namespace Tileon::Editor::View
 {
-    /// \brief Provides tools and functionality for sculpting the terrain in the editor.
-    class Sculpt final : public Activity
+    /// \brief Provides tools and functionality for managing and editing the tileset palette in the editor.
+    class Palette final : public Activity
     {
     public:
 
         /// \brief Constructs the activity with the specified context.
         ///
         /// \param Context The context associated with this activity.
-        Sculpt(Ref<Context> Context);
+        Palette(Ref<Context> Context);
 
         /// \copydoc Activity::OnDraw(Ref<UI::Composer>)
         void OnDraw(Ref<UI::Composer> Composer) override;
 
     private:
 
-        /// \brief Draws the list panel of the sculpting interface.
+        /// \brief Draws the list panel of the palette interface.
         ///
         /// \param Composer The UI composer used to render the list panel elements.
         void DrawListPanel(Ref<UI::Composer> Composer);
 
-        /// \brief Draws the left panel of the sculpting interface.
+        /// \brief Draws the left panel of the palette interface.
         ///
         /// \param Composer The UI composer used to render the left panel elements.
         /// \param Terrain  The currently selected terrain.
@@ -54,14 +54,14 @@ namespace Tileon::Editor::View
         /// \param Entry    The tileset entry data associated with the selected terrain.
         void DrawLeftPanelAnimationSection(Ref<UI::Composer> Composer, Ref<Tileset::Entry> Entry);
 
-        /// \brief Draws the right panel of the sculpting interface.
+        /// \brief Draws the right panel of the palette interface.
         ///
         /// \param Composer The UI composer used to render the right panel elements.
         /// \param Terrain  The currently selected terrain.
         /// \param Entry    The tileset entry data associated with the selected terrain.
         void DrawRightPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Tileset::Entry> Entry);
 
-        /// \brief Draws the bottom bar of the sculpting interface.
+        /// \brief Draws the bottom bar of the palette interface.
         ///
         /// \param Composer The UI composer used to render the bottom bar elements.
         void DrawBottomBar(Ref<UI::Composer> Composer);
