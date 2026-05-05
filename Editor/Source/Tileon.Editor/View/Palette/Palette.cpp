@@ -141,41 +141,42 @@ namespace Tileon::Editor::View
     {
         // Draw the editable fields for the terrain identity properties.
         Composer.Section("Identity");
-        Composer.Field<true>("Name", [&]
+
+        Composer.Field("Name");
+        Composer.PushItemWidth(-1);
+        Composer.InputText("##name", Terrain.GetName(), [&](ConstStr8 Value)
         {
-            Composer.InputText("##name", Terrain.GetName(), [&](ConstStr8 Value)
-            {
-                Terrain.SetName(Value);
-            });
+            Terrain.SetName(Value);
         });
+        Composer.PopItemWidth();
+        Composer.Spacing();
 
         // Draw the editable fields for the material properties of the tileset entry.
         Composer.Section("Material");
-        Composer.Field("Resource", [&]
-        {
-            Composer.InputTextWithButton("##url", Entry.Path.GetPath(),
-                [&](ConstStr8 Value)
-                {
-                    Ref<Content::Service> Content = GetContext().GetService<Content::Service>();
-                    Entry.Path     = Content::Uri(Format("Resources://{}", Value));
-                    Entry.Material = Content.Load<Graphic::Material>(Entry.Path);
-                },
-                "...",
-                [&]() { /* TODO: OnBrowseURI */ },
-                ImGuiInputTextFlags_EnterReturnsTrue);
-        });
-        Composer.Field("Span", [&]
-        {
-            if (Composer.InputIntPair("##span", Entry.Columns, Entry.Rows, "x"))
+
+        Composer.Field("Resource");
+        Composer.InputTextWithButton("##url", Entry.Path.GetPath(),
+            [&](ConstStr8 Url)
             {
-                Entry.Columns = Max(Entry.Columns, 1);
-                Entry.Rows    = Max(Entry.Rows, 1);
-            }
-        });
-        Composer.Field<true>("Color", [&]
-        {
-            Composer.InputTintSmall("##tint", Entry.Tint);
-        });
+                LoadMaterialUrl(Entry, Url);
+            },
+            "...",
+            [&]()
+            {
+                /* TODO: OnBrowseURI */
+            },
+            ImGuiInputTextFlags_EnterReturnsTrue);
+        Composer.Spacing();
+
+        Composer.Field("Span");
+        Composer.InputIntPair("##span", Entry.Columns, Entry.Rows, "x");
+        Composer.Spacing();
+
+        Composer.Field("Color");
+        Composer.PushItemWidth(-1);
+        Composer.InputTintSmall("##tint", Entry.Tint);
+        Composer.PopItemWidth();
+        Composer.Spacing();
 
         // Draw the animation section for the tileset entry.
         Composer.Section("Animation");
@@ -341,7 +342,8 @@ namespace Tileon::Editor::View
                 {
                     if (Composer.BeginTabItem(Enum::Name(Semantic)))
                     {
-                        mPreviewer.Draw(Composer, Texture);
+                        const Vector2 Size(Texture->GetWidth(), Texture->GetHeight());
+                        mPreviewer.Draw(Composer, Texture->GetID(), Size, Rect::One());
 
                         Composer.EndTabItem();
                     }
@@ -356,7 +358,8 @@ namespace Tileon::Editor::View
                     const Real32  Density = GetContext().GetDirector().GetDensity();
                     const Vector2 Size(Entry.Columns * Density, Entry.Rows * Density);
 
-                    mPreviewer.Draw(Composer, Albedo, Size, Entry.Animation.GetFrameData(Entry.Keyframe));
+                    const Rect Source = Entry.Animation.GetFrameData(Entry.Keyframe);
+                    mPreviewer.Draw(Composer, Albedo->GetID(), Size, Source, Color::FromColor8(Entry.Tint));
 
                     Composer.EndTabItem();
                 }

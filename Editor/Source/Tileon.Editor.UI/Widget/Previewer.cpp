@@ -29,14 +29,8 @@ namespace Tileon::Editor::UI
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-     void Previewer::Draw(Ref<Composer> Composer, ConstTracker<Graphic::Texture> Texture, Vector2 Size, Rect Source)
+     void Previewer::Draw(Ref<Composer> Composer, Graphic::Object Texture, Vector2 Size, Rect Source, Color Tint)
      {
-        // Fall back to the texture's native dimensions when no explicit size is given.
-        if (Size.GetX() == 0.0f && Size.GetY() == 0.0f && Texture)
-        {
-            Size = Vector2(Texture->GetWidth(), Texture->GetHeight());
-        }
-
         const ImVec2 Available = Composer.GetContentRegionAvail();
         const ImVec2 Origin    = Composer.GetCursorScreenPos();
 
@@ -119,9 +113,11 @@ namespace Tileon::Editor::UI
         // Draw the texture if available, scaling it to fit the zoom level and centering it.
         if (Texture)
         {
-            const ImVec2 UV0(Source.GetMinimumX(), Source.GetMinimumY());
-            const ImVec2 UV1(Source.GetMaximumX(), Source.GetMaximumY());
-            DrawList->AddImage(Texture->GetID(), ImageTL, ImageBR, UV0, UV1);
+            const ImVec2  UV0(Source.GetMinimumX(), Source.GetMinimumY());
+            const ImVec2  UV1(Source.GetMaximumX(), Source.GetMaximumY());
+            const ImColor Color(Tint.GetRed(), Tint.GetGreen(), Tint.GetBlue(), Tint.GetAlpha());
+
+            DrawList->AddImage(Texture, ImageTL, ImageBR, UV0, UV1, Color);
         }
 
         // Draw a border around the image area.

@@ -72,6 +72,17 @@ namespace Tileon::Editor::View
         /// \param Message  The message to display in the placeholder panel.
         void DrawEmptyPanel(Ref<UI::Composer> Composer, ConstStr8 Message);
 
+        /// \brief Loads a material resource from the specified URL and assigns it to the given tileset entry.
+        ///
+        /// \param Entry The tileset entry to which the material will be assigned.
+        /// \param Url   The URL of the material resource to load.
+        ZYPHRYON_INLINE void LoadMaterialUrl(Ref<Tileset::Entry> Entry, ConstStr8 Url)
+        {
+            Ref<Content::Service> Content = GetContext().GetService<Content::Service>();
+            Entry.Path     = Content::Uri(Format("Resources://{}", Url));
+            Entry.Material = Content.Load<Graphic::Material>(Entry.Path);
+        }
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

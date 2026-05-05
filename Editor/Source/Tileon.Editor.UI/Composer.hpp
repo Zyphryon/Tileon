@@ -213,26 +213,6 @@ namespace Tileon::Editor::UI
             PopStyleColor();
         }
 
-        template<Bool Autofit = false, typename Callback>
-        ZYPHRYON_INLINE void Field(ConstStr8 Label, AnyRef<Callback> Action)
-        {
-            Field(Label);
-
-            if constexpr(Autofit)
-            {
-                PushItemWidth(-1);
-            }
-
-            Action();
-
-            if constexpr(Autofit)
-            {
-                PopItemWidth();
-            }
-
-            Spacing();
-        }
-
         ZYPHRYON_INLINE void Indent(Real32 Width = 0.0f)
         {
             ImGui::Indent(Width);
@@ -420,11 +400,11 @@ namespace Tileon::Editor::UI
         }
 
         template<typename Type>
-        ZYPHRYON_INLINE Bool InputInt(ConstStr8 ID, Ref<Type> Value, Type Min = Type(1), Type Max = Type(1), ImGuiInputTextFlags Flags = ImGuiInputTextFlags_None)
+        ZYPHRYON_INLINE Bool InputInt(ConstStr8 ID, Ref<Type> Value, Type Step = Type(1), Type StepFast = Type(1), ImGuiInputTextFlags Flags = ImGuiInputTextFlags_None)
         {
             int Temp = static_cast<int>(Value);
 
-            if (ImGui::InputInt(ID.data(), &Temp, Min, Max, Flags))
+            if (ImGui::InputInt(ID.data(), &Temp, Step, StepFast, Flags))
             {
                 Value = static_cast<Type>(Temp);
                 return true;
@@ -438,8 +418,8 @@ namespace Tileon::Editor::UI
             Ref<Type>           X,
             Ref<Type>           Y,
             ConstStr8           Separator = "x",
-            Type                Min       = Type(1),
-            Type                Max       = Type(1),
+            Type                Step      = Type(1),
+            Type                StepFast  = Type(1),
             ImGuiInputTextFlags Flags     = ImGuiInputTextFlags_None)
         {
             const Real32 Size    = ImGui::CalcTextSize(Separator.data()).x;
@@ -449,14 +429,14 @@ namespace Tileon::Editor::UI
             Bool Dirty = false;
 
             ImGui::SetNextItemWidth(Width);
-            Dirty |= InputInt(Base::Format("{}_x", ID), X, Min, Max, Flags);
+            Dirty |= InputInt(Base::Format("{}_x", ID), X, Step, StepFast, Flags);
 
             ImGui::SameLine();
             ImGui::TextDisabled("%s", Separator.data());
             ImGui::SameLine();
 
             ImGui::SetNextItemWidth(Width);
-            Dirty |= InputInt(Base::Format("{}_y", ID), Y, Min, Max, Flags);
+            Dirty |= InputInt(Base::Format("{}_y", ID), Y, Step, StepFast, Flags);
 
             return Dirty;
         }

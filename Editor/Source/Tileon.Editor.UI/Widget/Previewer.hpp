@@ -47,7 +47,8 @@ namespace Tileon::Editor::UI
         /// \param Texture  The texture to be drawn in the previewer.
         /// \param Size     The size to draw the texture.
         /// \param Source   The source rectangle defining the portion of the texture to draw.
-        void Draw(Ref<Composer> Composer, ConstTracker<Graphic::Texture> Texture, Vector2 Size = Vector2::Zero(), Rect Source = Rect::One());
+        /// \param Tint     The color tint to apply to the texture when drawing.
+        void Draw(Ref<Composer> Composer, Graphic::Object Texture, Vector2 Size, Rect Source, Color Tint = Color::White());
 
         /// \brief Gets the current zoom level for the previewer.
         ///
