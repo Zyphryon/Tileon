@@ -48,44 +48,37 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Tileset::Tick(Real64 Time)
-    {
-        mRegistry.ForEach([Time](Ref<Entry> Data)
-        {
-            Data.Tick(Time); // TODO: Only tick entries that have animations.
-        });
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
     void Tileset::Preload()
     {
-        // TODO: Remove in the future.
-        mRegistry.ForEach([this](Ref<Entry> Data)
+        mRegistry.ForEach(Capture<& Tileset::Refresh>(this));
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Tileset::Tick(Real64 Time)
+    {
+        mRegistry.ForEach([this, Time](ConstRef<Motif> Motif)
         {
-            if (Data.Path.IsValid())
-            {
-                Data.Material = GetService<Content::Service>().Load<Graphic::Material>(Data.Path);
-            }
+            const UInt8 Keyframe = Animator::Sample(Motif.GetAnimation(), Time, 0, Motif.GetEasing());
+            mGlyphs[Motif.GetID()].Crop = Motif.GetAnimation().GetFrameData(Keyframe);
         });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Ref<Tileset::Entry> Tileset::CreateEntry(ConstRef<Terrain> Terrain)
+    void Tileset::Refresh(ConstRef<Motif> Motif)
     {
-        mRegistry.Acquire(Terrain.GetID());
-        return mRegistry[Terrain.GetID()];
-    }
+        Ref<Glyph> Glyph = mGlyphs[Motif.GetID()];
 
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        if (ConstRef<Content::Uri> Url = Motif.GetMaterial(); Url.IsValid())
+        {
+            Glyph.Material = GetService<Content::Service>().Load<Graphic::Material>(Url);
+        }
 
-    void Tileset::DeleteEntry(ConstRef<Terrain> Terrain)
-    {
-        mRegistry.Free(Terrain.GetID());
+        Glyph.Span = Motif.GetSpan();
+        Glyph.Tint = Motif.GetTint();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

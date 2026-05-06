@@ -13,8 +13,8 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Profile.hpp"
-#include "Tileon.Visual/Director.hpp"
-#include "Tileon.Visual/Renderer.hpp"
+#include "Tileon.Render/Director.hpp"
+#include "Tileon.Render/Renderer.hpp"
 #include "Tileon.World/World.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -60,7 +60,7 @@ namespace Tileon
         /// \param Immediate If `true`, renders directly to the display; if `false`, renders to an off-screen texture.
         void Present(Bool Immediate);
 
-        /// \brief Gets the World instance associated with the controller.
+        /// \brief Gets the world instance associated with the controller.
         ///
         /// \return The world instance managed by the controller.
         ZYPHRYON_INLINE Ref<World> GetWorld()
@@ -68,7 +68,7 @@ namespace Tileon
             return mWorld;
         }
 
-        /// \brief Gets the Director instance associated with the controller.
+        /// \brief Gets the director instance associated with the controller.
         ///
         /// \return The director instance managed by the controller.
         ZYPHRYON_INLINE Ref<Director> GetDirector()
@@ -76,7 +76,7 @@ namespace Tileon
             return mDirector;
         }
 
-        /// \brief Gets the Renderer instance associated with the controller.
+        /// \brief Gets the renderer instance associated with the controller.
         ///
         /// \return The renderer instance managed by the controller.
         ZYPHRYON_INLINE Ref<Renderer> GetRenderer()

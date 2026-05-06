@@ -20,7 +20,7 @@
 
 namespace Tileon
 {
-    /// \brief Represents a spatial anchor pointfor an entity, defining the local origin for transformations.
+    /// \brief Represents a spatial anchor point for an entity, defining the local origin for transformations.
     class Anchor final
     {
     public:

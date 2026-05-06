@@ -50,17 +50,11 @@ namespace Tileon::Editor
 
     void Workshop::ExecuteOnTiles(Command Command, Placement Placement, UInt32 Object)
     {
-        // Validates that the specified object ID corresponds to a valid tileset entry.
         Ref<Tileset> Tileset = mController.GetRenderer().GetTileset();
-        if (!Tileset.HasEntry(Object))
-        {
-            LOG_WARNING("Invalid tileset entry ID: {}", Object);
-            return;
-        }
 
         // Gets the tileset entry for the specified object ID and retrieves its column and row span.
-        ConstRef<Tileset::Entry> Entry = Tileset.GetEntry(Object);
-        const IntVector2 Span(Entry.Columns, Entry.Rows);
+        ConstRef<Motif> Motif = Tileset.GetMotif(Object);
+        const IntVector2 Span = Motif.GetSpan();
 
         // Apply the command based on the current brush type and the placement of the cursor in the world.
         switch (mBrush)
@@ -72,7 +66,7 @@ namespace Tileon::Editor
         {
             const SInt32  TileX = Floor(Placement.GetAbsoluteX());
             const SInt32  TileY = Floor(Placement.GetAbsoluteY());
-            const IntRect Area(TileX, TileY, TileX + Entry.Columns, TileY + Entry.Rows);
+            const IntRect Area(TileX, TileY, TileX + Span.GetX(), TileY + Span.GetY());
 
             ApplyTiles(Command, Area, static_cast<Tile::Layer>(Enum::Cast(mLevel)), Object, Span);
             break;

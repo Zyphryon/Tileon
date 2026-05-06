@@ -11,8 +11,8 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Geometry.hpp"
-#include "Tileon.Visual/Component.hpp"
-#include "Tileon.Visual/Depth.hpp"
+#include "Tileon.Render/Component.hpp"
+#include "Tileon.Render/Depth.hpp"
 #include "Tileon.World/Component/Kinematic/Transform.hpp"
 #include "Tileon.World/Component/Spatial/Anchor.hpp"
 #include "Tileon.World/Component/Spatial/Extent.hpp"
@@ -76,6 +76,7 @@ namespace Tileon::Stage
             });
 
             // Draw tile regions, culling against the view frustum to minimize overdraw.
+            // TODO: SpriteOpaqueWithNormal?
             mCanvas.SetPipeline(mPipelines[Enum::Cast(Technique::SpriteOpaque)]);
             mQrDrawRegions.Run<const Region>([&](ConstRef<Region> Region)
             {
@@ -113,7 +114,7 @@ namespace Tileon::Stage
 
         // Observe changes to the sprite component to resolve material resources and trigger updates when necessary.
         Scene.CreateObserver<Scene::DSL::In<const Sprite>>(
-            "Visual::Geometry::ObsUpdateAppaeranceOnSpriteUpdate",
+            "Render::Geometry::ObsUpdateAppaeranceOnSpriteUpdate",
             EcsOnSet,
             [this](Scene::Entity Actor, ConstRef<Sprite> Sprite)
             {
@@ -123,7 +124,7 @@ namespace Tileon::Stage
 
         // Observe when an Animation component is attached, and automatically initialize the animator for playback.
         Scene.CreateObserver<Scene::DSL::In<const Animation>>(
-            "Visual::Geometry::ObsUpdateAnimatorOnAnimationUpdate",
+            "Render::Geometry::ObsUpdateAnimatorOnAnimationUpdate",
             EcsOnSet,
             [](Scene::Entity Actor, ConstRef<Animation> Animation)
             {
@@ -132,7 +133,7 @@ namespace Tileon::Stage
 
         // Observe changes to the typeface component to resolve font resources and trigger updates when necessary.
         Scene.CreateObserver<Scene::DSL::In<Typeface>>(
-            "Visual::Geometry::ObsUpdateTypefaceAsync",
+            "Render::Geometry::ObsUpdateTypefaceAsync",
             EcsOnSet,
             [this](Scene::Entity Actor, Ref<Typeface> Component)
             {
@@ -154,7 +155,7 @@ namespace Tileon::Stage
 
         // Observe changes to the typeface or text components to update the dimension and origin of text entities when necessary.
         Scene.CreateObserver<Scene::DSL::In<const Typeface, const Text>>(
-            "Visual::Geometry::ObsUpdateTextBoundaries",
+            "Render::Geometry::ObsUpdateTextBoundaries",
             EcsOnSet,
             [](Scene::Entity Actor, ConstRef<Typeface> Typeface, ConstRef<Text> Text)
             {
@@ -172,7 +173,7 @@ namespace Tileon::Stage
 
         // System that advances animations and updates sprite appearances.
         Scene.CreateSystem<Scene::DSL::In<const Time, const Animation, Animator, Appaerance>>(
-            "Visual::Geometry::ComputeAnimation",
+            "Render::Geometry::ComputeAnimation",
             EcsOnUpdate,
             Scene::Execution::Concurrent,
             [](Time Time, ConstRef<Animation> Animation, Ref<Animator> Animator, Ref<Appaerance> Appaerance)
@@ -187,15 +188,15 @@ namespace Tileon::Stage
         // Create the queries for retrieving renderable components.
         mQrDrawSprites = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Extent, const Appaerance, ConstPtr<IntColor8>>
-        >("Visual::Geometry::DrawSprites", Scene::Cache::Auto);
+        >("Render::Geometry::DrawSprites", Scene::Cache::Auto);
 
         mQrDrawTexts = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Typeface, const Text, ConstPtr<IntColor8>>
-        >("Visual::Geometry::DrawTexts", Scene::Cache::Auto);
+        >("Render::Geometry::DrawTexts", Scene::Cache::Auto);
 
         mQrDrawRegions = Scene.CreateQuery<
             Scene::DSL::In<const Region>
-        >("Visual::Geometry::DrawRegions", Scene::Cache::Auto);
+        >("Render::Geometry::DrawRegions", Scene::Cache::Auto);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -255,85 +256,83 @@ namespace Tileon::Stage
                         continue;
                     }
 
-                    // Fetches the tileset entry corresponding to the terrain handle for the current layer of the tile.
-                    if (Tileset.HasEntry(Handle))
-                    {
-                        ConstRef<Tileset::Entry> Entry = Tileset.GetEntry(Handle);
+                    // Fetches the motif corresponding to the terrain handle for the current layer of the tile.
+                    ConstRef<Tileset::Glyph> Glyph = Tileset.GetGlyph(Handle);
 
-                        const UInt32 MaxInnerX = Min(Boundaries.GetMaximumX(), TileX + (Entry.Columns - Weight % Entry.Columns));
-                        const UInt32 MaxInnerY = Boundaries.GetMaximumY();
-                        UInt8        CountX    = 1;
-                        UInt8        CountY    = 1;
+                    const IntVector2 Span  = Glyph.Span;
+                    const UInt32 MaxInnerX = Min(Boundaries.GetMaximumX(), TileX + (Span.GetX() - Weight % Span.GetX()));
+                    const UInt32 MaxInnerY = Boundaries.GetMaximumY();
+                    UInt8        CountX    = 1;
+                    UInt8        CountY    = 1;
 
-                        // Try to expand horizontally to adjacent columns that share the same terrain.
-                        for (UInt32 InnerX = TileX + 1; InnerX < MaxInnerX; ++InnerX, ++CountX)
-                        {
-                            if (HasBit(Resolution[TileY], 1u << InnerX))
-                            {
-                                break;
-                            }
+                   // Try to expand horizontally to adjacent columns that share the same terrain.
+                   for (UInt32 InnerX = TileX + 1; InnerX < MaxInnerX; ++InnerX, ++CountX)
+                   {
+                       if (HasBit(Resolution[TileY], 1u << InnerX))
+                       {
+                           break;
+                       }
 
-                            const UInt16 ExpectedWeight = Weight + (InnerX - TileX);
+                       const UInt16 ExpectedWeight = Weight + (InnerX - TileX);
 
-                            ConstRef<Tileon::Tile> InnerTile = Region.GetTile(InnerX, TileY);
+                       ConstRef<Tileon::Tile> InnerTile = Region.GetTile(InnerX, TileY);
 
-                            if (InnerTile.GetHandle(Layer) != Handle || InnerTile.GetWeight(Layer) != ExpectedWeight)
-                            {
-                                break;
-                            }
-                        }
+                       if (InnerTile.GetHandle(Layer) != Handle || InnerTile.GetWeight(Layer) != ExpectedWeight)
+                       {
+                           break;
+                       }
+                   }
 
-                        const UInt32 Mask = ((1u << CountX) - 1) << TileX;
-                        Resolution[TileY] |= Mask;
+                   const UInt32 Mask = ((1u << CountX) - 1) << TileX;
+                   Resolution[TileY] |= Mask;
 
-                        // Try to expand vertically to adjacent rows that share the same terrain.
-                        UInt16 RowWeight = Weight + Entry.Columns;
+                   // Try to expand vertically to adjacent rows that share the same terrain.
+                   UInt16 RowWeight = Weight + Span.GetX();
 
-                        for (UInt32 InnerY = TileY + 1; InnerY < MaxInnerY; ++InnerY, ++CountY, RowWeight += Entry.Columns)
-                        {
-                            Bool Merge = true;
+                   for (UInt32 InnerY = TileY + 1; InnerY < MaxInnerY; ++InnerY, ++CountY, RowWeight += Span.GetX())
+                   {
+                       Bool Merge = true;
 
-                            for (UInt32 InnerX = TileX; InnerX < TileX + CountX; ++InnerX)
-                            {
-                                if (HasBit(Resolution[InnerY], 1u << InnerX))
-                                {
-                                    Merge = false;
-                                    break;
-                                }
+                       for (UInt32 InnerX = TileX; InnerX < TileX + CountX; ++InnerX)
+                       {
+                           if (HasBit(Resolution[InnerY], 1u << InnerX))
+                           {
+                               Merge = false;
+                               break;
+                           }
 
-                                ConstRef<Tileon::Tile> InnerTile = Region.GetTile(InnerX, InnerY);
+                           ConstRef<Tileon::Tile> InnerTile = Region.GetTile(InnerX, InnerY);
 
-                                const UInt16 ExpectedWeight = RowWeight + (InnerX - TileX);
+                           const UInt16 ExpectedWeight = RowWeight + (InnerX - TileX);
 
-                                if (InnerTile.GetHandle(Layer) != Handle || InnerTile.GetWeight(Layer) != ExpectedWeight)
-                                {
-                                    Merge = false;
-                                    break;
-                                }
-                            }
+                           if (InnerTile.GetHandle(Layer) != Handle || InnerTile.GetWeight(Layer) != ExpectedWeight)
+                           {
+                               Merge = false;
+                               break;
+                           }
+                       }
 
-                            if (Merge)
-                            {
-                                Resolution[InnerY] |= Mask;
-                            }
-                            else
-                            {
-                                break;
-                            }
-                        }
+                       if (Merge)
+                       {
+                           Resolution[InnerY] |= Mask;
+                       }
+                       else
+                       {
+                           break;
+                       }
+                   }
 
-                        // Draw all merged tiles as a single sprite.
-                        if (Entry.Material)
-                        {
-                            const Vector3 Position(
-                                RegionX + static_cast<SInt32>(TileX),
-                                RegionY + static_cast<SInt32>(TileY), Depth);
-                            DrawTile(Position, IntVector2(CountX, CountY), Weight, Entry);
-                        }
+                   // Draw all merged tiles as a single sprite.
+                   if (Glyph.Material)
+                   {
+                       const Vector3 Position(
+                           RegionX + static_cast<SInt32>(TileX),
+                           RegionY + static_cast<SInt32>(TileY), Depth);
+                       DrawTile(Position, IntVector2(CountX, CountY), Weight, Glyph);
+                   }
 
-                        // Advance the X coordinate by the number of merged tiles to skip over them in the iteration.
-                        TileX += CountX - 1;
-                    }
+                   // Advance the X coordinate by the number of merged tiles to skip over them in the iteration.
+                   TileX += CountX - 1;
                 }
             }
         }
@@ -342,23 +341,25 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Geometry::DrawTile(Vector3 Position, IntVector2 Span, UInt16 Weight, ConstRef<Tileset::Entry> Entry)
+    void Geometry::DrawTile(Vector3 Position, IntVector2 Size, UInt16 Weight, ConstRef<Tileset::Glyph> Glyph)
     {
-        const Rect Frame = Entry.Animation.GetFrameData(Entry.Keyframe);
+        const IntVector2 Span = Glyph.Span;
+        const Rect       Crop = Glyph.Crop;
 
-        const Real32 UCoordPerTile = Frame.GetWidth()  / Entry.Columns;
-        const Real32 VCoordPerTile = Frame.GetHeight() / Entry.Rows;
+        // TODO: Cache in Glyph to prevent two division per draw?
+        const Real32 UCoordPerTile = Crop.GetWidth()  / Span.GetX();
+        const Real32 VCoordPerTile = Crop.GetHeight() / Span.GetY();
 
-        const Real32 OffsetX = (Weight % Entry.Columns) * UCoordPerTile;
-        const Real32 OffsetY = (Weight / Entry.Columns) * VCoordPerTile;
+        const Real32 OffsetX = (Weight % Span.GetX()) * UCoordPerTile;
+        const Real32 OffsetY = (Weight / Span.GetX()) * VCoordPerTile;
 
         const Rect Displacement(
-            Frame.GetX() + OffsetX,
-            Frame.GetY() + OffsetY + Span.GetY() * VCoordPerTile,
-            Frame.GetX() + OffsetX + Span.GetX() * UCoordPerTile,
-            Frame.GetY() + OffsetY);
+            Crop.GetX() + OffsetX,
+            Crop.GetY() + OffsetY + Size.GetY() * VCoordPerTile,
+            Crop.GetX() + OffsetX + Size.GetX() * UCoordPerTile,
+            Crop.GetY() + OffsetY);
 
-        const Render::Sprite Command(Entry.Material, static_cast<Vector2>(Span), Entry.Tint, Displacement);
+        const Render::Sprite Command(Glyph.Material, static_cast<Vector2>(Size), Glyph.Tint, Displacement);
         mCanvas.DrawSprite(Command, Matrix3x2::FromTranslation(Position.GetXY()), Position.GetZ());
     }
 }

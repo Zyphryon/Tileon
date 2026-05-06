@@ -30,8 +30,8 @@ namespace Tileon
 
         /// \brief Constructs an extent with the specified offset and size.
         ///
-        /// \param Offset The offset to set for the extent, representing the position of the entity relative to its placement.
-        /// \param Size   The size to set for the extent, representing the dimensions of the entity in the world.
+        /// \param Offset The offset of the extent, representing the position relative to the entity's origin.
+        /// \param Size   The size of the extent, representing the width and height of the entity's spatial area.
         ZYPHRYON_INLINE Extent(Vector2 Offset, Vector2 Size)
             : mOffset { Offset },
               mSize   { Size }

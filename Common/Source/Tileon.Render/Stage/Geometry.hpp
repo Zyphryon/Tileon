@@ -12,9 +12,10 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Visual/Director.hpp"
-#include "Tileon.Visual/Tileset.hpp"
+#include "Tileon.Render/Director.hpp"
+#include "Tileon.Render/Tileset.hpp"
 #include <Zyphryon.Render/Renderer/Canvas.hpp>
+#include <Zyphryon.Scene/Service.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -72,18 +73,18 @@ namespace Tileon::Stage
 
         /// \brief Draws a tile at the specified position.
         ///
-        /// \param Position The position to draw the tile at.
-        /// \param Span     The span of the tile in terms of tile columns and rows.
-        /// \param Weight   The weight of the tile, which may affect its visual representation.
-        /// \param Entry    The tile entry containing the rendering data for the tile to be drawn.
-        void DrawTile(Vector3 Position, IntVector2 Span, UInt16 Weight, ConstRef<Tileset::Entry> Entry);
+        /// \param Position The position in world coordinates where the tile should be drawn.
+        /// \param Size     The size of the tile in logical units (e.g., world units).
+        /// \param Weight   The weight of the tile, used for determining rendering order.
+        /// \param Glyph    The glyph data representing the tile's visual appearance.
+        void DrawTile(Vector3 Position, IntVector2 Size, UInt16 Weight, ConstRef<Tileset::Glyph> Glyph);
 
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Render::Canvas mCanvas;         // TODO: Implement our own?
+        Render::Canvas mCanvas;         // TODO: Strip out from Zyphryon?
         Pipelines      mPipelines;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

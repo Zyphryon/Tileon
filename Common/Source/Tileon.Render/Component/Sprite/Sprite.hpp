@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include <Zyphryon.Graphic/Material.hpp>
+#include <Zyphryon.Content/Uri.hpp>
 #include <Zyphryon.Math/Geometry/Rect.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -21,43 +21,43 @@
 
 namespace Tileon
 {
-    /// \brief Represents the appearance of a sprite that contains runtime data for a sprite entity.
-    class Appaerance final
+    /// \brief Represents a sprite component that contains archetypal data for rendering sprites.
+    class Sprite final
     {
     public:
 
         /// \brief Default constructor.
-        ZYPHRYON_INLINE Appaerance() = default;
+        ZYPHRYON_INLINE Sprite() = default;
 
-        /// \brief Constructs an appearance with the specified material and source rectangle.
+        /// \brief Constructs a sprite with the specified path and source rectangle.
         ///
-        /// \param Material The material to use for rendering the sprite.
-        /// \param Source   The source rectangle for the sprite, defining the portion of the texture to use.
-        ZYPHRYON_INLINE Appaerance(ConstTracker<Graphic::Material> Material, Rect Source)
-            : mMaterial { Material },
-              mSource   { Source }
+        /// \param Path   The path to the sprite's texture resource.
+        /// \param Source The source rectangle for the sprite.
+        ZYPHRYON_INLINE Sprite(AnyRef<Content::Uri> Path, Rect Source = Rect::One())
+            : mPath   { Move(Path) },
+              mSource { Source }
         {
         }
 
-        /// \brief Sets the material for rendering the sprite.
+        /// \brief Sets the path to the sprite's texture resource.
         ///
-        /// \param Material The material to set for rendering the sprite.
-        ZYPHRYON_INLINE void SetMaterial(ConstTracker<Graphic::Material> Material)
+        /// \param Path The new path to set for the sprite's texture resource.
+        ZYPHRYON_INLINE void SetPath(AnyRef<Content::Uri> Path)
         {
-            mMaterial = Material;
+            mPath = Move(Path);
         }
 
-        /// \brief Gets the material used for rendering the sprite.
+        /// \brief Gets the path to the sprite's texture resource.
         ///
-        /// \return The material used for rendering the sprite.
-        ZYPHRYON_INLINE ConstTracker<Graphic::Material> GetMaterial() const
+        /// \return The path to the sprite's texture resource.
+        ZYPHRYON_INLINE ConstRef<Content::Uri> GetPath() const
         {
-            return mMaterial;
+            return mPath;
         }
 
         /// \brief Sets the source rectangle for the sprite.
         ///
-        /// \param Source The source rectangle to set for the sprite, defining the portion of the texture to use.
+        /// \param Source The new source rectangle to set for the sprite.
         ZYPHRYON_INLINE void SetSource(Rect Source)
         {
             mSource = Source;
@@ -65,10 +65,20 @@ namespace Tileon
 
         /// \brief Gets the source rectangle for the sprite.
         ///
-        /// \return The source rectangle for the sprite, defining the portion of the texture to use.
+        /// \return The source rectangle for the sprite.
         ZYPHRYON_INLINE Rect GetSource() const
         {
             return mSource;
+        }
+
+        /// \brief Serializes the state of the object to or from the specified archive.
+        ///
+        /// \param Archive The archive to serialize the object with.
+        template<typename Serializer>
+        ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
+        {
+            Archive.SerializeObject(mPath);
+            Archive.SerializeObject(mSource);
         }
 
     private:
@@ -76,7 +86,7 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Tracker<Graphic::Material> mMaterial;
-        Rect                       mSource;
+        Content::Uri mPath;
+        Rect         mSource;
     };
 }

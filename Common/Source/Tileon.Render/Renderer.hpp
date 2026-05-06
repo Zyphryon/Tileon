@@ -52,7 +52,7 @@ namespace Tileon
         /// \param Host The service host to associate with the renderer.
         Renderer(Ref<Service::Host> Host);
 
-        /// \brief Gets the tileset associated with the renderer, which manages the rendering data for different terrains.
+        /// \brief Gets the tileset associated with the renderer.
         ///
         /// \return The tileset associated with the renderer.
         ZYPHRYON_INLINE Ref<Tileset> GetTileset()

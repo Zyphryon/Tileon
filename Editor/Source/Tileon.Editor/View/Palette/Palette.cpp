@@ -47,20 +47,20 @@ namespace Tileon::Editor::View
 
             if (mRepository.HasTerrain(mSelection))
             {
-                Ref<Terrain>        Terrain = mRepository.GetTerrain(mSelection);
-                Ref<Tileset::Entry> Entry   = mTileset.GetEntry(Terrain.GetID());
+                Ref<Terrain> Terrain = mRepository.GetTerrain(mSelection);
+                Ref<Motif>   Motif   = mTileset.GetMotif(mSelection);
 
                 Composer.SameLine();
                 Composer.BeginChild("##left_panel", ImVec2(340.0f, Padding), ImGuiChildFlags_Borders);
-                DrawLeftPanel(Composer, Terrain, Entry);
+                DrawLeftPanel(Composer, Terrain, Motif);
                 Composer.EndChild();
 
                 Composer.SameLine();
                 Composer.BeginChild("##right_panel", ImVec2(0.0f, Padding), ImGuiChildFlags_Borders);
 
-                if (Entry.Material && Entry.Material->HasCompleted())
+                if (Motif.GetMaterial().IsValid())
                 {
-                    DrawRightPanel(Composer, Terrain, Entry);
+                    DrawRightPanel(Composer, mTileset.GetGlyph(Motif.GetID()));
                 }
                 else
                 {
@@ -92,7 +92,6 @@ namespace Tileon::Editor::View
         if (WasPlusClicked)
         {
             Ref<Terrain> Terrain = mRepository.CreateTerrain();
-            mTileset.CreateEntry(Terrain);
 
             mSelection = Terrain.GetID();
         }
@@ -125,8 +124,7 @@ namespace Tileon::Editor::View
             {
                 if (Composer.MenuItem("Delete"))
                 {
-                    mTileset.DeleteEntry(Terrain);
-                    mRepository.DeleteTerrain(Terrain);
+                    mRepository.DeleteTerrain(Terrain.GetID());
                 }
                 Composer.EndPopup();
             }
@@ -138,8 +136,10 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Palette::DrawLeftPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Tileset::Entry> Entry)
+    void Palette::DrawLeftPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Motif> Motif)
     {
+        Bool Dirty = false;
+
         // Draw the editable fields for the terrain identity properties.
         Composer.Section("Identity");
 
@@ -152,14 +152,19 @@ namespace Tileon::Editor::View
         Composer.PopItemWidth();
         Composer.Spacing();
 
-        // Draw the editable fields for the material properties of the tileset entry.
+        // Draw the editable fields for the material properties of the tileset Motif.
         Composer.Section("Material");
 
         Composer.Field("Resource");
-        Composer.InputTextWithButton("##url", Entry.Path.GetPath(),
+        Composer.InputTextWithButton("##url", Motif.GetMaterial().GetPath(),
             [&](ConstStr8 Url)
             {
-                LoadMaterialUrl(Entry, Url);
+                if (!Url.empty())
+                {
+                    Motif.SetMaterial(Format("Resources://{}", Url));
+
+                    Dirty = true;
+                }
             },
             "...",
             [&]()
@@ -170,31 +175,53 @@ namespace Tileon::Editor::View
         Composer.Spacing();
 
         Composer.Field("Span");
-        Composer.InputIntPair("##span", Entry.Columns, Entry.Rows, "x");
+        UInt8 Columns = Motif.GetSpan().GetX();
+        UInt8 Rows    = Motif.GetSpan().GetY();
+        if (Composer.InputIntPair("##span", Columns, Rows, "x"))
+        {
+            Motif.SetSpan(IntVector2(Columns, Rows));
+
+            Dirty = true;
+        }
         Composer.Spacing();
 
         Composer.Field("Color");
         Composer.PushItemWidth(-1);
-        Composer.InputTintSmall("##tint", Entry.Tint);
+        IntColor8 Tint = Motif.GetTint();
+        if (Composer.InputTintSmall("##tint", Tint))
+        {
+            Motif.SetTint(Tint);
+
+            Dirty = true;
+        }
         Composer.PopItemWidth();
         Composer.Spacing();
 
-        // Draw the animation section for the tileset entry.
+        // Refresh the tileset data for the motif if any of its properties were modified.
+        if (Dirty)
+        {
+            mTileset.Refresh(Motif);
+        }
+
+        // Draw the animation section for the tileset Motif.
         Composer.Section("Animation");
-        DrawLeftPanelAnimationSection(Composer, Entry);
+        DrawLeftPanelAnimation(Composer, Motif, mTileset.GetGlyph(Motif.GetID()));
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Palette::DrawLeftPanelAnimationSection(Ref<UI::Composer> Composer, Ref<Tileset::Entry> Entry)
+    void Palette::DrawLeftPanelAnimation(Ref<UI::Composer> Composer, Ref<Motif> Motif, ConstRef<Tileset::Glyph> Glyph)
     {
-        Ref<Animation> Animation = Entry.Animation;
+        Animation Animation = Motif.GetAnimation();
+        Bool      Dirty     = false;
 
         // Draw the add frame button for the animation, and disable it when the animation is full.
         if (Composer.DisabledButton("+ Add Frame", Animation.IsFull(), -1.0f))
         {
             Animation.Insert(Rect(0.0f, 0.0f, 0.0f, 0.0f), 0.1f);
+
+            Dirty = true;
         }
 
         Composer.Spacing();
@@ -210,11 +237,12 @@ namespace Tileon::Editor::View
         }
 
         // Draw the table of animation frames.
-        if (Composer.BeginTable("##anim_table", 7,
+        constexpr ImGuiTableFlags kTableFlags =
             ImGuiTableFlags_BordersOuter  |
             ImGuiTableFlags_BordersInnerV |
             ImGuiTableFlags_RowBg         |
-            ImGuiTableFlags_SizingStretchSame))
+            ImGuiTableFlags_SizingStretchSame;
+        if (Composer.BeginTable("##anim_table", 7, kTableFlags))
         {
             // Draw table columns and headers.
             Composer.TableSetupColumn("#",    ImGuiTableColumnFlags_WidthFixed,   18.0f);
@@ -230,9 +258,9 @@ namespace Tileon::Editor::View
             Real32 TextureWidth  = 1.0f;
             Real32 TextureHeight = 1.0f;
 
-            if (Entry.Material)
+            if (Glyph.Material)
             {
-                ConstTracker<Graphic::Texture> Albedo = Entry.Material->GetTexture(Graphic::TextureSemantic::Albedo);
+                ConstTracker<Graphic::Texture> Albedo = Glyph.Material->GetTexture(Graphic::TextureSemantic::Albedo);
                 TextureWidth  = Albedo ? static_cast<Real32>(Albedo->GetWidth())  : 1.0f;
                 TextureHeight = Albedo ? static_cast<Real32>(Albedo->GetHeight()) : 1.0f;
             }
@@ -243,7 +271,7 @@ namespace Tileon::Editor::View
             };
 
             // Draw table entries.
-            SInt32 RemoveEntryAt = -1;
+            SInt32 RemoveMotifAt = -1;
 
             for (UInt8 Keyframe = 0; Keyframe < Animation.GetCount(); ++Keyframe)
             {
@@ -264,6 +292,8 @@ namespace Tileon::Editor::View
                 if (Composer.InputFloat(Base::Format("##ax{}", Keyframe), X, 0.0f, 0.0f, "%.0f"))
                 {
                     Animation.SetFrameData(Keyframe, NormalizeRect(X, Y, W, H));
+
+                    Dirty = true;
                 }
                 Composer.PopItemWidth();
 
@@ -272,6 +302,8 @@ namespace Tileon::Editor::View
                 if (Composer.InputFloat(Base::Format("##ay{}", Keyframe), Y, 0.0f, 0.0f, "%.0f"))
                 {
                     Animation.SetFrameData(Keyframe, NormalizeRect(X, Y, W, H));
+
+                    Dirty = true;
                 }
                 Composer.PopItemWidth();
 
@@ -280,6 +312,8 @@ namespace Tileon::Editor::View
                 if (Composer.InputFloat(Base::Format("##aw{}", Keyframe), W, 0.0f, 0.0f, "%.0f"))
                 {
                     Animation.SetFrameData(Keyframe, NormalizeRect(X, Y, W, H));
+
+                    Dirty = true;
                 }
                 Composer.PopItemWidth();
 
@@ -288,6 +322,8 @@ namespace Tileon::Editor::View
                 if (Composer.InputFloat(Base::Format("##ah{}", Keyframe), H, 0.0f, 0.0f, "%.0f"))
                 {
                     Animation.SetFrameData(Keyframe, NormalizeRect(X, Y, W, H));
+
+                    Dirty = true;
                 }
                 Composer.PopItemWidth();
 
@@ -296,36 +332,45 @@ namespace Tileon::Editor::View
                 if (Composer.InputFloat(Base::Format("##ad{}", Keyframe), Duration, 0.0f, 0.0f, "%.2f"))
                 {
                     Animation.SetFrameDuration(Keyframe, Max(Duration, 0.01f));
+
+                    Dirty = true;
                 }
                 Composer.PopItemWidth();
 
                 Composer.TableSetColumnIndex(6);
                 if (Composer.SmallButton(Base::Format("x##{}", Keyframe)))
                 {
-                    RemoveEntryAt = static_cast<SInt32>(Keyframe);
+                    RemoveMotifAt = static_cast<SInt32>(Keyframe);
                 }
             }
 
             // Remove the animation frame if the remove button was clicked for any of the entries.
-            if (RemoveEntryAt != -1)
+            if (RemoveMotifAt != -1)
             {
-                Animation.Remove(static_cast<UInt8>(RemoveEntryAt));
+                Animation.Remove(static_cast<UInt8>(RemoveMotifAt));
+
+                Dirty = true;
             }
 
             Composer.EndTable();
+        }
+
+        if (Dirty)
+        {
+            Motif.SetAnimation(Move(Animation));
         }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Palette::DrawRightPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Tileset::Entry> Entry)
+    void Palette::DrawRightPanel(Ref<UI::Composer> Composer, ConstRef<Tileset::Glyph> Glyph)
     {
         if (Composer.BeginTabBar("##right_tabs"))
         {
             for (const Graphic::TextureSemantic Semantic : Enum::Values<Graphic::TextureSemantic>())
             {
-                if (ConstTracker<Graphic::Texture> Texture = Entry.Material->GetTexture(Semantic))
+                if (ConstTracker<Graphic::Texture> Texture = Glyph.Material->GetTexture(Semantic))
                 {
                     if (Composer.BeginTabItem(Enum::Name(Semantic)))
                     {
@@ -338,15 +383,14 @@ namespace Tileon::Editor::View
             }
 
             // TODO: Show animation for other texture semantics as well, not just albedo.
-            if (ConstTracker<Graphic::Texture> Albedo = Entry.Material->GetTexture(Graphic::TextureSemantic::Albedo))
+            if (ConstTracker<Graphic::Texture> Albedo = Glyph.Material->GetTexture(Graphic::TextureSemantic::Albedo))
             {
                 if (Composer.BeginTabItem("Animation"))
                 {
                     const Real32  Density = GetContext().GetDirector().GetDensity();
-                    const Vector2 Size(Entry.Columns * Density, Entry.Rows * Density);
+                    const Vector2 Size(Glyph.Span.GetX() * Density, Glyph.Span.GetY() * Density);
 
-                    const Rect Source = Entry.Animation.GetFrameData(Entry.Keyframe);
-                    mPreviewer.Draw(Composer, Albedo->GetID(), Size, Source, Color::FromColor8(Entry.Tint));
+                    mPreviewer.Draw(Composer, Albedo->GetID(), Size, Glyph.Crop, Color::FromColor8(Glyph.Tint));
 
                     Composer.EndTabItem();
                 }
@@ -374,7 +418,8 @@ namespace Tileon::Editor::View
         if (mRepository.HasTerrain(mSelection))
         {
             ConstRef<Terrain>        Terrain = mRepository.GetTerrain(mSelection);
-            ConstRef<Tileset::Entry> Entry   = mTileset.GetEntry(Terrain.GetID());
+            ConstRef<Motif>          Motif   = mTileset.GetMotif(Terrain.GetID());
+            ConstRef<Tileset::Glyph> Glyph   = mTileset.GetGlyph(Motif.GetID());
 
             Composer.SetCursorPosX(Composer.GetStyle().ItemSpacing.x);
             Composer.Label("{:04}  {}", Terrain.GetID(), Terrain.GetName().empty() ? "(Unnamed)" : Terrain.GetName());
@@ -392,7 +437,7 @@ namespace Tileon::Editor::View
                 ImVec4(0.90f, 0.30f, 0.30f, 1.0f)
             };
 
-            const UInt32 Status  = Enum::Cast(Entry.Material ? Entry.Material->GetStatus() : Content::Resource::Status::Idle);
+            const UInt32 Status  = Enum::Cast(Glyph.Material ? Glyph.Material->GetStatus() : Content::Resource::Status::Idle);
             const Real32 StatusW = Composer.CalcTextSize(kStatusLabel[Status]).x + Composer.GetStyle().ItemSpacing.x * 2.0f;
 
             Composer.SameLine(Composer.GetWindowWidth() - StatusW);

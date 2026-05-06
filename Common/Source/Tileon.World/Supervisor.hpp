@@ -41,9 +41,9 @@ namespace Tileon
 
     public:
 
-        /// \brief Constructs a Supervisor instance with the specified service host.
+        /// \brief Constructs a supervisor instance with the specified service host.
         ///
-        /// \param Host The service host to associate with the Supervisor.
+        /// \param Host The service host to associate with the supervisor.
         explicit Supervisor(Ref<Service::Host> Host);
 
         /// \brief Tears down releasing resources.
@@ -88,28 +88,29 @@ namespace Tileon
 
         /// \brief Queries over entities located within the spatial nodes intersecting the specified hitbox.
         ///
-        /// \param Hitbox   The area used to query overlapping spatial nodes.
-        /// \param Callback The function invoked for each candidate entity.
+        /// \param Hitbox   The area to query for intersecting entities.
+        /// \param Callback The callback function to apply to each entity that intersects the hitbox.
         template<typename Function>
         ZYPHRYON_INLINE void QueryEach(IntRect Hitbox, AnyRef<Function> Callback)
         {
             ForEachEntity(Hitbox, Callback);
         }
 
-        /// \brief Determines if any entity within the spatial nodes intersects the specified hitbox satisfies a given condition.
+        /// \brief Checks if any entity intersects the specified hitbox satisfies a given condition.
         ///
-        /// \param Hitbox   The area used to query overlapping spatial nodes.
-        /// \param Callback The predicate function applied to each candidate entity.
+        /// \param Hitbox    The area to query for intersecting entities.
+        /// \param Predicate The condition function to apply to each entity that intersects the hitbox.
+        /// \return `true` if any entity satisfies the condition, `false` otherwise.
         template<typename Function>
-        ZYPHRYON_INLINE Bool QueryAnyOf(IntRect Hitbox, AnyRef<Function> Callback)
+        ZYPHRYON_INLINE Bool QueryAnyOf(IntRect Hitbox, AnyRef<Function> Predicate)
         {
-            return AnyOfEntity(Hitbox, Callback);
+            return AnyOfEntity(Hitbox, Predicate);
         }
 
         /// \brief Queries the frontmost entity within the specified hitbox that intersects it.
         ///
-        /// \param Hitbox The hitbox area used for querying candidate entities.
-        /// \return The frontmost entity that satisfies the filter, or an invalid entity if none found.
+        /// \param Hitbox The area to query for intersecting entities.
+        /// \return The frontmost entity that intersects the hitbox, or an empty entity if none are found.
         ZYPHRYON_INLINE Scene::Entity QueryFrontmost(IntRect Hitbox)
         {
             Scene::Entity Result;
@@ -143,7 +144,7 @@ namespace Tileon
         /// \param X          The X-coordinate of the cell.
         /// \param Y          The Y-coordinate of the cell.
         /// \param Boundaries The boundaries of the grid.
-        /// \return The unique key for the cell.
+        /// \return The unique key representing the cell's position within the grid.
         ZYPHRYON_INLINE static constexpr UInt32 GetKey(SInt32 X, SInt32 Y, IntRect Boundaries)
         {
             return Index2D<UInt32>(X - Boundaries.GetMinimumX(), Y - Boundaries.GetMinimumY(), Boundaries.GetWidth());
@@ -239,7 +240,7 @@ namespace Tileon
 
             /// \brief Iterates over all entities in the cell and applies a callback function.
             ///
-            /// \param Action The callback function to apply to each entity ID.
+            /// \param Action The callback function to apply to each entity.
             template<typename Function>
             ZYPHRYON_INLINE void ForEach(AnyRef<Function> Action) const
             {
@@ -251,14 +252,14 @@ namespace Tileon
 
             /// \brief Checks if any entity in the cell satisfies a given condition.
             ///
-            /// \param Action The condition function to apply to each entity ID.
+            /// \param Predicate The condition function to apply to each entity.
             /// \return `true` if any entity satisfies the condition, `false` otherwise.
             template<typename Function>
-            ZYPHRYON_INLINE Bool AnyOf(AnyRef<Function> Action) const
+            ZYPHRYON_INLINE Bool AnyOf(AnyRef<Function> Predicate) const
             {
                 for (const UInt64 ID : Entities)
                 {
-                    if (Action(ID))
+                    if (Predicate(ID))
                     {
                         return true;
                     }
@@ -318,14 +319,14 @@ namespace Tileon
 
             /// \brief Checks if any loose cell index in the tight cell satisfies a given condition.
             ///
-            /// \param Action The condition function to apply to each loose cell index.
+            /// \param Predicate The condition function to apply to each loose cell index.
             /// \return `true` if any index satisfies the condition, `false` otherwise.
             template<typename Function>
-            ZYPHRYON_INLINE Bool AnyOf(AnyRef<Function> Action) const
+            ZYPHRYON_INLINE Bool AnyOf(AnyRef<Function> Predicate) const
             {
                 for (const UInt32 Index : Indices)
                 {
-                    if (Action(Index))
+                    if (Predicate(Index))
                     {
                         return true;
                     }
@@ -348,7 +349,7 @@ namespace Tileon
 
         /// \brief Iterates over entities located within the spatial nodes intersecting the specified hitbox.
         ///
-        /// \param Volume The area used to query overlapping spatial nodes.
+        /// \param Volume The area to query for intersecting entities.
         /// \param Action The function invoked for each candidate entity.
         template<typename Function>
         ZYPHRYON_INLINE void ForEachEntity(IntRect Volume, AnyRef<Function> Action)
@@ -384,13 +385,13 @@ namespace Tileon
             });
         }
 
-        /// \brief Determines if any entity within the spatial nodes intersects the specified hitbox satisfies a given condition.
+        /// \brief Checks if any entity intersects the specified hitbox satisfies a given condition.
         ///
-        /// \param Volume The area used to query overlapping spatial nodes.
-        /// \param Action The predicate function applied to each candidate entity.
+        /// \param Volume    The area to query for intersecting entities.
+        /// \param Predicate The condition function to apply to each entity that intersects the hitbox.
         /// \return `true` if any entity satisfies the condition, `false` otherwise.
         template<typename Function>
-        ZYPHRYON_INLINE Bool AnyOfEntity(IntRect Volume, AnyRef<Function> Action)
+        ZYPHRYON_INLINE Bool AnyOfEntity(IntRect Volume, AnyRef<Function> Predicate)
         {
             thread_local Set<UInt32> LooseAlreadyProcessed;
             LooseAlreadyProcessed.clear();
@@ -417,7 +418,7 @@ namespace Tileon
                     // Iterate all entities inside the loose cell.
                     return LooseCell.AnyOf([&](UInt64 ID)
                     {
-                        return Action(GetService<Scene::Service>().GetEntity(ID));
+                        return Predicate(GetService<Scene::Service>().GetEntity(ID));
                     });
                 });
             });
@@ -451,11 +452,11 @@ namespace Tileon
 
         /// \brief Checks if any loose cell within the specified volume satisfies a given condition.
         ///
-        /// \param Volume   The volume to check within.
-        /// \param Callback The condition function to apply to each loose cell.
+        /// \param Volume    The volume to check within.
+        /// \param Predicate The condition function to apply to each loose cell.
         /// \return `true` if any loose cell satisfies the condition, `false` otherwise
         template<typename Function>
-        ZYPHRYON_INLINE Bool AnyOfTightCell(IntRect Volume, AnyRef<Function> Callback)
+        ZYPHRYON_INLINE Bool AnyOfTightCell(IntRect Volume, AnyRef<Function> Predicate)
         {
             const UInt32 GridWidth = mTightBoundaries.GetWidth();
 
@@ -471,7 +472,7 @@ namespace Tileon
 
                 for (UInt32 CurrentRow = RowStart; CurrentRow < RowEnd; ++CurrentRow)
                 {
-                    if (Callback(mTightRegistry[CurrentRow]))
+                    if (Predicate(mTightRegistry[CurrentRow]))
                     {
                         return true;
                     }

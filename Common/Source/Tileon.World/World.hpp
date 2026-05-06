@@ -26,31 +26,31 @@ namespace Tileon
     {
     public:
 
-        /// \brief Constructs a World instance with the specified service host.
+        /// \brief Constructs a world instance with the specified service host.
         ///
-        /// \param Host The service host to associate with the World.
+        /// \param Host The service host to associate with the world.
         explicit World(Ref<Service::Host> Host);
 
-        /// \brief Tears down the World, releasing resources and shutting down services.
+        /// \brief Tears down the world, releasing resources and shutting down services.
         void Teardown();
 
-        /// \brief Loads the World state, initializing entities and resources.
+        /// \brief Loads the world state, initializing entities and resources.
         void Load();
 
-        /// \brief Saves the current state of the World.
+        /// \brief Saves the current state of the world.
         void Save();
 
-        /// \brief Retrieves the Repository instance associated with the World.
+        /// \brief Gets the repository instance associated with the world.
         ///
-        /// \return A reference to the Repository.
+        /// \return A reference to the repository.
         ZYPHRYON_INLINE Ref<Repository> GetRepository()
         {
             return mRepository;
         }
 
-        /// \brief Retrieves the Supervisor instance associated with the World.
+        /// \brief Gets the supervisor instance associated with the world.
         ///
-        /// \return A reference to the Supervisor.
+        /// \return A reference to the supervisor.
         ZYPHRYON_INLINE Ref<Supervisor> GetSupervisor()
         {
             return mSupervisor;

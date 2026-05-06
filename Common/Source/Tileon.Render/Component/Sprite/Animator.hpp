@@ -163,7 +163,7 @@ namespace Tileon
         /// \param Timestamp The initial timestamp to use for the animator (default is 0.0).
         /// \param Easing    The easing function to use for keyframe interpolation (default is linear).
         /// \return The keyframe index corresponding to the sampled time in the animation sequence.
-        template<Status Status = Status::Forward>
+        template<Status Status = Status::Repeat>
         ZYPHRYON_INLINE static UInt8 Sample(ConstRef<Animation> Sequence, Real64 Time, Real64 Timestamp = 0.0, Easing Easing = Easing::Linear)
         {
             Animator Animator(Timestamp, Status, Easing);

@@ -46,20 +46,20 @@ namespace Tileon::Editor::View
         /// \param Composer The UI composer used to render the left panel elements.
         /// \param Terrain  The currently selected terrain.
         /// \param Entry    The tileset entry data associated with the selected terrain.
-        void DrawLeftPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Tileset::Entry> Entry);
+        void DrawLeftPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Motif> Motif);
 
-        /// \brief Draws the animation section inside the left panel.
+        /// \brief Draws the animation panel of the palette interface for the selected motif.
         ///
-        /// \param Composer The UI composer used to render the animation section elements.
-        /// \param Entry    The tileset entry data associated with the selected terrain.
-        void DrawLeftPanelAnimationSection(Ref<UI::Composer> Composer, Ref<Tileset::Entry> Entry);
+        /// \param Composer The UI composer used to render the animation panel elements.
+        /// \param Motif    The motif whose animation is being displayed.
+        /// \param Glyph    The glyph containing the rendering data for the motif.
+        void DrawLeftPanelAnimation(Ref<UI::Composer> Composer, Ref<Motif> Motif, ConstRef<Tileset::Glyph> Glyph);
 
-        /// \brief Draws the right panel of the palette interface.
+        /// \brief Draws the right panel of the palette interface, showing a preview of the selected motif.
         ///
         /// \param Composer The UI composer used to render the right panel elements.
-        /// \param Terrain  The currently selected terrain.
-        /// \param Entry    The tileset entry data associated with the selected terrain.
-        void DrawRightPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Tileset::Entry> Entry);
+        /// \param Glyph    The glyph containing the rendering data for the motif to preview.
+        void DrawRightPanel(Ref<UI::Composer> Composer, ConstRef<Tileset::Glyph> Glyph);
 
         /// \brief Draws the bottom bar of the palette interface.
         ///
@@ -71,17 +71,6 @@ namespace Tileon::Editor::View
         /// \param Composer The UI composer used to render the placeholder.
         /// \param Message  The message to display in the placeholder panel.
         void DrawEmptyPanel(Ref<UI::Composer> Composer, ConstStr8 Message);
-
-        /// \brief Loads a material resource from the specified URL and assigns it to the given tileset entry.
-        ///
-        /// \param Entry The tileset entry to which the material will be assigned.
-        /// \param Url   The URL of the material resource to load.
-        ZYPHRYON_INLINE void LoadMaterialUrl(Ref<Tileset::Entry> Entry, ConstStr8 Url)
-        {
-            Ref<Content::Service> Content = GetContext().GetService<Content::Service>();
-            Entry.Path     = Content::Uri(Format("Resources://{}", Url));
-            Entry.Material = Content.Load<Graphic::Material>(Entry.Path);
-        }
 
     private:
 

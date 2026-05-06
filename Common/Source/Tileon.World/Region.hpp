@@ -26,13 +26,13 @@ namespace Tileon
     {
     public:
 
-        /// \brief Number of tiles per column in a region.
+        /// \brief The number of tiles per column in a region.
         static constexpr UInt8  kTilesPerX      = 32;
 
-        /// \brief Number of tiles per row in a region.
+        /// \brief The number of tiles per row in a region.
         static constexpr UInt8  kTilesPerY      = 32;
 
-        /// \brief Total number of tiles in a region.
+        /// \brief The total number of tiles in a region.
         static constexpr UInt16 kTilesPerRegion = kTilesPerX * kTilesPerY;
 
     public:
@@ -137,7 +137,7 @@ namespace Tileon
             }
         }
 
-        /// \brief Resets all layers of every tile within the rectangular area to their default state.
+        /// \brief Clears all layers of every tile within the rectangular area to their default state.
         ///
         /// \param Area The rectangular area within the region to clear (region-local coordinates).
         ZYPHRYON_INLINE void Clear(IntRect Area)

@@ -11,7 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Light.hpp"
-#include "Tileon.Visual/Component.hpp"
+#include "Tileon.Render/Component.hpp"
 #include "Tileon.World/Component/Kinematic/Transform.hpp"
 #include "Tileon.World/Component/Spatial/Anchor.hpp"
 #include "Tileon.World/Component/Spatial/Extent.hpp"
@@ -73,10 +73,12 @@ namespace Tileon::Stage
             ConstRef<Glowlight> Light,
             ConstPtr<IntColor8> Tint)
         {
-            const Vector2 Center = Transform.RebaseOnlyTranslation(Origin);
+            const Vector2 Center = Transform.GetWorldspace().GetTranslation() + Vector2(Transform.GetOrigin() - Origin);
             const Color   Color  = (Tint ? Math::Color::FromColor8(* Tint) : Color::White()) * Light.GetIntensity();
+            const Vector2 Scale  = Transform.GetWorldspace().GetScale();
 
-            mGlowlightData.emplace_back(Center, Light.GetRadius(), Light.GetFalloff(), Color);
+            const Real32 Radius = Light.GetRadius() * Max(Scale.GetX(), Scale.GetY());
+            mGlowlightData.emplace_back(Center, Radius, Light.GetFalloff(), Color);
         });
 
         // Accumulate the spotlights in the scene and render them in a single batch.
@@ -86,13 +88,15 @@ namespace Tileon::Stage
             ConstRef<Spotlight> Light,
             ConstPtr<IntColor8> Tint)
         {
-            const Vector2 Center = Transform.RebaseOnlyTranslation(Origin);
+            const Vector2 Center = Transform.GetWorldspace().GetTranslation() + Vector2(Transform.GetOrigin() - Origin);
             const Color   Color  = (Tint ? Math::Color::FromColor8(* Tint) : Color::White()) * Light.GetIntensity();
 
-            const Vector2 Direction = Vector2::Normalize(Transform.GetWorldspace().GetBasisX());
+            const Vector2 BasisX    = Transform.GetWorldspace().GetBasisX();
+            const Vector2 Direction = Vector2::Normalize(BasisX);
             const Vector2 Angles    = Vector2(Angle::Cosine(Light.GetInnerAngle()), Angle::Cosine(Light.GetOuterAngle()));
 
-            mSpotlightData.emplace_back(Center, Light.GetRange(), Light.GetFalloff(), Direction, Angles, Color);
+            const Real32 Range = Light.GetRange() * BasisX.GetLength();
+            mSpotlightData.emplace_back(Center, Range, Light.GetFalloff(), Direction, Angles, Color);
         });
 
         // Set the projection matrix for the light stage based on the director's position and viewport size.
@@ -132,7 +136,7 @@ namespace Tileon::Stage
 
         // Observes changes to the light radial component and updates the corresponding spatial properties of the actor.
         Scene.CreateObserver<Scene::DSL::In<const Glowlight>>(
-            "Visual::Light::ObsUpdateGlowlightBoundaries",
+            "Render::Light::ObsUpdateGlowlightBoundaries",
             EcsOnSet,
             [](Scene::Entity Actor, ConstRef<Glowlight> Light)
             {
@@ -143,7 +147,7 @@ namespace Tileon::Stage
 
         // Observes changes to the light cone component and updates the corresponding spatial properties of the actor.
         Scene.CreateObserver<Scene::DSL::In<const Transform, const Spotlight>>(
-            "Visual::Light::ObsUpdateSpotlightBoundaries",
+            "Render::Light::ObsUpdateSpotlightBoundaries",
             EcsOnSet,
             [](Scene::Entity Actor, ConstRef<Transform> Transform, ConstRef<Spotlight> Light)
             {
@@ -188,15 +192,15 @@ namespace Tileon::Stage
         // Creates the queries for the light stage.
         mQrDrawGlowlights = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Glowlight, ConstPtr<IntColor8>>
-        >("Visual::Light::DrawGlowlights", Scene::Cache::Auto);
+        >("Render::Light::DrawGlowlights", Scene::Cache::Auto);
 
         mQrDrawSpotlights = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Spotlight, ConstPtr<IntColor8>>
-        >("Visual::Light::DrawSpotlights", Scene::Cache::Auto);
+        >("Render::Light::DrawSpotlights", Scene::Cache::Auto);
 
         mQrDrawSkylight = Scene.CreateQuery<
             Scene::DSL::In<const Skylight>
-        >("Visual::Light::DrawSkylight", Scene::Cache::Auto);
+        >("Render::Light::DrawSkylight", Scene::Cache::Auto);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

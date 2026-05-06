@@ -19,7 +19,7 @@ namespace Tileon
     {
     public:
 
-        /// \brief Defines the different layers that a tile can have.
+        /// \brief Enumerates the different layers that can be assigned to a tile.
         enum class Layer : UInt8
         {
             Base,       ///< The base layer of the tile, typically representing the ground or floor.

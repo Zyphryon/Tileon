@@ -19,7 +19,7 @@ namespace Tileon
     {
     public:
 
-        /// \brief Defines the properties of the terrain.
+        /// \brief Enumerates the properties that can be assigned to a terrain type.
         enum class Property : UInt16
         {
             Walkable  = 0b00000001,     ///< Indicates whether the terrain is walkable.
@@ -66,10 +66,10 @@ namespace Tileon
             return mName;
         }
 
-        /// \brief Sets a property of the terrain.
+        /// \brief Changes the state of a specific property for the terrain.
         ///
-        /// \param Mask   The property to set.
-        /// \param Enable Whether to enable or disable the property.
+        /// \param Mask   The property to set or clear.
+        /// \param Enable `true` to set the property, `false` to clear it.
         ZYPHRYON_INLINE void SetProperty(Property Mask, Bool Enable)
         {
             mProperties = SetOrClearBit(mProperties, Enum::Cast(Mask), Enable);
