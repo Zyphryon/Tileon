@@ -13,6 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Runtime/Controller.hpp"
+#include "Session.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -21,7 +22,7 @@
 namespace Tileon::Editor
 {
     /// \brief Represents the context for the editor, providing access to various services.
-    class Context final : public Locator<Scene::Service, Content::Service>
+    class Context final : public Session, public Locator<Scene::Service, Content::Service>
     {
     public:
 
@@ -33,9 +34,6 @@ namespace Tileon::Editor
 
         /// \brief Tears down the context, releasing any resources it holds.
         void Teardown();
-
-        /// \brief Polls the context for updates, allowing it to process any pending operations or events.
-        void Poll();
 
         /// \brief Gets a reference to the controller associated with the context.
         ///

@@ -233,13 +233,16 @@ namespace Tileon::Editor::View
                 const Bool IsLeftButton  = Composer.IsMouseClicked(ImGuiMouseButton_Left);
                 const Bool IsRightButton = Composer.IsMouseClicked(ImGuiMouseButton_Right);
 
-                // Handle mouse clicks for painting or erasing tiles when the pencil or bucket brush is selected.
-                if (IsLeftButton != IsRightButton)
+                // Get the currently selected tile from the context.
+                const UInt16 Selection = GetContext().GetInteger("Selection.Tile", 0);
+
+                // Handle left-click for adding and right-click for removing tiles.
+                if (IsRightButton || (IsLeftButton && Selection != 0))
                 {
                     const Workshop::Command Command = IsLeftButton
                         ? Workshop::Command::Add
                         : Workshop::Command::Remove;
-                    mWorkshop.Execute(Command, Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY)), 1); // TODO: Remove hardcode
+                    mWorkshop.Execute(Command, Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY)), Selection);
                 }
             }
         }
