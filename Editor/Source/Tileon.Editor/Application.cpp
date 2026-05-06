@@ -15,6 +15,7 @@
 #include "View/Inspector/Inspector.hpp"
 #include "View/Palette/Palette.hpp"
 #include "View/Scene/Scene.hpp"
+#include "Tileon.World/Component/Condition/Lifecycle.hpp"
 #include <Zyphryon.Content/Mount/Disk.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -52,6 +53,15 @@ namespace Tileon::Editor
 
         // Preload the tileset to ensure that all necessary resources are available before the editor starts.
         mContext->GetTileset().Preload();
+
+        // Set up an observer to automatically add the Persist component to any region that is loaded,
+        // ensuring that changes to the region are saved.
+        ConstTracker<Scene::Service> Scene = GetService<Scene::Service>();
+        Scene->CreateObserver<Scene::DSL::In<Region>>("Editor::OnRegionLoadMakePersist", EcsOnSet,
+            [](Scene::Entity Actor, Ref<Region> Region)
+            {
+                Actor.Add<Persist>();
+            });
 
         // Wait for all content to finish loading before allowing the editor to run.
         Content->Wait();
