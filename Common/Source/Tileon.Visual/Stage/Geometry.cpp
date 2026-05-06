@@ -256,10 +256,10 @@ namespace Tileon::Stage
                     }
 
                     // Fetches the tileset entry corresponding to the terrain handle for the current layer of the tile.
-                    ConstRef<Tileset::Entry> Entry = Tileset.GetEntry(Handle);
-
-                    if (Entry.IsValid())
+                    if (Tileset.HasEntry(Handle))
                     {
+                        ConstRef<Tileset::Entry> Entry = Tileset.GetEntry(Handle);
+
                         const UInt32 MaxInnerX = Min(Boundaries.GetMaximumX(), TileX + (Entry.Columns - Weight % Entry.Columns));
                         const UInt32 MaxInnerY = Boundaries.GetMaximumY();
                         UInt8        CountX    = 1;
@@ -323,10 +323,13 @@ namespace Tileon::Stage
                         }
 
                         // Draw all merged tiles as a single sprite.
-                        const Vector3 Position(
-                            RegionX + static_cast<SInt32>(TileX),
-                            RegionY + static_cast<SInt32>(TileY), Depth);
-                        DrawTile(Position, IntVector2(CountX, CountY), Weight, Entry);
+                        if (Entry.Material)
+                        {
+                            const Vector3 Position(
+                                RegionX + static_cast<SInt32>(TileX),
+                                RegionY + static_cast<SInt32>(TileY), Depth);
+                            DrawTile(Position, IntVector2(CountX, CountY), Weight, Entry);
+                        }
 
                         // Advance the X coordinate by the number of merged tiles to skip over them in the iteration.
                         TileX += CountX - 1;
@@ -339,15 +342,15 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Geometry::DrawTile(Vector3 Position, IntVector2 Span, UInt16 Weight, ConstRef<Tileset::Entry> Tile)
+    void Geometry::DrawTile(Vector3 Position, IntVector2 Span, UInt16 Weight, ConstRef<Tileset::Entry> Entry)
     {
-        const Rect Frame = Tile.Animation.GetFrameData(Tile.Keyframe);
+        const Rect Frame = Entry.Animation.GetFrameData(Entry.Keyframe);
 
-        const Real32 UCoordPerTile = Frame.GetWidth()  / Tile.Columns;
-        const Real32 VCoordPerTile = Frame.GetHeight() / Tile.Rows;
+        const Real32 UCoordPerTile = Frame.GetWidth()  / Entry.Columns;
+        const Real32 VCoordPerTile = Frame.GetHeight() / Entry.Rows;
 
-        const Real32 OffsetX = (Weight % Tile.Columns) * UCoordPerTile;
-        const Real32 OffsetY = (Weight / Tile.Columns) * VCoordPerTile;
+        const Real32 OffsetX = (Weight % Entry.Columns) * UCoordPerTile;
+        const Real32 OffsetY = (Weight / Entry.Columns) * VCoordPerTile;
 
         const Rect Displacement(
             Frame.GetX() + OffsetX,
@@ -355,7 +358,7 @@ namespace Tileon::Stage
             Frame.GetX() + OffsetX + Span.GetX() * UCoordPerTile,
             Frame.GetY() + OffsetY);
 
-        const Render::Sprite Command(Tile.Material, static_cast<Vector2>(Span), Tile.Tint, Displacement);
+        const Render::Sprite Command(Entry.Material, static_cast<Vector2>(Span), Entry.Tint, Displacement);
         mCanvas.DrawSprite(Command, Matrix3x2::FromTranslation(Position.GetXY()), Position.GetZ());
     }
 }

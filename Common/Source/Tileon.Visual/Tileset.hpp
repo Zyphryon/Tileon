@@ -118,6 +118,15 @@ namespace Tileon
         /// \param Terrain The terrain for which to delete the entry.
         void DeleteEntry(ConstRef<Terrain> Terrain);
 
+        /// \brief Checks if an entry with the given unique identifier exists in the repository.
+        ///
+        /// \param ID The unique identifier of the entry to check for existence.
+        /// \return `true` if a entry with the given ID exists, `false`
+        ZYPHRYON_INLINE Bool HasEntry(UInt16 ID) const
+        {
+            return mRegistry.IsAllocated(ID);
+        }
+
         /// \brief Gets an entry from the tileset by its unique identifier.
         ///
         /// \param ID The unique identifier of the entry.

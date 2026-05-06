@@ -113,8 +113,9 @@ namespace Tileon::Editor
         /// \brief Executes a editing command at the specified placement in the world.
         ///
         /// \param Command   The editing command to execute (e.g., add or remove).
-        /// \param Placement The placement in the world where the command should be executed,.
-        void Execute(Command Command, Placement Placement);
+        /// \param Placement The placement in the world where the command should be executed.
+        /// \param Object    The unique identifier for the object to be added or removed.
+        void Execute(Command Command, Placement Placement, UInt32 Object);
 
     private:
 
@@ -122,13 +123,24 @@ namespace Tileon::Editor
         ///
         /// \param Command   The tile editing command to execute (e.g., add or remove).
         /// \param Placement The placement in the world where the tile command should be executed.
-        void ExecuteOnTiles(Command Command, Placement Placement);
+        /// \param Object    The unique identifier for the object to be added or removed.
+        void ExecuteOnTiles(Command Command, Placement Placement, UInt32 Object);
 
         /// \brief Executes an entity editing command at the specified placement in the world.
         ///
         /// \param Command   The entity editing command to execute (e.g., add or remove).
         /// \param Placement The placement in the world where the entity command should be executed.
-        void ExecuteOnEntities(Command Command, Placement Placement);
+        /// \param Object    The unique identifier for the object to be added or removed.
+        void ExecuteOnEntities(Command Command, Placement Placement, UInt32 Object);
+
+        /// \brief Applies the specified command to a given area of tiles on a specific layer.
+        ///
+        /// \param Command The command to apply (e.g., add or remove).
+        /// \param Area    The rectangular area of tiles to apply the command to, specified in tile coordinates.
+        /// \param Layer   The layer of the tiles to apply the command to (e.g., base or detail).
+        /// \param Handle  The unique identifier for the terrain type to apply when adding tiles.
+        /// \param Span    The dimensions of the tile being applied.
+        void ApplyTiles(Command Command, IntRect Area, Tile::Layer Layer, UInt16 Handle, IntVector2 Span);
 
     private:
 

@@ -88,7 +88,7 @@ namespace Tileon
         /// \brief Deletes a terrain from the repository.
         ///
         /// \param Terrain The terrain to delete.
-        void DeleteTerrain(Ref<Terrain> Terrain);
+        void DeleteTerrain(ConstRef<Terrain> Terrain);
 
         /// \brief Checks if a terrain with the given unique identifier exists in the repository.
         ///

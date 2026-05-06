@@ -52,8 +52,6 @@ namespace Tileon::Editor::View
     void Scene::DrawToolbar(Ref<UI::Composer> Composer)
     {
         // Draw mode switch button to toggle between tile editing and entity editing modes.
-        Composer.PushStyleColor(ImGuiCol_Button,        Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
-        Composer.PushStyleColor(ImGuiCol_ButtonHovered, Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
         switch (mWorkshop.GetMode())
         {
         case Workshop::Mode::Tile:
@@ -69,7 +67,6 @@ namespace Tileon::Editor::View
             }
             break;
         }
-        Composer.PopStyleColor(2);
         Composer.SameLine();
 
         // Draw common toolbar elements that are always visible.
@@ -139,34 +136,38 @@ namespace Tileon::Editor::View
 
     void Scene::DrawTileToolbar(Ref<UI::Composer> Composer)
     {
-        if (Composer.Button(ICON_FA_HAND "##select", 32.0f))
+        const auto DrawBrushButton = [&](Workshop::Brush Brush, ConstStr8 Icon)
         {
-            mWorkshop.SetBrush(Workshop::Brush::Select);
-        }
+            const Bool Active = (mWorkshop.GetBrush() == Brush);
+
+            if (Active)
+            {
+                Composer.PushStyleColor(ImGuiCol_Button,        Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
+                Composer.PushStyleColor(ImGuiCol_ButtonHovered, Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
+            }
+
+            if (Composer.Button(Base::Format("{}##{}", Icon, Enum::Name(Brush)), 32.0f))
+            {
+                mWorkshop.SetBrush(Brush);
+            }
+
+            if (Active)
+            {
+                Composer.PopStyleColor(2);
+            }
+        };
+
+        DrawBrushButton(Workshop::Brush::Select, ICON_FA_HAND);
         Composer.SameLine();
 
-        if (Composer.Button(ICON_FA_ARROW_POINTER "##pan", 32.0f))
-        {
-            mWorkshop.SetBrush(Workshop::Brush::Hand);
-        }
+        DrawBrushButton(Workshop::Brush::Hand, ICON_FA_ARROW_POINTER);
         Composer.SameLine();
 
-        if (Composer.Button(ICON_FA_BRUSH "##paint", 32.0f))
-        {
-            mWorkshop.SetBrush(Workshop::Brush::Pencil);
-        }
+        DrawBrushButton(Workshop::Brush::Pencil, ICON_FA_BRUSH);
         Composer.SameLine();
 
-        if (Composer.Button(ICON_FA_ERASER "##erase", 32.0f))
-        {
-            mWorkshop.SetBrush(Workshop::Brush::Pencil);
-        }
+        DrawBrushButton(Workshop::Brush::Bucket, ICON_FA_FILL_DRIP);
         Composer.SameLine();
-
-        if (Composer.Button(ICON_FA_FILL_DRIP "##fill", 32.0f))
-        {
-            mWorkshop.SetBrush(Workshop::Brush::Bucket);
-        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -238,7 +239,7 @@ namespace Tileon::Editor::View
                     const Workshop::Command Command = IsLeftButton
                         ? Workshop::Command::Add
                         : Workshop::Command::Remove;
-                    mWorkshop.Execute(Command, Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY)));
+                    mWorkshop.Execute(Command, Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY)), 1); // TODO: Remove hardcode
                 }
             }
         }

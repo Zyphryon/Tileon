@@ -125,7 +125,8 @@ namespace Tileon::Editor::View
             {
                 if (Composer.MenuItem("Delete"))
                 {
-                    mRepository.DeleteTerrain(mRepository.GetTerrain(Terrain.GetID()));
+                    mTileset.DeleteEntry(Terrain);
+                    mRepository.DeleteTerrain(Terrain);
                 }
                 Composer.EndPopup();
             }
