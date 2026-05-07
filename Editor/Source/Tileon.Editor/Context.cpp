@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Context.hpp"
+#include "Tileon.World/Component/Condition/Lifecycle.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -28,6 +29,15 @@ namespace Tileon::Editor
     {
         mController.Init(320, 200, Project.GetDensity());
         mController.Load();
+
+        // Creates an observer that marks any region added to the scene as persistent.
+        GetService<Scene::Service>().CreateObserver<Scene::DSL::In<const Region>>(
+            "Editor::MarkRegionPersistent",
+            EcsOnAdd,
+            [](Scene::Entity Actor, ConstRef<Region>)
+            {
+                Actor.Add<Persist>();
+            });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
