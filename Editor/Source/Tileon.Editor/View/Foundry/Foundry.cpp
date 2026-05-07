@@ -22,10 +22,11 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Foundry::Foundry(Ref<Context> Context)
-        : Activity    { Context, "Foundry" },
-          mRepository { Context.GetRepository() },
-          mTileset    { Context.GetTileset() },
-          mSelection  { 0 }
+        : Activity     { Context, "Foundry" },
+          mRepository  { Context.GetRepository() },
+          mTileset     { Context.GetTileset() },
+          mSelection   { 0 },
+          mBrowser     { Context.GetService<Content::Service>(), UI::Browser::Mode::Popup }
     {
     }
 
@@ -80,6 +81,15 @@ namespace Tileon::Editor::View
             DrawBottomBar(Composer);
         }
         Composer.End();
+
+        // Handle the file browser popup for selecting material resources for motifs.
+        if (mBrowser.Draw(Composer) && !mBrowser.GetSelection().empty())
+        {
+            Ref<Motif> Motif = mTileset.GetMotif(mSelection);
+            Motif.SetMaterial(Content::Uri(mBrowser.GetSelection()));
+
+            mTileset.Refresh(Motif);
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -169,7 +179,7 @@ namespace Tileon::Editor::View
             "...",
             [&]()
             {
-                /* TODO: OnBrowseURI */
+                mBrowser.Open(".material");
             },
             ImGuiInputTextFlags_EnterReturnsTrue);
         Composer.Spacing();

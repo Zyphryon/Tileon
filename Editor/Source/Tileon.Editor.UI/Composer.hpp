@@ -54,6 +54,21 @@ namespace Tileon::Editor::UI
             ImGui::EndChild();
         }
 
+        ZYPHRYON_INLINE Bool TreeNode(ConstStr8 Label, ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_None)
+        {
+            return ImGui::TreeNodeEx(Label.data(), Flags);
+        }
+
+        ZYPHRYON_INLINE void TreePop()
+        {
+            ImGui::TreePop();
+        }
+
+        ZYPHRYON_INLINE void SetNextItemOpen(Bool Open, ImGuiCond Condition = ImGuiCond_None)
+        {
+            ImGui::SetNextItemOpen(Open, Condition);
+        }
+
         ZYPHRYON_INLINE Bool BeginMainMenuBar()
         {
             return ImGui::BeginMainMenuBar();
@@ -434,6 +449,11 @@ namespace Tileon::Editor::UI
             return ImGui::IsItemClicked(Button);
         }
 
+        ZYPHRYON_INLINE Bool IsItemToggledOpen() const
+        {
+            return ImGui::IsItemToggledOpen();
+        }
+
         ZYPHRYON_INLINE Bool IsItemHovered(ImGuiHoveredFlags Flags = ImGuiHoveredFlags_None) const
         {
             return ImGui::IsItemHovered(Flags);
@@ -447,6 +467,21 @@ namespace Tileon::Editor::UI
         ZYPHRYON_INLINE Bool InvisibleButton(ConstStr8 ID, ImVec2 Size, ImGuiButtonFlags Flags = ImGuiButtonFlags_None)
         {
             return ImGui::InvisibleButton(ID.data(), Size, Flags);
+        }
+
+        ZYPHRYON_INLINE void OpenPopup(ConstStr8 ID, ImGuiPopupFlags Flags = ImGuiPopupFlags_None)
+        {
+            ImGui::OpenPopup(ID.data(), Flags);
+        }
+
+        ZYPHRYON_INLINE Bool BeginPopupModal(ConstStr8 ID, ImGuiWindowFlags Flags = ImGuiWindowFlags_None)
+        {
+            return ImGui::BeginPopupModal(ID.data(), nullptr, Flags);
+        }
+
+        ZYPHRYON_INLINE void CloseCurrentPopup()
+        {
+            ImGui::CloseCurrentPopup();
         }
 
         ZYPHRYON_INLINE Bool BeginPopupContextItem(ConstStr8 ID = {})

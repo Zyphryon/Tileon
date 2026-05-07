@@ -13,6 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Editor/Activity.hpp"
+#include "Tileon.Editor.UI/Widget/Browser.hpp"
 #include "Tileon.Editor.UI/Widget/Previewer.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -85,5 +86,6 @@ namespace Tileon::Editor::View
 
         UInt16          mSelection;
         UI::Previewer   mPreviewer;
+        UI::Browser     mBrowser;
     };
 }

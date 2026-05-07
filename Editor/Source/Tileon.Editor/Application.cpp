@@ -11,7 +11,6 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Application.hpp"
-#include "View/Browser/Browser.hpp"
 #include "View/Foundry/Foundry.hpp"
 #include "View/Inspector/Inspector.hpp"
 #include "View/Palette/Palette.hpp"
@@ -130,7 +129,6 @@ namespace Tileon::Editor
         mContext->GetTileset().Preload();
 
         // Add editor activities to the list of activities, which will be rendered in the interface.
-        mActivities.push_back(Tracker<View::Browser>::Create(* mContext));
         mActivities.push_back(Tracker<View::Foundry>::Create(* mContext));
         mActivities.push_back(Tracker<View::Inspector>::Create(* mContext));
         mActivities.push_back(Tracker<View::Palette>::Create(* mContext));
