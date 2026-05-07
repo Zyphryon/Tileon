@@ -19,8 +19,11 @@ namespace Tileon::Editor
     {
     public:
 
-        /// \brief The file extension used for project files.
-        static constexpr ConstStr8 kExtension = ".tileon";
+        /// \brief The expected file description for project files.
+        static constexpr auto kFileDescription = "Tileon Project File";
+
+        /// \brief The expected file extension for project files.
+        static constexpr auto kFileExtension   = "tileon";
 
     public:
 

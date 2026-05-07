@@ -13,7 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Editor/Activity.hpp"
-#include "Tileon.Editor.UI/Widget/Previewer.hpp"
+#include "Tileon.Editor.UI/Widget/Gallery.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -21,7 +21,7 @@
 
 namespace Tileon::Editor::View
 {
-    /// \brief Provides tools and functionality for managing and editing the tileset palette in the editor.
+    /// \brief Provides a palette interface for browsing and selecting terrains in the editor.
     class Palette final : public Activity
     {
     public:
@@ -36,41 +36,15 @@ namespace Tileon::Editor::View
 
     private:
 
-        /// \brief Draws the list panel of the palette interface.
+        /// \brief Draws the top toolbar containing the search box and view-mode toggle buttons.
         ///
-        /// \param Composer The UI composer used to render the list panel elements.
-        void DrawListPanel(Ref<UI::Composer> Composer);
+        /// \param Composer The UI composer used to render the toolbar.
+        void DrawGallery(Ref<UI::Composer> Composer);
 
-        /// \brief Draws the left panel of the palette interface.
+        /// \brief Draws the bottom status bar showing the selected terrain.
         ///
-        /// \param Composer The UI composer used to render the left panel elements.
-        /// \param Terrain  The currently selected terrain.
-        /// \param Entry    The tileset entry data associated with the selected terrain.
-        void DrawLeftPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Motif> Motif);
-
-        /// \brief Draws the animation panel of the palette interface for the selected motif.
-        ///
-        /// \param Composer The UI composer used to render the animation panel elements.
-        /// \param Motif    The motif whose animation is being displayed.
-        /// \param Glyph    The glyph containing the rendering data for the motif.
-        void DrawLeftPanelAnimation(Ref<UI::Composer> Composer, Ref<Motif> Motif, ConstRef<Tileset::Glyph> Glyph);
-
-        /// \brief Draws the right panel of the palette interface, showing a preview of the selected motif.
-        ///
-        /// \param Composer The UI composer used to render the right panel elements.
-        /// \param Glyph    The glyph containing the rendering data for the motif to preview.
-        void DrawRightPanel(Ref<UI::Composer> Composer, ConstRef<Tileset::Glyph> Glyph);
-
-        /// \brief Draws the bottom bar of the palette interface.
-        ///
-        /// \param Composer The UI composer used to render the bottom bar elements.
+        /// \param Composer The UI composer used to render the status bar.
         void DrawBottomBar(Ref<UI::Composer> Composer);
-
-        /// \brief Draws a placeholder panel shown when no terrain is selected.
-        ///
-        /// \param Composer The UI composer used to render the placeholder.
-        /// \param Message  The message to display in the placeholder panel.
-        void DrawEmptyPanel(Ref<UI::Composer> Composer, ConstStr8 Message);
 
     private:
 
@@ -83,7 +57,6 @@ namespace Tileon::Editor::View
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        UInt16          mSelection;
-        UI::Previewer   mPreviewer;
+        UI::Gallery     mGallery;
     };
 }

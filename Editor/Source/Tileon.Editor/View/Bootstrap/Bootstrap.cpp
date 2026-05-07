@@ -188,7 +188,7 @@ namespace Tileon::Editor::View
     void Bootstrap::OpenFileDialog(ConstRef<Engine::Device> Device)
     {
         constexpr SDL_DialogFileFilter   kFilter[] = {
-            { "Tileon Project", "tileon" }
+            { Project::kFileDescription, Project::kFileExtension }
         };
         constexpr SDL_DialogFileCallback kCallback = [](Ptr<void> Context, ConstPtr<ConstPtr<Char>> Files, SInt32)
         {
@@ -206,7 +206,7 @@ namespace Tileon::Editor::View
     void Bootstrap::OpenSaveDialog(ConstRef<Engine::Device> Device)
     {
         constexpr SDL_DialogFileFilter   kFilter[] = {
-            { "Tileon Project", "tileon" }
+            { Project::kFileDescription, Project::kFileExtension }
         };
         constexpr SDL_DialogFileCallback kCallback = [](Ptr<void> Context, ConstPtr<ConstPtr<Char>> Files, SInt32)
         {
@@ -228,9 +228,9 @@ namespace Tileon::Editor::View
         std::ranges::replace(Result, '\\', '/');
 
         // Ensure the selected file has the correct project file extension, appending it if necessary.
-        if (!Result.ends_with(Project::kExtension))
+        if (!Result.ends_with(Project::kFileExtension))
         {
-            Result.append(Project::kExtension);
+            Result.append(".").append(Project::kFileExtension);
         }
         mProject.SetPath(Move(Result));
 

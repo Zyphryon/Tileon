@@ -94,6 +94,38 @@ namespace Tileon::Editor::UI
             ImGui::SetNextWindowSizeConstraints(ImVec2(MinWidth, MinHeight), ImVec2(MaxWidth, MaxHeight));
         }
 
+        ZYPHRYON_INLINE ImVec2 GetDisplaySize() const
+        {
+            return ImGui::GetIO().DisplaySize;
+        }
+
+        ZYPHRYON_INLINE Real32 GetWindowBottom(UInt32 Rows = 1) const
+        {
+            return ImGui::GetWindowHeight()
+                - ImGui::GetFrameHeightWithSpacing() * static_cast<Real32>(Rows)
+                - ImGui::GetStyle().WindowPadding.y;
+        }
+
+        ZYPHRYON_INLINE void SliderFloat(ConstStr8 ID, Ref<Real32> Value, Real32 Min, Real32 Max, ConstStr8 Format = "%.2f")
+        {
+            ImGui::SliderFloat(ID.data(), &Value, Min, Max, Format.data());
+        }
+
+        ZYPHRYON_INLINE void BeginTooltip()
+        {
+            ImGui::BeginTooltip();
+        }
+
+        ZYPHRYON_INLINE void EndTooltip()
+        {
+            ImGui::EndTooltip();
+        }
+
+        ZYPHRYON_INLINE void SetTooltip(ConstStr8 Text)
+        {
+            ImGui::SetTooltip("%s", Text.data());
+        }
+
         ZYPHRYON_INLINE void SameLine(Real32 OffsetX = 0.0f, Real32 Spacing = -1.0f)
         {
             ImGui::SameLine(OffsetX, Spacing);
@@ -214,14 +246,34 @@ namespace Tileon::Editor::UI
             return ImGui::IsMouseHoveringRect(Min, Max, Clip);
         }
 
-        ZYPHRYON_INLINE ImVec2 GetDisplaySize() const
-        {
-            return ImGui::GetIO().DisplaySize;
-        }
-
         ZYPHRYON_INLINE ConstRef<ImGuiStyle> GetStyle() const
         {
             return ImGui::GetStyle();
+        }
+
+        ZYPHRYON_INLINE ImU32 GetColorU32(ImGuiCol Index) const
+        {
+            return ImGui::GetColorU32(Index);
+        }
+
+        ZYPHRYON_INLINE ImU32 GetColorU32(ImGuiCol Index, Real32 Alpha) const
+        {
+            return ImGui::GetColorU32(Index, Alpha);
+        }
+
+        ZYPHRYON_INLINE void PushStyleVar(ImGuiStyleVar Index, Real32 Value)
+        {
+            ImGui::PushStyleVar(Index, Value);
+        }
+
+        ZYPHRYON_INLINE void PushStyleVar(ImGuiStyleVar Index, ImVec2 Value)
+        {
+            ImGui::PushStyleVar(Index, Value);
+        }
+
+        ZYPHRYON_INLINE void PopStyleVar(SInt32 Count = 1)
+        {
+            ImGui::PopStyleVar(Count);
         }
 
         ZYPHRYON_INLINE ImVec4 GetStyleColorVec4(ImGuiCol Index) const
@@ -311,12 +363,6 @@ namespace Tileon::Editor::UI
         ZYPHRYON_INLINE Real32 GetWindowHeight() const
         {
             return ImGui::GetWindowHeight();
-        }
-
-        ZYPHRYON_INLINE Real32 GetWindowBottom(SInt32 Rows = 1) const
-        {
-            const Real32 RowHeight = ImGui::GetFrameHeightWithSpacing() * static_cast<Real32>(Rows);
-            return GetWindowHeight() - ImGui::GetStyle().WindowPadding.y - RowHeight;
         }
 
         ZYPHRYON_INLINE Real32 GetCursorPosX() const
@@ -456,6 +502,11 @@ namespace Tileon::Editor::UI
         ZYPHRYON_INLINE void TableSetupColumn(ConstStr8 Label, ImGuiTableColumnFlags Flags = ImGuiTableColumnFlags_None, Real32 InitWidth = 0.0f)
         {
             ImGui::TableSetupColumn(Label.data(), Flags, InitWidth);
+        }
+
+        ZYPHRYON_INLINE void TableNextColumn()
+        {
+            ImGui::TableNextColumn();
         }
 
         ZYPHRYON_INLINE void TableHeadersRow()

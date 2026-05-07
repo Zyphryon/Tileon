@@ -56,7 +56,7 @@ namespace Tileon::Editor::View
 
     void Browser::DrawToolbar(Ref<UI::Composer> Composer)
     {
-
+        // TODO
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -64,7 +64,7 @@ namespace Tileon::Editor::View
 
     void Browser::DrawSidebar(Ref<UI::Composer> Composer)
     {
-
+        // TODO
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -72,6 +72,6 @@ namespace Tileon::Editor::View
 
     void Browser::DrawGrid(Ref<UI::Composer> Composer)
     {
-
+        // TODO
     }
 }

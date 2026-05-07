@@ -24,7 +24,7 @@ namespace Tileon::Editor::View
     Scene::Scene(Ref<Context> Context)
         : Activity  { Context, kTitle, true  },
           mWorkshop { Context.GetController() },
-          mFrame    { Renderer::Frame::Final }
+          mFrame    { Renderer::Frame::Albedo }
     {
     }
 

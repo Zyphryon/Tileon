@@ -10,7 +10,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Atlas.hpp"
+#include "Foundry.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -21,8 +21,8 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Atlas::Atlas(Ref<Context> Context)
-        : Activity    { Context, "Atlas" },
+    Foundry::Foundry(Ref<Context> Context)
+        : Activity    { Context, "Foundry" },
           mRepository { Context.GetRepository() },
           mTileset    { Context.GetTileset() },
           mSelection  { 0 }
@@ -32,7 +32,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Atlas::OnDraw(Ref<UI::Composer> Composer)
+    void Foundry::OnDraw(Ref<UI::Composer> Composer)
     {
         Composer.SetNextWindowSize(1160.0f, 680.0f, ImGuiCond_FirstUseEver);
         Composer.SetNextWindowSizeConstraints(900.0f, 500.0f, 1800.0f, 1400.0f);
@@ -85,7 +85,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Atlas::DrawListPanel(Ref<UI::Composer> Composer)
+    void Foundry::DrawListPanel(Ref<UI::Composer> Composer)
     {
         const Bool WasPlusClicked = Composer.Button("+", -1.0f);
 
@@ -136,7 +136,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Atlas::DrawLeftPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Motif> Motif)
+    void Foundry::DrawLeftPanel(Ref<UI::Composer> Composer, Ref<Terrain> Terrain, Ref<Motif> Motif)
     {
         Bool Dirty = false;
 
@@ -203,7 +203,7 @@ namespace Tileon::Editor::View
             mTileset.Refresh(Motif);
         }
 
-        // Draw the animation section for the tileset Motif.
+        // Draw the animation section for the motif.
         Composer.Section("Animation");
         DrawLeftPanelAnimation(Composer, Motif, mTileset.GetGlyph(Motif.GetID()));
     }
@@ -211,7 +211,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Atlas::DrawLeftPanelAnimation(Ref<UI::Composer> Composer, Ref<Motif> Motif, ConstRef<Tileset::Glyph> Glyph)
+    void Foundry::DrawLeftPanelAnimation(Ref<UI::Composer> Composer, Ref<Motif> Motif, ConstRef<Tileset::Glyph> Glyph)
     {
         Animation Animation = Motif.GetAnimation();
         Bool      Dirty     = false;
@@ -364,10 +364,23 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Atlas::DrawRightPanel(Ref<UI::Composer> Composer, ConstRef<Tileset::Glyph> Glyph)
+    void Foundry::DrawRightPanel(Ref<UI::Composer> Composer, ConstRef<Tileset::Glyph> Glyph)
     {
         if (Composer.BeginTabBar("##right_tabs"))
         {
+            if (ConstTracker<Graphic::Texture> Albedo = Glyph.Material->GetTexture(Graphic::TextureSemantic::Albedo))
+            {
+                if (Composer.BeginTabItem("Preview"))
+                {
+                    const Real32  Density = GetContext().GetDirector().GetDensity();
+                    const Vector2 Size(Glyph.Span.GetX() * Density, Glyph.Span.GetY() * Density);
+
+                    mPreviewer.Draw(Composer, Albedo->GetID(), Size, Glyph.Crop, Color::FromColor8(Glyph.Tint));
+
+                    Composer.EndTabItem();
+                }
+            }
+
             for (const Graphic::TextureSemantic Semantic : Enum::Values<Graphic::TextureSemantic>())
             {
                 if (ConstTracker<Graphic::Texture> Texture = Glyph.Material->GetTexture(Semantic))
@@ -382,20 +395,6 @@ namespace Tileon::Editor::View
                 }
             }
 
-            // TODO: Show animation for other texture semantics as well, not just albedo.
-            if (ConstTracker<Graphic::Texture> Albedo = Glyph.Material->GetTexture(Graphic::TextureSemantic::Albedo))
-            {
-                if (Composer.BeginTabItem("Animation"))
-                {
-                    const Real32  Density = GetContext().GetDirector().GetDensity();
-                    const Vector2 Size(Glyph.Span.GetX() * Density, Glyph.Span.GetY() * Density);
-
-                    mPreviewer.Draw(Composer, Albedo->GetID(), Size, Glyph.Crop, Color::FromColor8(Glyph.Tint));
-
-                    Composer.EndTabItem();
-                }
-            }
-
             Composer.EndTabBar();
         }
     }
@@ -403,7 +402,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Atlas::DrawBottomBar(Ref<UI::Composer> Composer)
+    void Foundry::DrawBottomBar(Ref<UI::Composer> Composer)
     {
         const Real32 BarHeight = Composer.GetFrameHeightWithSpacing() + 4.0f;
 
@@ -458,7 +457,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Atlas::DrawEmptyPanel(Ref<UI::Composer> Composer, ConstStr8 Message)
+    void Foundry::DrawEmptyPanel(Ref<UI::Composer> Composer, ConstStr8 Message)
     {
         constexpr ConstStr8 kIcon = "?";
 

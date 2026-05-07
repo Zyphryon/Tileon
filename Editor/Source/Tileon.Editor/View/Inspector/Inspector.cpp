@@ -56,7 +56,7 @@ namespace Tileon::Editor::View
 
     void Inspector::DrawHeader(Ref<UI::Composer> Composer)
     {
-
+        // TODO
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -64,7 +64,7 @@ namespace Tileon::Editor::View
 
     void Inspector::DrawBody(Ref<UI::Composer> Composer)
     {
-
+        // TODO
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -72,6 +72,6 @@ namespace Tileon::Editor::View
 
     void Inspector::DrawFooter(Ref<UI::Composer> Composer)
     {
-
+        // TODO
     }
 }
