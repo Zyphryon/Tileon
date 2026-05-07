@@ -74,6 +74,16 @@ namespace Tileon::Editor::UI
             ImGui::EndMenu();
         }
 
+        ZYPHRYON_INLINE ImVec2 GetViewportCenter() const
+        {
+            return ImGui::GetMainViewport()->GetCenter();
+        }
+
+        ZYPHRYON_INLINE void SetNextWindowPos(ImVec2 Position, ImGuiCond Condition = ImGuiCond_None, ImVec2 Pivot = ImVec2(0.0f, 0.0f))
+        {
+            ImGui::SetNextWindowPos(Position, Condition, Pivot);
+        }
+
         ZYPHRYON_INLINE void SetNextWindowSize(Real32 Width, Real32 Height, ImGuiCond Condition = ImGuiCond_None)
         {
             ImGui::SetNextWindowSize(ImVec2(Width, Height), Condition);

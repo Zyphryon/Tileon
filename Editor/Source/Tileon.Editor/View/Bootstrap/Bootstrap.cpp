@@ -39,10 +39,6 @@ namespace Tileon::Editor::View
         // Draw a solid background to cover the entire display area.
         ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(0, 0), Composer.GetDisplaySize(), IM_COL32(18, 18, 28, 255));
 
-        // Ensure the welcome window is centered on the screen and cannot be moved or resized by the user.
-        const ImVec2 Center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(Center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-
         switch (mState)
         {
         case State::Menu:
@@ -54,6 +50,7 @@ namespace Tileon::Editor::View
         default:
             break;
         }
+        Composer.SetNextWindowPos(Composer.GetViewportCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 
         constexpr ImGuiWindowFlags kWindowFlags =
             ImGuiWindowFlags_NoResize              |

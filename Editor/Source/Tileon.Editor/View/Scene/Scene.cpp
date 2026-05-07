@@ -33,6 +33,10 @@ namespace Tileon::Editor::View
 
     void Scene::OnDraw(Ref<UI::Composer> Composer)
     {
+        Composer.SetNextWindowPos(Composer.GetViewportCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+        Composer.SetNextWindowSize(800.0f, 600.0f, ImGuiCond_FirstUseEver);
+        Composer.SetNextWindowSizeConstraints(320.0f, 200.0f);
+
         if (Composer.Begin(GetTitle(), mVisible))
         {
             Composer.BeginChild("##mainbar", ImVec2(0.0f, 40.0f), ImGuiChildFlags_Borders);

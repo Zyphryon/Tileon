@@ -11,9 +11,9 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Application.hpp"
+#include "View/Atlas/Atlas.hpp"
 #include "View/Browser/Browser.hpp"
 #include "View/Inspector/Inspector.hpp"
-#include "View/Palette/Palette.hpp"
 #include "View/Scene/Scene.hpp"
 #include "Tileon.Editor.UI/Theme.hpp"
 #include <Zyphryon.Content/Mount/Disk.hpp>
@@ -37,6 +37,7 @@ namespace Tileon::Editor
         mFrontend.Initialize(* this, GetDevice());
         UI::Theme::Initialize();
 
+        // TODO: Manage ImGUI configuration file manually
         // TODO: Serialize the last project open.
 
         return true;
@@ -129,9 +130,9 @@ namespace Tileon::Editor
 
         // Add editor activities to the list of activities, which will be rendered in the interface.
         mActivities.push_back(Tracker<View::Browser>::Create(* mContext));
+        mActivities.push_back(Tracker<View::Atlas>::Create(* mContext));
         mActivities.push_back(Tracker<View::Inspector>::Create(* mContext));
         mActivities.push_back(Tracker<View::Scene>::Create(* mContext));
-        mActivities.push_back(Tracker<View::Palette>::Create(* mContext));
 
         // Wait until the content service is fully initialized
         // TODO: show a loading screen instead of blocking the main thread
