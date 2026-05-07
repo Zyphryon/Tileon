@@ -10,7 +10,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Context.hpp"
+#include "Project.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -21,20 +21,41 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Context::Context(Ref<Service::Host> Host, AnyRef<Project> Project)
-        : Locator     { Host },
-          mController { Host },
-          mProject    { Move(Project) }
+    Project::Project()
+        : mName        { "Untitled" },
+          mAuthor      { "Unknown"  },
+          mDescription { "No description provided." },
+          mDensity     { 32 }
     {
-        mController.Init(320, 200, Project.GetDensity());
-        mController.Load();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Context::Teardown()
+    Bool Project::Load(Ref<TOMLParser> Parser)
     {
-        mController.Teardown();
+        const TOMLSection Metadata = Parser.GetSection("Metadata", false);
+        mName        = Metadata.GetString("name",        mName);
+        mAuthor      = Metadata.GetString("author",      mAuthor);
+        mDescription = Metadata.GetString("description", mDescription);
+
+        const TOMLSection Configuration = Parser.GetSection("Configuration", false);
+        mDensity = Configuration.GetInteger("density", mDensity);
+
+        return true;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Project::Save(Ref<TOMLParser> Parser) const
+    {
+        TOMLSection Metadata = Parser.GetSection("Metadata");
+        Metadata.SetString("name",        mName);
+        Metadata.SetString("author",      mAuthor);
+        Metadata.SetString("description", mDescription);
+
+        TOMLSection Configuration = Parser.GetSection("Configuration");
+        Configuration.SetInteger("density", mDensity);
     }
 }

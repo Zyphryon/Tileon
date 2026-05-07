@@ -15,7 +15,6 @@
 #include "View/Inspector/Inspector.hpp"
 #include "View/Palette/Palette.hpp"
 #include "View/Scene/Scene.hpp"
-#include "Tileon.World/Component/Condition/Lifecycle.hpp"
 #include "Tileon.Editor.UI/Theme.hpp"
 #include <Zyphryon.Content/Mount/Disk.hpp>
 
@@ -30,43 +29,16 @@ namespace Tileon::Editor
 
     Bool Application::OnInitialize()
     {
-        // Set up resource management system and asset path.
-        /// TODO: Project Management (+ Configuration)
+        // Adds the main disk content mount for the editor, which allows loading assets from the local file system.
         ConstTracker<Content::Service> Content = GetService<Content::Service>();
-        Content->AddMount("Resources", Tracker<Content::Disk>::Create("Resources"));
+        Content->AddMount("Editor", Tracker<Content::Disk>::Create("Editor"));
 
-        // Initialize the ImGui frontend for rendering the user interface.
+        // Initialize ImGui plugin and the UI theme system, which sets up the rendering the user interface.
         mFrontend.Initialize(* this, GetDevice());
         UI::Theme::Initialize();
 
-        // Create the main context for the editor, which provides access to various services.
-        // TODO: Project Management (+ Configuration)
-        Profile Configuration;
-        Configuration.SetDisplay(GetDevice().GetWidth(), GetDevice().GetHeight(), 32.0f);
+        // TODO: Serialize the last project open.
 
-        mContext = Unique<Context>::Create(* this, Configuration);
-
-        // Add editor activities to the list of activities, which will be rendered in the interface.
-        mActivities.push_back(Tracker<View::Browser>::Create(* mContext));
-        mActivities.push_back(Tracker<View::Inspector>::Create(* mContext));
-        mActivities.push_back(Tracker<View::Scene>::Create(* mContext));
-        mActivities.push_back(Tracker<View::Palette>::Create(* mContext));
-
-        // Preload the tileset to ensure that all necessary resources are available before the editor starts.
-        mContext->GetTileset().Preload();
-
-        // Set up an observer to automatically add the Persist component to any region that is loaded,
-        // ensuring that changes to the region are saved.
-        // TODO: Remove from here....
-        ConstTracker<Scene::Service> Scene = GetService<Scene::Service>();
-        Scene->CreateObserver<Scene::DSL::In<Region>>("Editor::OnRegionLoadMakePersist", EcsOnSet,
-            [](Scene::Entity Actor, Ref<Region> Region)
-            {
-                Actor.Add<Persist>();
-            });
-
-        // Wait for all content to finish loading before allowing the editor to run.
-        Content->Wait();
         return true;
     }
 
@@ -77,28 +49,52 @@ namespace Tileon::Editor
     {
         ConstTracker<Graphic::Service> Graphics = GetService<Graphic::Service>();
 
-        // Render the game world to the offscreen texture.
-        const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(View::Scene::kTitle);
-
-        if (Parent && Parent->Active)
+        // Render the game view to an off-screen buffer, which will be displayed in the scene activity's viewport.
+        if (mContext)
         {
-            const UInt32    ViewportID   = Parent->GetID("##viewport");
-            const ConstStr8 ViewportName = Format("{}/##viewport_{:08X}", View::Scene::kTitle, ViewportID);
+            const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(View::Scene::kTitle);
 
-            if (const ConstPtr<ImGuiWindow> Child = ImGui::FindWindowByName(ViewportName.data()); Child)
+            if (Parent && Parent->Active)
             {
-                DrawGame(Child->ContentSize.x, Child->ContentSize.y);
+                const UInt32    ViewportID   = Parent->GetID("##viewport");
+                const ConstStr8 ViewportName = Format("{}/##viewport_{:08X}", View::Scene::kTitle, ViewportID);
+
+                if (const ConstPtr<ImGuiWindow> Child = ImGui::FindWindowByName(ViewportName.data()); Child)
+                {
+                    DrawGame(Child->ContentSize.x, Child->ContentSize.y);
+                }
             }
         }
 
-        // Render the user interface to the screen.
+        // Render the editor interface or bootstrap view depending on whether the main context has been initialized.
         const Graphic::Viewport Viewport(0.0f, 0.0f, GetDevice().GetWidth(), GetDevice().GetHeight());
 
         Graphics->Prepare(Graphic::kDisplay, Viewport, Color::Black(), 1.0f, 0);
         {
             mFrontend.Begin(Time);
             {
-                DrawInterface(Time);
+                UI::Composer Composer;
+
+                if (mContext)
+                {
+                    DrawEditor(Composer, Time);
+                }
+                else
+                {
+                    const View::Bootstrap::Result Result = mBootstrap.Draw(Composer, GetDevice());
+
+                    switch (Result)
+                    {
+                    case View::Bootstrap::Result::Done:
+                        Launch(Move(mBootstrap.GetProject()));
+                        break;
+                    case View::Bootstrap::Result::Exit:
+                        Exit();
+                        break;
+                    default:
+                        break;
+                    }
+                }
             }
             mFrontend.End();
         }
@@ -110,16 +106,43 @@ namespace Tileon::Editor
 
     void Application::OnTeardown()
     {
-        mContext->Teardown();
+        if (mContext)
+        {
+            mContext->Teardown();
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Application::DrawInterface(Time Time)
+    void Application::Launch(AnyRef<Project> Project)
     {
-        UI::Composer Composer;
+        const Str8 Directory(Project.GetPath().substr(0, Project.GetPath().find_last_of("/\\") + 1));
 
+        // Add the project content mount, which allows loading assets from the project's directory.
+        ConstTracker<Content::Service> Content = GetService<Content::Service>();
+        Content->AddMount("Resources", Tracker<Content::Disk>::Create(Directory));
+
+        // Initialize the main context for the editor.
+        mContext = Unique<Context>::Create(* this, Move(Project));
+        mContext->GetTileset().Preload();
+
+        // Add editor activities to the list of activities, which will be rendered in the interface.
+        mActivities.push_back(Tracker<View::Browser>::Create(* mContext));
+        mActivities.push_back(Tracker<View::Inspector>::Create(* mContext));
+        mActivities.push_back(Tracker<View::Scene>::Create(* mContext));
+        mActivities.push_back(Tracker<View::Palette>::Create(* mContext));
+
+        // Wait until the content service is fully initialized
+        // TODO: show a loading screen instead of blocking the main thread
+        Content->Wait();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Application::DrawEditor(Ref<UI::Composer> Composer, Time Time)
+    {
         // Draw the main menu bar at the top.
         if (Composer.BeginMainMenuBar())
         {

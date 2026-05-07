@@ -204,6 +204,11 @@ namespace Tileon::Editor::UI
             return ImGui::IsMouseHoveringRect(Min, Max, Clip);
         }
 
+        ZYPHRYON_INLINE ImVec2 GetDisplaySize() const
+        {
+            return ImGui::GetIO().DisplaySize;
+        }
+
         ZYPHRYON_INLINE ConstRef<ImGuiStyle> GetStyle() const
         {
             return ImGui::GetStyle();
@@ -291,6 +296,17 @@ namespace Tileon::Editor::UI
         ZYPHRYON_INLINE Real32 GetWindowWidth() const
         {
             return ImGui::GetWindowWidth();
+        }
+
+        ZYPHRYON_INLINE Real32 GetWindowHeight() const
+        {
+            return ImGui::GetWindowHeight();
+        }
+
+        ZYPHRYON_INLINE Real32 GetWindowBottom(SInt32 Rows = 1) const
+        {
+            const Real32 RowHeight = ImGui::GetFrameHeightWithSpacing() * static_cast<Real32>(Rows);
+            return GetWindowHeight() - ImGui::GetStyle().WindowPadding.y - RowHeight;
         }
 
         ZYPHRYON_INLINE Real32 GetCursorPosX() const

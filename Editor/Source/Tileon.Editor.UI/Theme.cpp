@@ -33,7 +33,7 @@ namespace Tileon::Editor::UI
 
         constexpr ImWchar kIconRange[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
 
-        Ptr<ImFontAtlas> Atlas = ImGui::GetIO().Fonts;
+        const Ptr<ImFontAtlas> Atlas = ImGui::GetIO().Fonts;
         Atlas->Clear();
         Atlas->AddFontFromFileTTF("Editor\\Fonts\\Roboto-Medium.ttf",  16.0f);
         Atlas->AddFontFromFileTTF("Editor\\Fonts\\fa-regular-400.ttf", 16.0f, &Config, kIconRange);

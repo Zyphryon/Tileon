@@ -13,6 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Runtime/Controller.hpp"
+#include "Project.hpp"
 #include "Session.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -29,8 +30,8 @@ namespace Tileon::Editor
         /// \brief Constructs a context instance with the specified service host.
         ///
         /// \param Host    The service host to associate with the context.
-        /// \param Profile The profile containing configuration settings for the context.
-        explicit Context(Ref<Service::Host> Host, ConstRef<Profile> Profile);
+        /// \param Project The project to load into the context.
+        explicit Context(Ref<Service::Host> Host, AnyRef<Project> Project);
 
         /// \brief Tears down the context, releasing any resources it holds.
         void Teardown();
@@ -89,5 +90,6 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         Controller mController;
+        Project    mProject;
     };
 }

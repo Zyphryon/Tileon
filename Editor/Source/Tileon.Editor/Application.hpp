@@ -13,6 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Activity.hpp"
+#include "View/Bootstrap/Bootstrap.hpp"
 #include <ImGuiSystem.hpp>
 #include <Zyphryon.Engine/Kernel.hpp>
 
@@ -38,10 +39,16 @@ namespace Tileon::Editor
 
     private:
 
-        /// \brief Draws the user interface, rendering any relevant information and controls for the user.
+        /// \brief Launches the specified project, initializing the editor state and loading the project data.
         ///
-        /// \param Time The time elapsed since the last tick.
-        void DrawInterface(Time Time);
+        /// \param Project The project to launch in the editor.
+        void Launch(AnyRef<Project> Project);
+
+        /// \brief Draws the editor view, which contains the main user interface for editing and manipulating the game world.
+        ///
+        /// \param Composer The UI composer used to render the editor interface elements.
+        /// \param Time     The time elapsed since the last tick.
+        void DrawEditor(Ref<UI::Composer> Composer, Time Time);
 
         /// \brief Draws the game view, rendering the current state of the game world.
         ///
@@ -54,6 +61,7 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+        View::Bootstrap           mBootstrap;
         Unique<Context>           mContext;
         Plugin::ImGuiSystem       mFrontend;
         Vector<Tracker<Activity>> mActivities;

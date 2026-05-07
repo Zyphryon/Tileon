@@ -40,16 +40,14 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Controller::Init(ConstRef<Profile> Configuration)
+    void Controller::Init(UInt16 Width, UInt16 Height, UInt16 Density)
     {
         // Initialize the director with the display dimensions and density specified in the configuration.
-        mDirector.SetDensity(Configuration.GetDisplayDensity());
-        mDirector.SetViewport(
-            Configuration.GetDisplayWidth()  / static_cast<Real32>(Configuration.GetDisplayDensity()),
-            Configuration.GetDisplayHeight() / static_cast<Real32>(Configuration.GetDisplayDensity()));
+        mDirector.SetDensity(Density);
+        mDirector.SetViewport(Width / static_cast<Real32>(Density), Height / static_cast<Real32>(Density));
 
         // Resize the renderer to match the display dimensions specified in the configuration.
-        mRenderer.Resize(Configuration.GetDisplayWidth(), Configuration.GetDisplayHeight());
+        mRenderer.Resize(Width, Height);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

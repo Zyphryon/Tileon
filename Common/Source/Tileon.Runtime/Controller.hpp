@@ -12,7 +12,6 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Profile.hpp"
 #include "Tileon.Render/Director.hpp"
 #include "Tileon.Render/Renderer.hpp"
 #include "Tileon.World/World.hpp"
@@ -38,10 +37,12 @@ namespace Tileon
         /// \brief Tears down the controller, releasing any allocated resources.
         void Teardown();
 
-        /// \brief Initializes the controller with the provided configuration profile.
+        /// \brief Initializes the world and related systems with the specified parameters.
         ///
-        /// \param Configuration The profile containing configuration settings for the controller.
-        void Init(ConstRef<Profile> Configuration);
+        /// \param Width   The display width (in pixels) for rendering the world.
+        /// \param Height  The display height (in pixels) for rendering the world.
+        /// \param Density The pixel density that defines how many pixels one logical world unit occupies on screen.
+        void Init(UInt16 Width, UInt16 Height, UInt16 Density);
 
         /// \brief Loads the world and initializes necessary resources for rendering.
         void Load();
