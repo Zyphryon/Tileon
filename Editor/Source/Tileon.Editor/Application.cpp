@@ -216,19 +216,24 @@ namespace Tileon::Editor
 
 int main([[maybe_unused]] int Argc, [[maybe_unused]] Ptr<Char> Argv[])
 {
+    // Load the editor configuration from the user's home directory "Tileon/Editor/Config.toml".
+    const Blob Configuration = Filesystem::Load(Filesystem::GetHome("Tileon", "Editor") + "Config.toml");
+    TOMLParser Parser(Configuration.GetText());
+
     Engine::Properties Properties;
-    Properties.SetWindowTitle("Tileon's Editor");
-    Properties.SetWindowWidth(1280);
-    Properties.SetWindowHeight(768);
-    Properties.SetWindowSamples(1);
-    Properties.SetWindowFullscreen(false);
-    Properties.SetWindowBorderless(false);
+    Properties.SetWindowTitle("Tileon Editor (v0.1)");
     Properties.SetVideoDriver("D3D11");
+    Properties.Load(Parser);
 
     // Initialize 'Zyphryon Engine' and enter main loop.
     const Unique<Tileon::Editor::Application> Application = Unique<Tileon::Editor::Application>::Create();
     Application->Initialize(Service::Host::Mode::Client, Move(Properties));
     Application->Run();
+    Application->Sync(Properties);
+
+    // Save the editor configuration back to the user's home directory.
+    Properties.Save(Parser);
+    Filesystem::Save(Filesystem::GetHome("Tileon", "Editor") + "Config.toml", Parser.Dump());
 
     return 0;
 }
