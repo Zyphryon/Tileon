@@ -23,6 +23,7 @@ namespace Tileon
 
     Director::Director()
         : mZoom    { 1.0f },
+          mMode    { Mode::Ortho },
           mDensity { 32 }
     {
     }
@@ -59,11 +60,37 @@ namespace Tileon
             const Real64 AbsoluteX  = mPosition.GetAbsoluteX();
             const Real64 AbsoluteY  = mPosition.GetAbsoluteY();
 
-            mFrustum.Set(Max(Floor(AbsoluteX - HalfWidth),  Placement::kMinTileX),
-                         Max(Floor(AbsoluteY - HalfHeight), Placement::kMinTileY),
-                         Min( Ceil(AbsoluteX + HalfWidth),  Placement::kMaxTileX),
-                         Min( Ceil(AbsoluteY + HalfHeight), Placement::kMaxTileY));
+            const Real32 FrustumHalfX = (mMode == Mode::Isometric) ? (HalfWidth * 0.5f + HalfHeight) : HalfWidth;
+            const Real32 FrustumHalfY = (mMode == Mode::Isometric) ? (HalfWidth * 0.5f + HalfHeight) : HalfHeight;
+
+            mFrustum.Set(Max(Floor(AbsoluteX - FrustumHalfX), Placement::kMinTileX),
+                         Max(Floor(AbsoluteY - FrustumHalfY), Placement::kMinTileY),
+                         Min( Ceil(AbsoluteX + FrustumHalfX), Placement::kMaxTileX),
+                         Min( Ceil(AbsoluteY + FrustumHalfY), Placement::kMaxTileY));
         }
         return Dirty;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Director::SetViewport(Real32 Width, Real32 Height)
+    {
+        mViewport.Set(Width, Height);
+
+        const Real32 HalfWidth  = (mViewport.GetX() * 0.5f) * mZoom;
+        const Real32 HalfHeight = (mViewport.GetY() * 0.5f) * mZoom;
+        mCamera.SetOrthographic(-HalfWidth, HalfWidth, -HalfHeight, HalfHeight, 0.0f, 1.0f);
+
+        // Apply an additional shear transformation to the projection matrix if the camera is in isometric mode.
+        if (mMode == Mode::Isometric)
+        {
+            static const Matrix4x4 kIsometricShear(
+                Vector4( 1.0f, 0.5f, 0.0f, 0.0f),
+                Vector4(-1.0f, 0.5f, 0.0f, 0.0f),
+                Vector4( 0.0f, 0.0f, 1.0f, 0.0f),
+                Vector4( 0.0f, 0.0f, 0.0f, 1.0f));
+            mCamera.SetProjectionMatrix(mCamera.GetProjectionMatrix() * kIsometricShear);
+        }
     }
 }

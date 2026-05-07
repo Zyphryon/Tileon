@@ -73,6 +73,7 @@ namespace Tileon::Editor::View
         }
         Composer.SameLine();
 
+
         // Draw common toolbar elements that are always visible.
         if (Composer.Button(ICON_FA_MAGNIFYING_GLASS_PLUS "##zoom_in", 32.0f))
         {
@@ -108,10 +109,35 @@ namespace Tileon::Editor::View
         }
         Composer.SameLine();
 
-        // Draw frame selector combo on the far right of the toolbar.
-        Composer.SetCursorPosX(Composer.GetWindowWidth() - 100.0f);
-        Composer.SetNextItemWidth(96.0f);
+        // Draw projection mode and frame selector combos on the far right of the toolbar.
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 4.0f));
+
+        Composer.SetCursorPosX(Composer.GetWindowWidth() - 200.0f);
+        Composer.SetNextItemWidth(96.0f);
+
+        const Director::Mode CurrentMode = GetContext().GetDirector().GetMode();
+
+        if (Composer.BeginCombo("##mode", Enum::Name(CurrentMode)))
+        {
+            for (const Director::Mode Type : Enum::Values<Director::Mode>())
+            {
+                const Bool Selected = (CurrentMode == Type);
+
+                if (Composer.Selectable(Enum::Name(Type), Selected))
+                {
+                    GetContext().GetDirector().SetMode(Type);
+                }
+
+                if (Selected)
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            Composer.EndCombo();
+        }
+
+        Composer.SameLine();
+        Composer.SetNextItemWidth(96.0f);
 
         if (Composer.BeginCombo("##frame", Enum::Name(mFrame)))
         {
@@ -219,17 +245,18 @@ namespace Tileon::Editor::View
             {
                 if (Composer.IsMouseDragging(ImGuiMouseButton_Left))
                 {
-                    const ImVec2    Delta   = Composer.GetMouseDelta();
-                    const ImVec2    Size    = Composer.GetItemRectSize();
-                    const Placement Current = Director.GetPosition();
+                    const ImVec2 Delta = Composer.GetMouseDelta();
+                    const ImVec2 Size  = Composer.GetItemRectSize();
 
-                    const Real32 ScaleX = (Director.GetZoom() * Director.GetViewport().GetX() / Size.x);
-                    const Real32 ScaleY = (Director.GetZoom() * Director.GetViewport().GetY() / Size.y);
+                    const Real32 ScaleX = Director.GetViewport().GetX() * Director.GetDensity() / Size.x;
+                    const Real32 ScaleY = Director.GetViewport().GetY() * Director.GetDensity() / Size.y;
 
-                    const Placement Target = Placement::FromAbsolute(
-                        Current.GetAbsoluteX() - Delta.x * ScaleX,
-                        Current.GetAbsoluteY() + Delta.y * ScaleY);
-                    Director.SetPosition(Target);
+                    const Vector2 OldPosition(AbsoluteX * ScaleX, AbsoluteY* ScaleY);
+                    const Vector2 NewPosition((AbsoluteX - Delta.x) * ScaleX, (AbsoluteY - Delta.y) * ScaleY);
+
+                    const Placement OldPlacement = Director.GetWorldCoordinates(OldPosition);
+                    const Placement NewPlacement = Director.GetWorldCoordinates(NewPosition);
+                    Director.SetPosition(Placement::Normalize(Director.GetPosition() + NewPlacement - OldPlacement));
                 }
             }
             else

@@ -37,6 +37,13 @@ namespace Tileon
         /// \brief The maximum zoom value, representing the furthest the camera can zoom out.
         static constexpr Real32 kMaxZoom = 16.0f;
 
+        /// \brief Enumerates the different camera modes available for rendering the world.
+        enum class Mode
+        {
+            Ortho,      ///< Uses an orthographic projection, where objects maintain their size regardless of distance.
+            Isometric,  ///< Uses an isometric projection, where objects are rendered with a fixed angle.
+        };
+
     public:
 
         /// \brief Constructs it with default camera settings.
@@ -47,6 +54,27 @@ namespace Tileon
         /// \param Delta The time delta since the last update, in seconds.
         /// \return `true` if the camera's state was updated, `false` otherwise
         Bool Tick(Real64 Delta);
+
+        /// \brief Sets the camera mode.
+        ///
+        /// \param Mode The camera mode to set.
+        ZYPHRYON_INLINE void SetMode(Mode Mode)
+        {
+            if (mMode != Mode)
+            {
+                mMode = Mode;
+
+                SetViewport(mViewport.GetX(), mViewport.GetY());
+            }
+        }
+
+        /// \brief Gets the current camera mode.
+        ///
+        /// \return The current camera mode.
+        ZYPHRYON_INLINE Mode GetMode() const
+        {
+            return mMode;
+        }
 
         /// \brief Sets the pixel density of the camera's viewport.
         ///
@@ -68,14 +96,7 @@ namespace Tileon
         ///
         /// \param Width  The width of the viewport in logical units (e.g., world units).
         /// \param Height The height of the viewport in logical units (e.g., world units).
-        ZYPHRYON_INLINE void SetViewport(Real32 Width, Real32 Height)
-        {
-            mViewport.Set(Width, Height);
-
-            const Real32 HalfWidth  = (mViewport.GetX() * 0.5f) * mZoom;
-            const Real32 HalfHeight = (mViewport.GetY() * 0.5f) * mZoom;
-            mCamera.SetOrthographic(-HalfWidth, HalfWidth, -HalfHeight, HalfHeight, 0.0f, 1.0f);
-        }
+        void SetViewport(Real32 Width, Real32 Height);
 
         /// \brief Gets the current viewport dimensions of the camera.
         ///
@@ -262,6 +283,7 @@ namespace Tileon
         Graphic::Camera  mCamera;
         Real32           mZoom;
         Vector2          mViewport;
+        Mode             mMode;
         UInt16           mDensity;
         IntRect          mFrustum;
         Placement        mPosition;
