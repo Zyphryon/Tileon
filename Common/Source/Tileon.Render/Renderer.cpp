@@ -77,7 +77,7 @@ namespace Tileon
         mViewport = Graphic::Viewport(0.0f, 0.0f, Width, Height);
 
         mFrames[Enum::Cast(Frame::Albedo)]   = Graphics.CreateTexture(Graphic::TextureFormat::RGBA8UIntNorm, true, Width, Height);
-        mFrames[Enum::Cast(Frame::Normal)]   = Graphics.CreateTexture(Graphic::TextureFormat::RG8UIntNorm,   true, Width, Height);
+        mFrames[Enum::Cast(Frame::Normal)]   = Graphics.CreateTexture(Graphic::TextureFormat::RGBA8UIntNorm, true, Width, Height);
         mFrames[Enum::Cast(Frame::Depth)]    = Graphics.CreateTexture(Graphic::TextureFormat::D24S8UIntNorm, true, Width, Height);
         mFrames[Enum::Cast(Frame::Radiance)] = Graphics.CreateTexture(Graphic::TextureFormat::RGBA16Float,   true, Width, Height);
         mFrames[Enum::Cast(Frame::Final)]    = Graphics.CreateTexture(Graphic::TextureFormat::RGBA8UIntNorm, true, Width, Height);

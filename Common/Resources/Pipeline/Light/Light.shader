@@ -125,11 +125,8 @@ float4 fragment(ps_Input Input) : SV_Target0
     clip(Attenuation - 0.001);
 
 #if   defined(ENABLE_NORMAL_MAPPING)
-    const float2 NormalXY   = NormalTexture.Sample(LinearSampler, Input.World.zw).rg * 2.0 - 1.0;
-    const float  NormalZ    = sqrt(saturate(1.0 - dot(NormalXY, NormalXY)));
-    const float3 Normal     = normalize(float3(NormalXY, NormalZ));
-	
-    const float  NormalDotL = saturate(dot(Normal, normalize(float3(Distance2D, 0.5))));
+    const float3 Normal     = NormalTexture.Sample(LinearSampler, Input.World.zw).rgb * 2.0 - 1.0;
+    const float  NormalDotL = saturate(dot(Normal, normalize(float3(Distance2D, -0.5))));
 #else
     const float  NormalDotL = 1.0;
 #endif
