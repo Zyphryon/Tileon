@@ -228,7 +228,7 @@ namespace Tileon
         /// \brief Gets the inverse of the view-projection matrix of the camera.
         ///
         /// \return The inverse of the view-projection matrix of the camera.
-        ZYPHRYON_INLINE ConstRef<Matrix4x4> GetInverseViewProjection() const
+        ZYPHRYON_INLINE ConstRef<Matrix4x4> GetViewProjectionInverse() const
         {
             return mCamera.GetViewProjectionInverse();
         }

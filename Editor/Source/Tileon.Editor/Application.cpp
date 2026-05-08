@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Application.hpp"
+#include "View/Archetypes/Archetypes.hpp"
 #include "View/Foundry/Foundry.hpp"
 #include "View/Inspector/Inspector.hpp"
 #include "View/Palette/Palette.hpp"
@@ -82,9 +83,7 @@ namespace Tileon::Editor
                 }
                 else
                 {
-                    const View::Bootstrap::Result Result = mBootstrap.Draw(Composer, GetDevice());
-
-                    switch (Result)
+                    switch (mBootstrap.Draw(Composer, GetDevice()))
                     {
                     case View::Bootstrap::Result::Done:
                         Launch(Move(mBootstrap.GetProject()));
@@ -130,6 +129,7 @@ namespace Tileon::Editor
 
         // Add editor activities to the list of activities, which will be rendered in the interface.
         mActivities.push_back(Tracker<View::Foundry>::Create(* mContext));
+        mActivities.push_back(Tracker<View::Archetypes>::Create(* mContext));
         mActivities.push_back(Tracker<View::Inspector>::Create(* mContext));
         mActivities.push_back(Tracker<View::Palette>::Create(* mContext));
         mActivities.push_back(Tracker<View::Scene>::Create(* mContext));
@@ -242,12 +242,12 @@ int main([[maybe_unused]] int Argc, [[maybe_unused]] Ptr<Char> Argv[])
 {
     // Load the editor configuration from the user's home directory "Tileon/Editor/Config.toml".
     const Blob Configuration = Filesystem::Load(Filesystem::GetHome("Tileon", "Editor") + "Config.toml");
-    TOMLParser Parser(Configuration.GetText());
+    TOMLParser Archive(Configuration.GetText());
 
     Engine::Properties Properties;
     Properties.SetWindowTitle("Tileon Editor (v0.1)");
     Properties.SetVideoDriver("D3D11");
-    Properties.Load(Parser);
+    Properties.Load(Archive);
 
     // Initialize 'Zyphryon Engine' and enter main loop.
     const Unique<Tileon::Editor::Application> Application = Unique<Tileon::Editor::Application>::Create();
@@ -256,8 +256,8 @@ int main([[maybe_unused]] int Argc, [[maybe_unused]] Ptr<Char> Argv[])
     Application->Sync(Properties);
 
     // Save the editor configuration back to the user's home directory.
-    Properties.Save(Parser);
-    Filesystem::Save(Filesystem::GetHome("Tileon", "Editor") + "Config.toml", Parser.Dump());
+    Properties.Save(Archive);
+    Filesystem::Save(Filesystem::GetHome("Tileon", "Editor") + "Config.toml", Archive.Dump());
 
     return 0;
 }

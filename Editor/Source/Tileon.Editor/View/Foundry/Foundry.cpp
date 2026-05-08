@@ -215,6 +215,26 @@ namespace Tileon::Editor::View
 
         // Draw the animation section for the motif.
         Composer.Section("Animation");
+
+        Composer.Field("Easing");
+        Composer.PushItemWidth(-1);
+        if (Composer.BeginCombo("##easing", Format("{}", Enum::Name(Motif.GetEasing()))))
+        {
+            for (const Easing Option : Enum::Values<Easing>())
+            {
+                const Bool Selected = (Motif.GetEasing() == Option);
+
+                if (Composer.Selectable(Enum::Name(Option), Selected))
+                {
+                    Motif.SetEasing(Option);
+                }
+            }
+            Composer.EndCombo();
+        }
+        Composer.PopItemWidth();
+        Composer.Spacing();
+
+        Composer.Field("Frames");
         DrawLeftPanelAnimation(Composer, Motif, mTileset.GetGlyph(Motif.GetID()));
     }
 
@@ -295,7 +315,7 @@ namespace Tileon::Editor::View
                 Composer.TableNextRow();
 
                 Composer.TableSetColumnIndex(0);
-                Composer.Label("{}", Keyframe);
+                Composer.Label("{}", Keyframe + 1);
 
                 Composer.TableSetColumnIndex(1);
                 Composer.PushItemWidth(-1);

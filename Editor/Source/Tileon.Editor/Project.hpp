@@ -30,16 +30,16 @@ namespace Tileon::Editor
         /// \brief Initializes the project with default values.
         Project();
 
-        /// \brief Populates project data from the given TOML object.
+        /// \brief Loads the project data from the specified TOML archive.
         ///
-        /// \param Parser A TOML object containing the serialized project data.
-        /// \return `true` if at least the metadata section was found, `false` otherwise.
-        Bool Load(Ref<TOMLParser> Parser);
+        /// \param Archive The TOML parser containing the project data to load.
+        /// \return `true` if the project was loaded successfully, `false` otherwise.
+        Bool Load(Ref<TOMLParser> Archive);
 
-        /// \brief Serializes the project data into a TOML object.
+        /// \brief Saves the project data to the specified TOML archive.
         ///
-        /// \param Parser A TOML object to populate with the project data.
-        void Save(Ref<TOMLParser> Parser) const;
+        /// \param Archive The TOML parser to save the project data into.
+        void Save(Ref<TOMLParser> Archive) const;
 
         /// \brief Sets the file path of the project.
         ///
