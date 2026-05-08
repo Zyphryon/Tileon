@@ -22,8 +22,8 @@ namespace Tileon
         /// \brief Enumerates the different layers that can be assigned to a tile.
         enum class Layer : UInt8
         {
-            Base,       ///< The base layer of the tile, typically representing the ground or floor.
-            Detail,     ///< The overlay layer, used for additional details like paths or markings.
+            Base,       ///< The base layer of the tile, representing the primary terrain type.
+            Detail,     ///< The detail layer of the tile, representing additional terrain features or variations.
         };
 
     public:

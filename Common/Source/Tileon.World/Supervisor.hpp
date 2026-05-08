@@ -13,7 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Coordinate.hpp"
-#include "Component/Spatial/Bounds.hpp"
+#include "Component.hpp"
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Scene/Service.hpp>
 
@@ -120,7 +120,7 @@ namespace Tileon
 
             ForEachEntity(Hitbox, [&](Scene::Entity Actor)
             {
-                const IntRect AABB = Actor.Get<Bounds>().GetRect();
+                const IntRect AABB = Actor.Get<Bound>().GetRect();
 
                 if (const SInt32 ActorMaxY = AABB.GetMaximumY(); ActorMaxY > MaxY)
                 {
@@ -186,7 +186,7 @@ namespace Tileon
                         ForEach([&](UInt64 ID)
                         {
                             const Scene::Entity Actor = Scene.GetEntity(ID);
-                            AABB = IntRect::Union(AABB, Actor.Get<Bounds>().GetRect());
+                            AABB = IntRect::Union(AABB, Actor.Get<Bound>().GetRect());
                         });
                         Boundaries = AABB;
                     }

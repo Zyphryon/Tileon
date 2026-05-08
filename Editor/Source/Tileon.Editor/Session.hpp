@@ -19,6 +19,17 @@ namespace Tileon::Editor
     {
     public:
 
+        /// \brief Loads session data from a TOML string.
+        ///
+        /// \param Data A TOML string containing the session data to load.
+        /// \return `true` if the session data was successfully loaded, `false` otherwise.
+        Bool Load(ConstStr8 Data);
+
+        /// \brief Saves the session data to a TOML string.
+        ///
+        /// \return A TOML string representing the current session data.
+        Str8 Save() const;
+
         /// \brief Sets a boolean value in the session with the specified key.
         ///
         /// \param Key   The key associated with the boolean value to set.

@@ -12,9 +12,7 @@
 
 #include "Light.hpp"
 #include "Tileon.Render/Component.hpp"
-#include "Tileon.World/Component/Kinematic/Transform.hpp"
-#include "Tileon.World/Component/Spatial/Anchor.hpp"
-#include "Tileon.World/Component/Spatial/Extent.hpp"
+#include "Tileon.World/Component.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -101,7 +99,7 @@ namespace Tileon::Stage
 
         // Set the projection matrix for the light stage based on the director's position and viewport size.
         const Graphic::Stream Projection = Graphics.AllocateTransientBuffer(
-            Graphic::Usage::Uniform, Spanify(Director.GetProjection()));
+            Graphic::Usage::Uniform, Spanify(Director.GetViewProjection()));
         Encoder.SetUniform(0, Projection);
 
         // Render the accumulated glowlights in batches to minimize draw calls and state changes.

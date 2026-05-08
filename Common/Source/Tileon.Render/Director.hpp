@@ -220,9 +220,17 @@ namespace Tileon
         /// \brief Gets the view-projection matrix of the camera.
         ///
         /// \return The view-projection matrix of the camera.
-        ZYPHRYON_INLINE ConstRef<Matrix4x4> GetProjection() const
+        ZYPHRYON_INLINE ConstRef<Matrix4x4> GetViewProjection() const
         {
             return mCamera.GetViewProjection();
+        }
+
+        /// \brief Gets the inverse of the view-projection matrix of the camera.
+        ///
+        /// \return The inverse of the view-projection matrix of the camera.
+        ZYPHRYON_INLINE ConstRef<Matrix4x4> GetInverseViewProjection() const
+        {
+            return mCamera.GetViewProjectionInverse();
         }
 
         /// \brief Gets the current frustum of the camera's view in logical units (e.g., world units).

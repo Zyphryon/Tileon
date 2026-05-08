@@ -11,7 +11,6 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "World.hpp"
-#include "Component.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -60,6 +59,7 @@ namespace Tileon
 
     void World::OnRegister(Ref<Scene::Service> Scene)
     {
+        // TODO: Clear separation between components and systems registered by the world.
         Scene.GetComponent<Persist>("Persist");
         Scene.GetComponent<Dispose>("Dispose");
         Scene.GetComponent<Stale>("Stale");
@@ -67,8 +67,8 @@ namespace Tileon
         Scene.GetComponent<Transform>("Transform");
         Scene.GetComponent<Pose>("Pose").With<Transform>().AddTrait(Scene::Trait::Serializable);
         Scene.GetComponent<Anchor>("Anchor").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Bounds>("Bounds");
-        Scene.GetComponent<Extent>("Extent").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Bounds>();
+        Scene.GetComponent<Bound>("Bound");
+        Scene.GetComponent<Extent>("Extent").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Bound>();
         Scene.GetComponent<Velocity>("Velocity").With<Dynamic>();
         Scene.GetComponent<Region>("Region").AddTrait(Scene::Trait::Serializable);
 
@@ -180,11 +180,11 @@ namespace Tileon
             });
 
         // System that computes world-space volumes from local-space volumes and updates spatial partitioning.
-        Scene.CreateSystem<Scene::DSL::In<const Transform, const Extent, Bounds>, Kinetic>(
+        Scene.CreateSystem<Scene::DSL::In<const Transform, const Extent, Bound>, Kinetic>(
             "World::ComputeHierarchy",
             EcsOnUpdate,
             Scene::Execution::Concurrent,
-            [this](Scene::Entity Actor, ConstRef<Transform> Transform, Extent Extent, Ref<Bounds> Bounds)
+            [this](Scene::Entity Actor, ConstRef<Transform> Transform, Extent Extent, Ref<Bound> Bounds)
             {
                 const Rect LocalAABB(Extent.GetOffset(), Extent.GetOffset() + Extent.GetSize());
                 const Rect WorldAABB = Rect::Transform(LocalAABB, Transform.GetWorldspace());
@@ -214,11 +214,11 @@ namespace Tileon
             });
 
         /// System that disposes of entities marked for disposal.
-        Scene.CreateSystem<Scene::DSL::In<ConstPtr<Bounds>, const Dispose>>(
+        Scene.CreateSystem<Scene::DSL::In<ConstPtr<Bound>, const Dispose>>(
             "World::DestroyEntitiesTagged",
             EcsPostFrame,
             Scene::Execution::Concurrent,
-            [this](Scene::Entity Actor, ConstPtr<Bounds> Bounds)
+            [this](Scene::Entity Actor, ConstPtr<Bound> Bounds)
             {
                 if (Bounds)
                 {

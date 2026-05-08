@@ -13,9 +13,7 @@
 #include "Geometry.hpp"
 #include "Tileon.Render/Component.hpp"
 #include "Tileon.Render/Depth.hpp"
-#include "Tileon.World/Component/Kinematic/Transform.hpp"
-#include "Tileon.World/Component/Spatial/Anchor.hpp"
-#include "Tileon.World/Component/Spatial/Extent.hpp"
+#include "Tileon.World/Component.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -42,7 +40,7 @@ namespace Tileon::Stage
         const IntRect    Frustum = Director.GetFrustum();
         const IntVector2 Origin(Director.GetPosition().GetBaseX(), Director.GetPosition().GetBaseY());
 
-        mCanvas.Begin(Director.GetProjection());
+        mCanvas.Begin(Director.GetViewProjection());
         {
             // Draw sprite entities.
             // TODO: Frustum Culling

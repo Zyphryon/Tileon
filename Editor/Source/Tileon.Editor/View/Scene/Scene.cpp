@@ -198,6 +198,41 @@ namespace Tileon::Editor::View
 
         DrawBrushButton(Workshop::Brush::Bucket, ICON_FA_FILL_DRIP);
         Composer.SameLine();
+
+        Composer.SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        Composer.SameLine();
+
+        // Draw the layer selection buttons for switching between layers.
+        const auto DrawLayerButton = [&](Workshop::Level Level, ConstStr8 Icon)
+        {
+            const Bool Active = (mWorkshop.GetLevel() == Level);
+
+            if (Active)
+            {
+                Composer.PushStyleColor(ImGuiCol_Button,        Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
+                Composer.PushStyleColor(ImGuiCol_ButtonHovered, Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
+            }
+
+            if (Composer.Button(Base::Format("{}##{}", Icon, Enum::Name(Level)), 32.0f))
+            {
+                mWorkshop.SetLevel(Level);
+            }
+
+            if (Active)
+            {
+                Composer.PopStyleColor(2);
+            }
+        };
+
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text(ICON_FA_LAYER_GROUP);
+        Composer.SameLine();
+
+        DrawLayerButton(Workshop::Level::Base,   ICON_FA_1);
+        Composer.SameLine();
+
+        DrawLayerButton(Workshop::Level::Detail, ICON_FA_2);
+        Composer.SameLine();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

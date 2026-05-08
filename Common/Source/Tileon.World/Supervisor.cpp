@@ -11,8 +11,6 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Supervisor.hpp"
-#include "Component/Condition/Lifecycle.hpp"
-#include "Component/Kinematic/Transform.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -86,7 +84,7 @@ namespace Tileon
 
                         Actor.Children([this](Scene::Entity Child)
                         {
-                            RemoveEntityOnCell(Child, Child.Get<Bounds>().GetRect().GetCenter());
+                            RemoveEntityOnCell(Child, Child.Get<Bound>().GetRect().GetCenter());
                         });
                         Actor.Destruct();
                     }

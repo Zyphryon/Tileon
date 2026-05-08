@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Workshop.hpp"
+#include "Tileon.World/Component/State/Lifecycle.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -53,8 +54,13 @@ namespace Tileon::Editor
         Ref<Tileset> Tileset = mController.GetRenderer().GetTileset();
 
         // Gets the tileset entry for the specified object ID and retrieves its column and row span.
-        ConstRef<Motif> Motif = Tileset.GetMotif(Object);
-        const IntVector2 Span = Motif.GetSpan();
+        IntVector2 Span = IntVector2::One();
+
+        if (Object)
+        {
+            ConstRef<Motif> Motif = Tileset.GetMotif(Object);
+            Span = Motif.GetSpan();
+        }
 
         // Apply the command based on the current brush type and the placement of the cursor in the world.
         switch (mBrush)
@@ -74,7 +80,7 @@ namespace Tileon::Editor
         case Brush::Bucket:
         {
             const SInt32  TileX = Placement.GetRegionX() * Region::kTilesPerX;
-            const SInt32  TileY = Placement.GetRegionY() * Region::kTilesPerX;
+            const SInt32  TileY = Placement.GetRegionY() * Region::kTilesPerY;
             const IntRect Area(TileX, TileY, TileX + Region::kTilesPerX, TileY + Region::kTilesPerY);
 
             ApplyTiles(Command, Area, static_cast<Tile::Layer>(Enum::Cast(mLevel)), Object, Span);
@@ -100,8 +106,8 @@ namespace Tileon::Editor
         // Compute the range of regions that the global tile rect overlaps.
         const SInt16 RegionMinX = Coordinate::GetRegionX(Area.GetMinimumX());
         const SInt16 RegionMinY = Coordinate::GetRegionY(Area.GetMinimumY());
-        const SInt16 RegionMaxX = Coordinate::GetRegionX(Area.GetMaximumX());
-        const SInt16 RegionMaxY = Coordinate::GetRegionY(Area.GetMaximumY());
+        const SInt16 RegionMaxX = Coordinate::GetRegionX(Area.GetMaximumX() - 1);
+        const SInt16 RegionMaxY = Coordinate::GetRegionY(Area.GetMaximumY() - 1);
 
         for (SInt16 RegionY = RegionMinY; RegionY <= RegionMaxY; ++RegionY)
         {
@@ -139,6 +145,9 @@ namespace Tileon::Editor
                     {
                         Actor.Get<Region>().Erase(LocalArea, Layer);
                     }
+
+                    // Mark the region as dirty so it gets saved and reloaded with the updated tile data.
+                    Actor.Add<Persist>();
                 }
             }
         }

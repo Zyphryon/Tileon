@@ -20,33 +20,33 @@
 
 namespace Tileon
 {
-    /// \brief Represents the spatial bounds of an entity in the world, defined by an axis-aligned bounding box.
-    class Bounds final
+    /// \brief Represents the computed world-space axis-aligned bounding box of an entity.
+    class Bound final
     {
     public:
 
-        /// \brief Default constructor initializing the bounds with an empty rectangle.
-        ZYPHRYON_INLINE Bounds() = default;
+        /// \brief Default constructor initializing the bound with an empty rectangle.
+        ZYPHRYON_INLINE Bound() = default;
 
-        /// \brief Constructs bounds with the specified axis-aligned bounding box.
+        /// \brief Constructs a bound with the specified axis-aligned bounding box.
         ///
-        /// \param Rect The axis-aligned bounding box to initialize the bounds with.
-        ZYPHRYON_INLINE Bounds(IntRect Rect)
+        /// \param Rect The axis-aligned bounding box to initialize the bound with.
+        ZYPHRYON_INLINE Bound(IntRect Rect)
             : mRect { Rect }
         {
         }
 
-        /// \brief Sets the axis-aligned bounding box for the bounds.
+        /// \brief Sets the axis-aligned bounding box of the bound.
         ///
-        /// \param Rect The axis-aligned bounding box to set for the bounds.
+        /// \param Rect The axis-aligned bounding box to set.
         ZYPHRYON_INLINE void SetRect(IntRect Rect)
         {
             mRect = Rect;
         }
 
-        /// \brief Gets the axis-aligned bounding box of the bounds.
+        /// \brief Gets the axis-aligned bounding box of the bound.
         ///
-        /// \return The axis-aligned bounding box of the bounds.
+        /// \return The axis-aligned bounding box of the bound.
         ZYPHRYON_INLINE IntRect GetRect() const
         {
             return mRect;
