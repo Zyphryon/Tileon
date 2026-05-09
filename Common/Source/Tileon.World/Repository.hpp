@@ -27,17 +27,20 @@ namespace Tileon
     {
     public:
 
+        /// \brief Default filename for storing the world state.
+        static constexpr ConstStr8 kManifestUri    = "Resources://Data/World.bin";
+
         /// \brief Maximum number of terrains that can be stored in the repository.
-        static constexpr UInt32    kTerrainLimit      = 1'024;
+        static constexpr UInt32    kTerrainLimit   = 1'024;
 
         /// \brief Default filename for storing terrains.
-        static constexpr ConstStr8 kTerrainFilename   = "Resources://Data/Terrains.bin";
+        static constexpr ConstStr8 kTerrainUri     = "Resources://Data/Terrains.bin";
 
         /// \brief Maximum number of entity archetypes that can be stored in the repository.
-        static constexpr UInt32    kArchetypeLimit    = Scene::kMaxCountArchetypes;
+        static constexpr UInt32    kArchetypeLimit = Scene::kMaxCountArchetypes;
 
         /// \brief Default filename for storing entity archetypes.
-        static constexpr ConstStr8 kArchetypeFilename = "Resources://Data/Archetypes.bin";
+        static constexpr ConstStr8 kArchetypeUri   = "Resources://Data/Archetypes.bin";
 
     public:
 
@@ -136,6 +139,14 @@ namespace Tileon
         }
 
     private:
+
+        /// \brief Loads the world manifest from file.
+        ///
+        /// \return `true` if the manifest was loaded successfully, `false` otherwise.
+        Bool LoadManifest();
+
+        /// \brief Saves the world manifest to file.
+        void SaveManifest();
 
         /// \brief Loads the entity archetype database from file.
         ///

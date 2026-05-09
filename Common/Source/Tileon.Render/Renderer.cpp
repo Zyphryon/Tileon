@@ -22,7 +22,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Renderer::Renderer(Ref<Service::Host> Host)
-        : Locator(Host),
+        : Locator   { Host },
           mPhases   { },
           mFrames   { },
           mPipeline { Host },

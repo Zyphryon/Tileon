@@ -31,14 +31,19 @@ namespace Tileon
 
     void Repository::Load()
     {
+        if (!LoadManifest())
+        {
+            LOG_WARNING("Failed to load manifest from '{}'", kManifestUri);
+        }
+
         if (!LoadArchetypeDatabase())
         {
-            LOG_WARNING("Failed to load archetypes from '{}'", kArchetypeFilename);
+            LOG_WARNING("Failed to load archetypes from '{}'", kArchetypeUri);
         }
 
         if (!LoadTerrainDatabase())
         {
-            LOG_WARNING("Failed to load terrains from '{}'", kTerrainFilename);
+            LOG_WARNING("Failed to load terrains from '{}'", kTerrainUri);
         }
     }
 
@@ -47,6 +52,7 @@ namespace Tileon
 
     void Repository::Save()
     {
+        SaveManifest();
         SaveArchetypeDatabase();
         SaveTerrainDatabase();
     }
@@ -88,9 +94,37 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    Bool Repository::LoadManifest()
+    {
+        if (Blob File = GetService<Content::Service>().Find(Content::Uri(kManifestUri)); File)
+        {
+            Reader Input(File.GetSpan<UInt8>());
+            GetService<Scene::Service>().LoadWorld(Input);
+        }
+        else
+        {
+            return false;
+        }
+        return true;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Repository::SaveManifest()
+    {
+        Writer Output;
+        GetService<Scene::Service>().SaveWorld(Output);
+
+        GetService<Content::Service>().Save(kManifestUri, Output.GetData());
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     Bool Repository::LoadArchetypeDatabase()
     {
-        if (Blob File = GetService<Content::Service>().Find(Content::Uri(kArchetypeFilename)); File)
+        if (Blob File = GetService<Content::Service>().Find(Content::Uri(kArchetypeUri)); File)
         {
             Reader Input(File.GetSpan<UInt8>());
             GetService<Scene::Service>().LoadArchetypes(Input);
@@ -110,7 +144,7 @@ namespace Tileon
         Writer Output;
         GetService<Scene::Service>().SaveArchetypes(Output);
 
-        GetService<Content::Service>().Save(kArchetypeFilename, Output.GetData());
+        GetService<Content::Service>().Save(kArchetypeUri, Output.GetData());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -118,7 +152,7 @@ namespace Tileon
 
     Bool Repository::LoadTerrainDatabase()
     {
-        if (Blob File = GetService<Content::Service>().Find(Content::Uri(kTerrainFilename)); File)
+        if (Blob File = GetService<Content::Service>().Find(Content::Uri(kTerrainUri)); File)
         {
             Reader Input(File.GetSpan<UInt8>());
             mTerrains.OnSerialize(Archive(Input));
@@ -138,6 +172,6 @@ namespace Tileon
         Writer Output;
         mTerrains.OnSerialize(Archive(Output));
 
-        GetService<Content::Service>().Save(kTerrainFilename, Output.GetData());
+        GetService<Content::Service>().Save(kTerrainUri, Output.GetData());
     }
 }
