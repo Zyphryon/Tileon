@@ -17,8 +17,8 @@
 [Properties.Layout]
 
     Attributes      = [
-        ["CUSTOM0",  "Float32x4",  0,  0, 1],
-        ["COLOR0",   "Float32x4",  0, 16, 1],
+        ["TEXCOORD0", "Float32x4",    0,  0, 1],
+        ["COLOR0",    "UIntNorm8x4",  0, 16, 1],
     ]
 
     Primitive       = "TriangleStrip"

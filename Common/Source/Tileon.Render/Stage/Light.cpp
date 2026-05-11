@@ -128,9 +128,9 @@ namespace Tileon::Stage
 
     void Light::OnRegister(Ref<Scene::Service> Scene)
     {
-        Scene.GetComponent<Glowlight>("Glowlight").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Skylight>("Skylight").AddTrait(Scene::Trait::Serializable, Scene::Trait::Singleton);
-        Scene.GetComponent<Spotlight>("Spotlight").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<Glowlight>("Glowlight").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<Skylight>("Skylight").Grant(Scene::Trait::Serializable, Scene::Trait::Singleton);
+        Scene.GetComponent<Spotlight>("Spotlight").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
 
         // Observes changes to the light radial component and updates the corresponding spatial properties of the actor.
         Scene.CreateObserver<Scene::DSL::In<const Glowlight>>(

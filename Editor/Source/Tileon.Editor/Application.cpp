@@ -28,6 +28,14 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    Application::Application()
+        : mState { State::Idle }
+    {
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     Bool Application::OnInitialize()
     {
         // Adds the main disk content mount for the editor, which allows loading assets from the local file system.
@@ -51,21 +59,25 @@ namespace Tileon::Editor
     {
         ConstTracker<Graphic::Service> Graphics = GetService<Graphic::Service>();
 
-        // Render the game view to an off-screen buffer, which will be displayed in the scene activity's viewport.
-        if (mContext)
+        switch (mState)
         {
-            const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(View::Scene::kTitle);
+        case State::Idle:
+            break;
+        case State::Loading:
+        {
+            ConstTracker<Content::Service> Content = GetService<Content::Service>();
 
-            if (Parent && Parent->Active)
+            if (Content->GetPending() == 0)
             {
-                const UInt32    ViewportID   = Parent->GetID("##viewport");
-                const ConstStr8 ViewportName = Format("{}/##viewport_{:08X}", View::Scene::kTitle, ViewportID);
-
-                if (const ConstPtr<ImGuiWindow> Child = ImGui::FindWindowByName(ViewportName.data()); Child)
-                {
-                    DrawGame(Child->ContentSize.x, Child->ContentSize.y);
-                }
+                mState = State::Running;
             }
+            break;
+        }
+        case State::Running:
+        {
+            DrawGame();
+            break;
+        }
         }
 
         // Render the editor interface or bootstrap view depending on whether the main context has been initialized.
@@ -77,12 +89,9 @@ namespace Tileon::Editor
             {
                 UI::Composer Composer;
 
-                if (mContext)
+                switch (mState)
                 {
-                    DrawEditor(Composer, Time);
-                }
-                else
-                {
+                case State::Idle:
                     switch (mBootstrap.Draw(Composer, GetDevice()))
                     {
                     case View::Bootstrap::Result::Done:
@@ -94,6 +103,13 @@ namespace Tileon::Editor
                     default:
                         break;
                     }
+                    break;
+                case State::Loading:
+                    DrawLoading(Composer);
+                    break;
+                case State::Running:
+                    DrawEditor(Composer, Time);
+                    break;
                 }
             }
             mFrontend.End();
@@ -134,9 +150,8 @@ namespace Tileon::Editor
         mActivities.push_back(Tracker<View::Palette>::Create(* mContext));
         mActivities.push_back(Tracker<View::Scene>::Create(* mContext));
 
-        // Wait until the content service is fully initialized
-        // TODO: show a loading screen instead of blocking the main thread
-        Content->Wait();
+        // Signal that we are waiting for the content service to finish loading all queued assets.
+        mState = State::Loading;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -219,18 +234,73 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Application::DrawGame(UInt16 Width, UInt16 Height)
+    void Application::DrawGame()
     {
-        if (mViewport.GetX() != Width || mViewport.GetY() != Height)
-        {
-            if (Width != 0 && Height != 0)
-            {
-                mViewport.Set(Width, Height);
+        // Render the game view to an off-screen buffer, which will be displayed in the scene activity's viewport.
+        const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(View::Scene::kTitle);
 
-                mContext->GetController().Resize(Width, Height);
+        if (Parent && Parent->Active)
+        {
+            const UInt32    ViewportID   = Parent->GetID("##viewport");
+            const ConstStr8 ViewportName = Format("{}/##viewport_{:08X}", View::Scene::kTitle, ViewportID);
+
+            if (const ConstPtr<ImGuiWindow> Child = ImGui::FindWindowByName(ViewportName.data()); Child)
+            {
+                const Real32 Width  = Child->ContentSize.x;
+                const Real32 Height = Child->ContentSize.y;
+
+                if (mViewport.GetX() != Width || mViewport.GetY() != Height)
+                {
+                    if (Width != 0 && Height != 0)
+                    {
+                        mViewport.Set(Width, Height);
+
+                        mContext->GetController().Resize(Width, Height);
+                    }
+                }
+                mContext->GetController().Present(false);
             }
         }
-        mContext->GetController().Present(false);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Application::DrawLoading(Ref<UI::Composer> Composer)
+    {
+        ConstTracker<Content::Service> Content = GetService<Content::Service>();
+
+        // Center a fixed-size, chrome-free loading window.
+        ImGui::SetNextWindowSize(ImVec2(300, 70), ImGuiCond_Always);
+        Composer.SetNextWindowPos(Composer.GetViewportCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowBgAlpha(0.88f);
+
+        constexpr ImGuiWindowFlags kFlags =
+            ImGuiWindowFlags_NoDecoration          |
+            ImGuiWindowFlags_NoInputs              |
+            ImGuiWindowFlags_NoNav                 |
+            ImGuiWindowFlags_NoMove                |
+            ImGuiWindowFlags_NoBringToFrontOnFocus |
+            ImGuiWindowFlags_NoDocking;
+
+        if (ImGui::Begin("##Loading", nullptr, kFlags))
+        {
+            // Animated ellipsis based on elapsed time.
+            const UInt32 Dots  = static_cast<UInt32>(ImGui::GetTime() * 3.0) % 4;
+            const UInt32 Count = Content->GetPending();
+
+            ConstStr8 Ellipsis = Dots == 0 ? "" : Dots == 1 ? "." : Dots == 2 ? ".." : "...";
+
+            const ConstStr8 Label = Format("Loading{} ({} asset{} remaining)", Ellipsis, Count, Count == 1u ? "" : "s");
+
+            // Center the text inside the window.
+            const ImVec2 Available = ImGui::GetContentRegionAvail();
+            const ImVec2 TextSize  = ImGui::CalcTextSize(Label.data());
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (Available.x - TextSize.x) * 0.5f);
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (Available.y - TextSize.y) * 0.5f);
+            ImGui::TextUnformatted(Label.data());
+        }
+        ImGui::End();
     }
 }
 

@@ -22,10 +22,10 @@ struct vs_Input
 {
     uint   VertexID : SV_VertexID;
 
-    float4 Params0  : CUSTOM0;		// center.xy, radius ||	range, falloff
+    float4 Params0  : TEXCOORD0;		// center.xy, radius ||	range, falloff
 	
 #if   defined(LIGHT_SPOT)
-    float4 Params1  : CUSTOM1;		// direction.xy, angles.xy
+    float4 Params1  : TEXCOORD1;		// direction.xy, angles.xy
 #endif 
 
     float4 Color    : COLOR0;

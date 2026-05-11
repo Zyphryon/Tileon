@@ -76,7 +76,7 @@ namespace Tileon::Editor::View
         {
             if (const Scene::Entity Archetype = mRepository.CreateArchetype(); Archetype.IsValid())
             {
-                Archetype.SetDisplayName(Format("Archetype.{}", Archetype.GetID() - Scene::kMinRangeArchetypes));
+                Archetype.SetAlias(Format("Archetype.{}", Archetype.GetID() - Scene::kMinRangeArchetypes));
 
                 mSelection = Archetype;
             }
@@ -101,7 +101,7 @@ namespace Tileon::Editor::View
         {
             const Bool Selected = (mSelection == Archetype);
 
-            Composer.Selectable(Archetype.GetDisplayName(), Selected);
+            Composer.Selectable(Archetype.GetAlias(), Selected);
 
             if (Composer.IsItemClicked())
             {
@@ -145,11 +145,11 @@ namespace Tileon::Editor::View
         });
         Composer.Spacing();
 
-        Composer.Field("Display");
+        Composer.Field("Alias");
         Composer.SetNextItemWidth(-1.0f);
-        Composer.InputText("##archetype_display", mSelection.GetDisplayName(), [&](ConstStr8 Value)
+        Composer.InputText("##archetype_display", mSelection.GetAlias(), [&](ConstStr8 Value)
         {
-            mSelection.SetDisplayName(Value);
+            mSelection.SetAlias(Value);
         });
         Composer.Spacing();
 
@@ -175,7 +175,7 @@ namespace Tileon::Editor::View
 
         if (mSelection.IsValid())
         {
-            const ConstStr8 Label = mSelection.GetDisplayName();
+            const ConstStr8 Label = mSelection.GetAlias();
 
             Composer.SetCursorPosX((Composer.GetWindowWidth() - Composer.CalcTextSize(Label).x) * 0.5f);
             Composer.TextDisabled(Label);

@@ -65,12 +65,12 @@ namespace Tileon
         Scene.GetComponent<Stale>("Stale");
         Scene.GetComponent<Dynamic>("Dynamic");
         Scene.GetComponent<Transform>("Transform");
-        Scene.GetComponent<Pose>("Pose").With<Transform>().AddTrait(Scene::Trait::Serializable);
-        Scene.GetComponent<Anchor>("Anchor").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<Pose>("Pose").With<Transform>().Grant(Scene::Trait::Serializable);
+        Scene.GetComponent<Anchor>("Anchor").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Bound>("Bound");
-        Scene.GetComponent<Extent>("Extent").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Bound>();
+        Scene.GetComponent<Extent>("Extent").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Bound>();
         Scene.GetComponent<Velocity>("Velocity").With<Dynamic>();
-        Scene.GetComponent<Region>("Region").AddTrait(Scene::Trait::Serializable);
+        Scene.GetComponent<Region>("Region").Grant(Scene::Trait::Serializable);
 
         // Observe changes to the pivot component and mark entities as stale if they are not kinetic.
         Scene.CreateObserver<Scene::DSL::With<Anchor>, Scene::DSL::Not<Dynamic>>(
@@ -234,7 +234,7 @@ namespace Tileon
             Scene::Execution::Immediate,
             [this]
             {
-                GetService<Scene::Service>().Purge<Stale>();
+                GetService<Scene::Service>().GetWorld().Purge<Stale>();
             });
     }
 

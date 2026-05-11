@@ -28,6 +28,9 @@ namespace Tileon::Editor
     {
     public:
 
+        /// \brief
+        Application();
+
         /// \copydoc Kernel::OnInitialize
         Bool OnInitialize() override;
 
@@ -38,6 +41,14 @@ namespace Tileon::Editor
         void OnTick(Time Time) override;
 
     private:
+
+        /// \brief Enumerates the different states of the editor application.
+        enum class State : UInt8
+        {
+            Idle,       ///< The application is idle, waiting for user input or project loading.
+            Loading,    ///< The application is loading assets and initializing the editor state for the current project.
+            Running,    ///< The application is running, actively processing user input and updating the editor state.
+        };
 
         /// \brief Launches the specified project, initializing the editor state and loading the project data.
         ///
@@ -51,16 +62,19 @@ namespace Tileon::Editor
         void DrawEditor(Ref<UI::Composer> Composer, Time Time);
 
         /// \brief Draws the game view, rendering the current state of the game world.
+        void DrawGame();
+
+        /// \brief Draws a simple loading overlay while assets are being streamed in.
         ///
-        /// \param Width  The width of the game view in pixels.
-        /// \param Height The height of the game view in pixels.
-        void DrawGame(UInt16 Width, UInt16 Height);
+        /// \param Composer The UI composer used to render the loading screen.
+        void DrawLoading(Ref<UI::Composer> Composer);
 
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+        State                     mState;
         View::Bootstrap           mBootstrap;
         Unique<Context>           mContext;
         Plugin::ImGuiSystem       mFrontend;

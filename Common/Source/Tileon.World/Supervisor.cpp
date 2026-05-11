@@ -173,7 +173,7 @@ namespace Tileon
             if (Blob File = GetService<Content::Service>().Find(Content::Uri(Filename)); File)
             {
                 Reader Input(File.GetSpan<UInt8>());
-                Actor = GetService<Scene::Service>().LoadEntityHierarchy(Input);
+                Actor = GetService<Scene::Service>().LoadHierarchy(Input);
             }
             else
             {
@@ -202,7 +202,7 @@ namespace Tileon
         ConstRef<Region> Region = Actor.Get<const Tileon::Region>();
 
         Writer Output;
-        GetService<Scene::Service>().SaveEntityHierarchy(Output, Actor);
+        GetService<Scene::Service>().SaveHierarchy(Output, Actor);
 
         LOG_DEBUG("Supervisor: Saving {} {}", Region.GetX(), Region.GetY());
 

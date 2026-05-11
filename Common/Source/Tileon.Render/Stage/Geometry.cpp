@@ -102,13 +102,13 @@ namespace Tileon::Stage
 
     void Geometry::OnRegister(Ref<Scene::Service> Scene)
     {
-        Scene.GetComponent<IntColor8>("Tint").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<IntColor8>("Tint").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Animator>("Animator");
         Scene.GetComponent<Appaerance>("Appaerance");
-        Scene.GetComponent<Animation>("Animation").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Sprite>("Sprite").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Text>("Text").AddTrait(Scene::Trait::Serializable);
-        Scene.GetComponent<Typeface>("Typeface").AddTrait(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<Animation>("Animation").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<Sprite>("Sprite").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<Text>("Text").Grant(Scene::Trait::Serializable);
+        Scene.GetComponent<Typeface>("Typeface").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
 
         // Observe changes to the sprite component to resolve material resources and trigger updates when necessary.
         Scene.CreateObserver<Scene::DSL::In<const Sprite>>(
