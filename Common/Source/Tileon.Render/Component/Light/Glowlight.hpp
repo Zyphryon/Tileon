@@ -20,7 +20,7 @@ namespace Tileon
     public:
 
         /// \brief Default constructor initializing the glow light with default values.
-        ZYPHRYON_INLINE Glowlight()
+        ZY_INLINE Glowlight()
             : mRadius    { 10.0f },
               mIntensity { 1.0f },
               mFalloff   { 1.0f }
@@ -32,7 +32,7 @@ namespace Tileon
         /// \param Radius    The radius of the light, defining the area of effect.
         /// \param Intensity The intensity of the light, defining its brightness.
         /// \param Falloff   The falloff of the light, defining how quickly the intensity diminishes with distance.
-        ZYPHRYON_INLINE Glowlight(Real32 Radius, Real32 Intensity, Real32 Falloff)
+        ZY_INLINE Glowlight(Real32 Radius, Real32 Intensity, Real32 Falloff)
             : mRadius    { Radius },
               mIntensity { Intensity },
               mFalloff   { Falloff }
@@ -42,7 +42,7 @@ namespace Tileon
         /// \brief Sets the radius of the glow light.
         ///
         /// \param Radius The new radius value to set for the light.
-        ZYPHRYON_INLINE void SetRadius(Real32 Radius)
+        ZY_INLINE void SetRadius(Real32 Radius)
         {
             mRadius = Radius;
         }
@@ -50,7 +50,7 @@ namespace Tileon
         /// \brief Gets the radius of the glow light.
         ///
         /// \return The current radius value of the light.
-        ZYPHRYON_INLINE Real32 GetRadius() const
+        ZY_INLINE Real32 GetRadius() const
         {
             return mRadius;
         }
@@ -58,7 +58,7 @@ namespace Tileon
         /// \brief Sets the intensity of the glow light.
         ///
         /// \param Intensity The new intensity value to set for the light.
-        ZYPHRYON_INLINE void SetIntensity(Real32 Intensity)
+        ZY_INLINE void SetIntensity(Real32 Intensity)
         {
             mIntensity = Intensity;
         }
@@ -66,7 +66,7 @@ namespace Tileon
         /// \brief Gets the intensity of the glow light.
         ///
         /// \return The current intensity value of the light.
-        ZYPHRYON_INLINE Real32 GetIntensity() const
+        ZY_INLINE Real32 GetIntensity() const
         {
             return mIntensity;
         }
@@ -74,7 +74,7 @@ namespace Tileon
         /// \brief Sets the falloff of the glow light.
         ///
         /// \param Falloff The new falloff value to set for the light.
-        ZYPHRYON_INLINE void SetFalloff(Real32 Falloff)
+        ZY_INLINE void SetFalloff(Real32 Falloff)
         {
             mFalloff = Falloff;
         }
@@ -82,20 +82,9 @@ namespace Tileon
         /// \brief Gets the falloff of the glow light.
         ///
         /// \return The current falloff value of the light.
-        ZYPHRYON_INLINE Real32 GetFalloff() const
+        ZY_INLINE Real32 GetFalloff() const
         {
             return mFalloff;
-        }
-
-        /// \brief Serializes the state of the object to or from the specified archive.
-        ///
-        /// \param Archive The archive to serialize the object with.
-        template<typename Serializer>
-        ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
-        {
-            Archive.SerializeReal32(mRadius);
-            Archive.SerializeReal32(mIntensity);
-            Archive.SerializeReal32(mFalloff);
         }
 
     private:

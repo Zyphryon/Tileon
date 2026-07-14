@@ -21,7 +21,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Context::Context(Ref<Service::Host> Host, AnyRef<Project> Project)
+    Context::Context(Ref<Engine::Subsystem::Host> Host, AnyRef<Project> Project)
         : Locator     { Host },
           mController { Host },
           mProject    { Move(Project) }

@@ -22,14 +22,14 @@
 namespace Tileon
 {
     /// \brief Represents the main world class, managing the game state, entities, and services.
-    class World : public Locator<Scene::Service>
+    class World : public Engine::Locator<Scene::Service>
     {
     public:
 
         /// \brief Constructs a world instance with the specified service host.
         ///
         /// \param Host The service host to associate with the world.
-        explicit World(Ref<Service::Host> Host);
+        explicit World(Ref<Engine::Subsystem::Host> Host);
 
         /// \brief Tears down the world, releasing resources and shutting down services.
         void Teardown();
@@ -43,7 +43,7 @@ namespace Tileon
         /// \brief Gets the repository instance associated with the world.
         ///
         /// \return A reference to the repository.
-        ZYPHRYON_INLINE Ref<Repository> GetRepository()
+        ZY_INLINE Ref<Repository> GetRepository()
         {
             return mRepository;
         }
@@ -51,7 +51,7 @@ namespace Tileon
         /// \brief Gets the supervisor instance associated with the world.
         ///
         /// \return A reference to the supervisor.
-        ZYPHRYON_INLINE Ref<Supervisor> GetSupervisor()
+        ZY_INLINE Ref<Supervisor> GetSupervisor()
         {
             return mSupervisor;
         }

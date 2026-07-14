@@ -22,7 +22,7 @@
 namespace Tileon::Editor
 {
     /// \brief Represents an activity within the editor.
-    class Activity : public Trackable<Activity>
+    class Activity : public Retainable<Activity>
     {
     public:
 
@@ -31,7 +31,7 @@ namespace Tileon::Editor
         /// \param Context The context associated with this activity.
         /// \param Title   The title of the activity.
         /// \param Visible `true` to make the activity visible, `false` to hide it. Defaults to `false`.
-        ZYPHRYON_INLINE Activity(Ref<Context> Context, ConstStr8 Title, Bool Visible = false)
+        ZY_INLINE Activity(Ref<Context> Context, Text Title, Bool Visible = false)
             : mContext { Context },
               mTitle   { Title },
               mVisible { Visible }
@@ -39,12 +39,12 @@ namespace Tileon::Editor
         }
 
         /// \brief Destructor for the activity class.
-        ZYPHRYON_INLINE virtual ~Activity() = default;
+        ZY_INLINE virtual ~Activity() = default;
 
         /// \brief Get the context associated with this activity.
         ///
         /// \return The context associated with this activity.
-        ZYPHRYON_INLINE Ref<Context> GetContext()
+        ZY_INLINE Ref<Context> GetContext()
         {
             return mContext;
         }
@@ -52,7 +52,7 @@ namespace Tileon::Editor
         /// \brief Set the title of the activity.
         ///
         /// \param Title The new title for the activity.
-        ZYPHRYON_INLINE void SetTitle(ConstStr8 Title)
+        ZY_INLINE void SetTitle(Text Title)
         {
             mTitle = Title;
         }
@@ -60,7 +60,7 @@ namespace Tileon::Editor
         /// \brief Get the title of the activity.
         ///
         /// \return The current title of the activity.
-        ZYPHRYON_INLINE ConstStr8 GetTitle() const
+        ZY_INLINE Text GetTitle() const
         {
             return mTitle;
         }
@@ -68,7 +68,7 @@ namespace Tileon::Editor
         /// \brief Set the visibility of the activity.
         ///
         /// \param Visible `true` to make the activity visible, `false` to hide it.
-        ZYPHRYON_INLINE void SetVisible(Bool Visible)
+        ZY_INLINE void SetVisible(Bool Visible)
         {
             mVisible = Visible;
         }
@@ -76,7 +76,7 @@ namespace Tileon::Editor
         /// \brief Check if the activity is currently visible.
         ///
         /// \return `true` if the activity is visible, `false` otherwise.
-        ZYPHRYON_INLINE Bool IsVisible() const
+        ZY_INLINE Bool IsVisible() const
         {
             return mVisible;
         }
@@ -94,7 +94,7 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         Ref<Context> mContext;
-        Str8         mTitle;
+        Str          mTitle;
         Bool         mVisible;
     };
 }

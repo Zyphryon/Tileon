@@ -39,7 +39,7 @@ namespace Tileon
     public:
 
         /// \brief Initializes the animator with default values.
-        ZYPHRYON_INLINE Animator()
+        ZY_INLINE Animator()
             : mTimestamp { 0.0 },
               mStatus    { Status::Idle },
               mEasing    { Easing::Linear },
@@ -52,7 +52,7 @@ namespace Tileon
         /// \param Timestamp The initial timestamp of the animator.
         /// \param Status    The playback status of the animator.
         /// \param Easing    The easing function to use for keyframe interpolation (default is linear).
-        ZYPHRYON_INLINE Animator(Real64 Timestamp, Status Status, Easing Easing = Easing::Linear)
+        ZY_INLINE Animator(Real64 Timestamp, Status Status, Easing Easing = Easing::Linear)
             : mTimestamp { Timestamp },
               mStatus    { Status },
               mEasing    { Easing },
@@ -69,7 +69,7 @@ namespace Tileon
         /// \brief Sets the currtent timestamp of the animator.
         ///
         /// \param Timestamp The new timestamp value.
-        ZYPHRYON_INLINE void SetTimestamp(Real64 Timestamp)
+        ZY_INLINE void SetTimestamp(Real64 Timestamp)
         {
             mTimestamp = Timestamp;
         }
@@ -77,7 +77,7 @@ namespace Tileon
         /// \brief Gets the current timestamp of the animator.
         ///
         /// \return The current timestamp.
-        ZYPHRYON_INLINE Real64 GetTimestamp() const
+        ZY_INLINE Real64 GetTimestamp() const
         {
             return mTimestamp;
         }
@@ -85,7 +85,7 @@ namespace Tileon
         /// \brief Sets the playback status of the animator.
         ///
         /// \param Status The new playback status.
-        ZYPHRYON_INLINE void SetStatus(Status Status)
+        ZY_INLINE void SetStatus(Status Status)
         {
             mStatus = Status;
         }
@@ -93,7 +93,7 @@ namespace Tileon
         /// \brief Gets the current playback status of the animator.
         ///
         /// \return The current playback status.
-        ZYPHRYON_INLINE Status GetStatus() const
+        ZY_INLINE Status GetStatus() const
         {
             return mStatus;
         }
@@ -101,7 +101,7 @@ namespace Tileon
         /// \brief Sets the easing function for the animator.
         ///
         /// \param Easing The new easing function.
-        ZYPHRYON_INLINE void SetEasing(Easing Easing)
+        ZY_INLINE void SetEasing(Easing Easing)
         {
             mEasing = Easing;
         }
@@ -109,7 +109,7 @@ namespace Tileon
         /// \brief Gets the easing function of the animator.
         ///
         /// \return The current easing function.
-        ZYPHRYON_INLINE Easing GetEasing() const
+        ZY_INLINE Easing GetEasing() const
         {
             return mEasing;
         }
@@ -117,7 +117,7 @@ namespace Tileon
         /// \brief Sets the current keyframe of the animator.
         ///
         /// \param Keyframe The new keyframe index.
-        ZYPHRYON_INLINE void SetKeyframe(UInt8 Keyframe)
+        ZY_INLINE void SetKeyframe(UInt8 Keyframe)
         {
             mKeyframe = Keyframe;
         }
@@ -125,21 +125,9 @@ namespace Tileon
         /// \brief Gets the current keyframe of the animator.
         ///
         /// \return The current keyframe index.
-        ZYPHRYON_INLINE UInt8 GetKeyframe() const
+        ZY_INLINE UInt8 GetKeyframe() const
         {
             return mKeyframe;
-        }
-
-        /// \brief Serializes the state of the object to or from the specified archive.
-        ///
-        /// \param Archive The archive to serialize the object with.
-        template<typename Serializer>
-        ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
-        {
-            Archive.SerializeReal64(mTimestamp);
-            Archive.SerializeEnum(mStatus);
-            Archive.SerializeEnum(mEasing);
-            Archive.SerializeUInt(mKeyframe);
         }
 
     private:
@@ -149,7 +137,7 @@ namespace Tileon
         /// \param Delta    The time delta to apply easing to.
         /// \param Duration The total duration of the animation.
         /// \return The eased time delta, clamped to the range [0, Duration].
-        ZYPHRYON_INLINE Real64 ApplyEasing(Real64 Delta, Real64 Duration) const
+        ZY_INLINE Real64 ApplyEasing(Real64 Delta, Real64 Duration) const
         {
             return Clamp(Math::Ease(mEasing, Delta / Duration), 0.0, 1.0) * Duration;
         }
@@ -164,7 +152,7 @@ namespace Tileon
         /// \param Easing    The easing function to use for keyframe interpolation (default is linear).
         /// \return The keyframe index corresponding to the sampled time in the animation sequence.
         template<Status Status = Status::Repeat>
-        ZYPHRYON_INLINE static UInt8 Sample(ConstRef<Animation> Sequence, Real64 Time, Real64 Timestamp = 0.0, Easing Easing = Easing::Linear)
+        ZY_INLINE static UInt8 Sample(ConstRef<Animation> Sequence, Real64 Time, Real64 Timestamp = 0.0, Easing Easing = Easing::Linear)
         {
             Animator Animator(Timestamp, Status, Easing);
             Animator.Advance(Time, Sequence);

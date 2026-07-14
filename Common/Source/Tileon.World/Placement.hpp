@@ -13,7 +13,6 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Region.hpp"
-#include <Zyphryon.Math/Scalar.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -47,7 +46,7 @@ namespace Tileon
     public:
 
         /// \brief Default constructor initializing the placement at the origin (0, 0) with no offset.
-        ZYPHRYON_INLINE constexpr Placement()
+        ZY_INLINE constexpr Placement()
             : mRegionX { 0 },
               mRegionY { 0 },
               mOffsetX { 0.0f },
@@ -61,7 +60,7 @@ namespace Tileon
         /// \param RegionY The y-coordinate of the region.
         /// \param OffsetX The x-offset within the region, representing the placement relative to the region's origin.
         /// \param OffsetY The y-offset within the region, representing the placement relative to the region's origin.
-        ZYPHRYON_INLINE constexpr Placement(SInt16 RegionX, SInt16 RegionY, Real32 OffsetX, Real32 OffsetY)
+        ZY_INLINE constexpr Placement(SInt16 RegionX, SInt16 RegionY, Real32 OffsetX, Real32 OffsetY)
             : mRegionX { RegionX },
               mRegionY { RegionY },
               mOffsetX { OffsetX },
@@ -72,7 +71,7 @@ namespace Tileon
         /// \brief Gets the x-coordinate of the region that this placement belongs to.
         ///
         /// \return The x-coordinate of the region.
-        ZYPHRYON_INLINE constexpr SInt16 GetRegionX() const
+        ZY_INLINE constexpr SInt16 GetRegionX() const
         {
             return mRegionX;
         }
@@ -80,7 +79,7 @@ namespace Tileon
         /// \brief Gets the y-coordinate of the region that this placement belongs to.
         ///
         /// \return The y-coordinate of the region.
-        ZYPHRYON_INLINE constexpr SInt16 GetRegionY() const
+        ZY_INLINE constexpr SInt16 GetRegionY() const
         {
             return mRegionY;
         }
@@ -88,7 +87,7 @@ namespace Tileon
         /// \brief Gets the x-offset within the region, representing the placement relative to the region's origin.
         ///
         /// \return The x-offset within the region.
-        ZYPHRYON_INLINE constexpr Real32 GetOffsetX() const
+        ZY_INLINE constexpr Real32 GetOffsetX() const
         {
             return mOffsetX;
         }
@@ -96,7 +95,7 @@ namespace Tileon
         /// \brief Gets the y-offset within the region, representing the placement relative to the region's origin.
         ///
         /// \return The y-offset within the region.
-        ZYPHRYON_INLINE constexpr Real32 GetOffsetY() const
+        ZY_INLINE constexpr Real32 GetOffsetY() const
         {
             return mOffsetY;
         }
@@ -104,7 +103,7 @@ namespace Tileon
         /// \brief Gets the shifted x-coordinate of the region.
         ///
         /// \return The shifted x-coordinate of the region.
-        ZYPHRYON_INLINE constexpr SInt32 GetBaseX() const
+        ZY_INLINE constexpr SInt32 GetBaseX() const
         {
             return mRegionX * Region::kTilesPerX;
         }
@@ -112,7 +111,7 @@ namespace Tileon
         /// \brief Gets the shifted y-coordinate of the region.
         ///
         /// \return The shifted y-coordinate of the region.
-        ZYPHRYON_INLINE constexpr SInt32 GetBaseY() const
+        ZY_INLINE constexpr SInt32 GetBaseY() const
         {
             return mRegionY * Region::kTilesPerY;
         }
@@ -120,7 +119,7 @@ namespace Tileon
         /// \brief Gets the absolute x-coordinate in the world by combining the region's x-coordinate and the offset.
         ///
         /// \return The absolute x-coordinate in the world.
-        ZYPHRYON_INLINE constexpr Real64 GetAbsoluteX() const
+        ZY_INLINE constexpr Real64 GetAbsoluteX() const
         {
             return (mRegionX * Region::kTilesPerX) + mOffsetX;
         }
@@ -128,7 +127,7 @@ namespace Tileon
         /// \brief Gets the absolute y-coordinate in the world by combining the region's y-coordinate and the offset.
         ///
         /// \return The absolute y-coordinate in the world.
-        ZYPHRYON_INLINE constexpr Real64 GetAbsoluteY() const
+        ZY_INLINE constexpr Real64 GetAbsoluteY() const
         {
             return (mRegionY * Region::kTilesPerY) + mOffsetY;
         }
@@ -137,7 +136,7 @@ namespace Tileon
         ///
         /// \param Other The other placement to add.
         /// \return A new normalized placement representing the sum.
-        ZYPHRYON_INLINE constexpr Placement operator+(Placement Other) const
+        ZY_INLINE constexpr Placement operator+(Placement Other) const
         {
             return FromAbsolute(
                 GetAbsoluteX() + Other.GetAbsoluteX(),
@@ -148,7 +147,7 @@ namespace Tileon
         ///
         /// \param Other The other placement to subtract.
         /// \return A new normalized placement representing the difference.
-        ZYPHRYON_INLINE constexpr Placement operator-(Placement Other) const
+        ZY_INLINE constexpr Placement operator-(Placement Other) const
         {
             return FromAbsolute(
                 GetAbsoluteX() - Other.GetAbsoluteX(),
@@ -159,7 +158,7 @@ namespace Tileon
         ///
         /// \param Other The other placement to add.
         /// \return A reference to this placement after addition.
-        ZYPHRYON_INLINE constexpr Ref<Placement> operator+=(Placement Other)
+        ZY_INLINE constexpr Ref<Placement> operator+=(Placement Other)
         {
             (* this) = (* this) + Other;
             return (*this);
@@ -169,7 +168,7 @@ namespace Tileon
         ///
         /// \param Other The other placement to subtract.
         /// \return A reference to this placement after subtraction.
-        ZYPHRYON_INLINE constexpr Ref<Placement> operator-=(Placement Other)
+        ZY_INLINE constexpr Ref<Placement> operator-=(Placement Other)
         {
             (* this) = (* this) - Other;
             return (*this);
@@ -179,7 +178,7 @@ namespace Tileon
         ///
         /// \param Other The other placement to compare against.
         /// \return `true` if the placements are equal, `false` otherwise.
-        ZYPHRYON_INLINE constexpr Bool operator==(ConstRef<Placement> Other) const
+        ZY_INLINE constexpr Bool operator==(ConstRef<Placement> Other) const
         {
             return mRegionX == Other.mRegionX && mRegionY == Other.mRegionY
                 && mOffsetX == Other.mOffsetX && mOffsetY == Other.mOffsetY;
@@ -189,21 +188,9 @@ namespace Tileon
         ///
         /// \param Other The other placement to compare against.
         /// \return `true` if the placements are not equal, `false` otherwise.
-        ZYPHRYON_INLINE constexpr Bool operator!=(ConstRef<Placement> Other) const
+        ZY_INLINE constexpr Bool operator!=(ConstRef<Placement> Other) const
         {
             return !(*this == Other);
-        }
-
-        /// \brief Serializes the state of the object to or from the specified archive.
-        ///
-        /// \param Archive The archive to serialize the object with.
-        template<typename Serializer>
-        ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
-        {
-            Archive.SerializeInt(mRegionX);
-            Archive.SerializeInt(mRegionY);
-            Archive.SerializeReal32(mOffsetX);
-            Archive.SerializeReal32(mOffsetY);
         }
 
     public:
@@ -212,7 +199,7 @@ namespace Tileon
         ///
         /// \param RegionX The x-coordinate of the region.
         /// \param RegionY The y-coordinate of the region.
-        ZYPHRYON_INLINE static constexpr Placement FromRegion(SInt16 RegionX, SInt16 RegionY)
+        ZY_INLINE static constexpr Placement FromRegion(SInt16 RegionX, SInt16 RegionY)
         {
             return Placement(RegionX, RegionY, 0.0f, 0.0f);
         }
@@ -221,7 +208,7 @@ namespace Tileon
         ///
         /// \param AbsoluteX The absolute x-coordinate in the world, which will be used to determine the region and offset.
         /// \param AbsoluteY The absolute y-coordinate in the world, which will be used to determine the region and offset.
-        ZYPHRYON_INLINE static constexpr Placement FromAbsolute(Real64 AbsoluteX, Real64 AbsoluteY)
+        ZY_INLINE static constexpr Placement FromAbsolute(Real64 AbsoluteX, Real64 AbsoluteY)
         {
             const SInt16 RegionX = static_cast<SInt16>(Floor(AbsoluteX / (Region::kTilesPerX)));
             const SInt16 RegionY = static_cast<SInt16>(Floor(AbsoluteY / (Region::kTilesPerY)));
@@ -234,7 +221,7 @@ namespace Tileon
         ///
         /// \param Input The placement to normalize.
         /// \return A new placement with normalized region coordinates and offset.
-        ZYPHRYON_INLINE static constexpr Placement Normalize(Placement Input)
+        ZY_INLINE static constexpr Placement Normalize(Placement Input)
         {
             const SInt32 DeltaX = static_cast<SInt32>(Floor(Input.GetOffsetX() / Region::kTilesPerX));
             const SInt32 DeltaY = static_cast<SInt32>(Floor(Input.GetOffsetY() / Region::kTilesPerY));
@@ -250,11 +237,11 @@ namespace Tileon
         ///
         /// \param Input The placement to clamp.
         /// \return A placement clamped to the valid world extents.
-        ZYPHRYON_INLINE static constexpr Placement Clamp(Placement Input)
+        ZY_INLINE static constexpr Placement Clamp(Placement Input)
         {
             return FromAbsolute(
-                Math::Clamp(Input.GetAbsoluteX(), static_cast<Real64>(kMinTileX), static_cast<Real64>(kMaxTileX)),
-                Math::Clamp(Input.GetAbsoluteY(), static_cast<Real64>(kMinTileY), static_cast<Real64>(kMaxTileY)));
+                Base::Clamp(Input.GetAbsoluteX(), static_cast<Real64>(kMinTileX), static_cast<Real64>(kMaxTileX)),
+                Base::Clamp(Input.GetAbsoluteY(), static_cast<Real64>(kMinTileY), static_cast<Real64>(kMaxTileY)));
         }
 
         /// \brief Linearly interpolates between two placements.
@@ -263,7 +250,7 @@ namespace Tileon
         /// \param End        The ending placement.
         /// \param Percentage The interpolation factor in [0, 1].
         /// \return A normalized placement interpolated between Start and End.
-        ZYPHRYON_INLINE static constexpr Placement Lerp(Placement Start, Placement End, Real32 Percentage)
+        ZY_INLINE static constexpr Placement Lerp(Placement Start, Placement End, Real32 Percentage)
         {
             const Real64 OffsetX = End.GetAbsoluteX() - Start.GetAbsoluteX();
             const Real64 OffsetY = End.GetAbsoluteY() - Start.GetAbsoluteY();

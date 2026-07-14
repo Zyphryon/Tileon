@@ -14,45 +14,45 @@
 
 namespace Tileon::Editor
 {
-    /// \brief Represets a project, which encapsulates the metadata and configuration for a game project.
+    /// \brief Represents a project, which encapsulates the metadata and configuration for a game project.
     class Project final
     {
     public:
 
         /// \brief The expected file description for project files.
-        static constexpr auto kFileDescription = "Tileon Project File";
+        static constexpr Symbol kFileDescription = "Tileon Project File";
 
         /// \brief The expected file extension for project files.
-        static constexpr auto kFileExtension   = "tileon";
+        static constexpr Symbol kFileExtension   = "tileon";
 
     public:
 
         /// \brief Initializes the project with default values.
         Project();
 
-        /// \brief Loads the project data from the specified TOML archive.
+        /// \brief Loads the project data from the specified JSON archive.
         ///
-        /// \param Archive The TOML parser containing the project data to load.
+        /// \param Archive The JSON object containing the project data to load.
         /// \return `true` if the project was loaded successfully, `false` otherwise.
-        Bool Load(Ref<TOMLParser> Archive);
+        Bool Load(JsonObject Archive);
 
-        /// \brief Saves the project data to the specified TOML archive.
+        /// \brief Saves the project data to the specified JSON archive.
         ///
-        /// \param Archive The TOML parser to save the project data into.
-        void Save(Ref<TOMLParser> Archive) const;
+        /// \param Archive The JSON object to save the project data into.
+        void Save(JsonObject Archive) const;
 
         /// \brief Sets the file path of the project.
         ///
         /// \param Path The file path to assign to the project.
-        ZYPHRYON_INLINE void SetPath(AnyRef<Str8> Path)
+        ZY_INLINE void SetPath(Text Path)
         {
-            mPath = Move(Path);
+            mPath = Path;
         }
 
         /// \brief Gets the file path of the project.
         ///
         /// \return The file path of the project.
-        ZYPHRYON_INLINE ConstStr8 GetPath() const
+        ZY_INLINE Text GetPath() const
         {
             return mPath;
         }
@@ -60,7 +60,7 @@ namespace Tileon::Editor
         /// \brief Sets the display name of the project.
         ///
         /// \param Name The display name to assign to the project.
-        ZYPHRYON_INLINE void SetName(ConstStr8 Name)
+        ZY_INLINE void SetName(Text Name)
         {
             mName = Name;
         }
@@ -68,7 +68,7 @@ namespace Tileon::Editor
         /// \brief Gets the display name of the project.
         ///
         /// \return The display name of the project.
-        ZYPHRYON_INLINE ConstStr8 GetName() const
+        ZY_INLINE Text GetName() const
         {
             return mName;
         }
@@ -76,7 +76,7 @@ namespace Tileon::Editor
         /// \brief Sets the author of the project.
         ///
         /// \param Author The author name to assign to the project.
-        ZYPHRYON_INLINE void SetAuthor(ConstStr8 Author)
+        ZY_INLINE void SetAuthor(Text Author)
         {
             mAuthor = Author;
         }
@@ -84,7 +84,7 @@ namespace Tileon::Editor
         /// \brief Gets the author of the project.
         ///
         /// \return The author name of the project.
-        ZYPHRYON_INLINE ConstStr8 GetAuthor() const
+        ZY_INLINE Text GetAuthor() const
         {
             return mAuthor;
         }
@@ -92,7 +92,7 @@ namespace Tileon::Editor
         /// \brief Sets the description of the project.
         ///
         /// \param Description The description to assign to the project.
-        ZYPHRYON_INLINE void SetDescription(ConstStr8 Description)
+        ZY_INLINE void SetDescription(Text Description)
         {
             mDescription = Description;
         }
@@ -100,7 +100,7 @@ namespace Tileon::Editor
         /// \brief Gets the description of the project.
         ///
         /// \return The description of the project.
-        ZYPHRYON_INLINE ConstStr8 GetDescription() const
+        ZY_INLINE Text GetDescription() const
         {
             return mDescription;
         }
@@ -108,7 +108,7 @@ namespace Tileon::Editor
         /// \brief Sets the tile density (pixels per world unit) for the project.
         ///
         /// \param Density The density value to assign (e.g. 32 pixels per tile).
-        ZYPHRYON_INLINE void SetDensity(UInt16 Density)
+        ZY_INLINE void SetDensity(UInt16 Density)
         {
             mDensity = Density;
         }
@@ -116,7 +116,7 @@ namespace Tileon::Editor
         /// \brief Gets the tile density (pixels per world unit) of the project.
         ///
         /// \return The density value of the project.
-        ZYPHRYON_INLINE UInt16 GetDensity() const
+        ZY_INLINE UInt16 GetDensity() const
         {
             return mDensity;
         }
@@ -126,10 +126,10 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Str8   mPath;
-        Str8   mName;
-        Str8   mAuthor;
-        Str8   mDescription;
+        Str    mPath;
+        Str    mName;
+        Str    mAuthor;
+        Str    mDescription;
         UInt16 mDensity;
     };
 }

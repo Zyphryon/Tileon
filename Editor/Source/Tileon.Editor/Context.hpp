@@ -23,7 +23,7 @@
 namespace Tileon::Editor
 {
     /// \brief Represents the context for the editor, providing access to various services.
-    class Context final : public Session, public Locator<Scene::Service, Content::Service>
+    class Context final : public Session, public Engine::Locator<Scene::Service, Content::Service>
     {
     public:
 
@@ -31,7 +31,7 @@ namespace Tileon::Editor
         ///
         /// \param Host    The service host to associate with the context.
         /// \param Project The project to load into the context.
-        explicit Context(Ref<Service::Host> Host, AnyRef<Project> Project);
+        explicit Context(Ref<Engine::Subsystem::Host> Host, AnyRef<Project> Project);
 
         /// \brief Tears down the context, releasing any resources it holds.
         void Teardown();
@@ -39,7 +39,7 @@ namespace Tileon::Editor
         /// \brief Gets a reference to the controller associated with the context.
         ///
         /// \return A reference to the controller associated with the context.
-        ZYPHRYON_INLINE Ref<Controller> GetController()
+        ZY_INLINE Ref<Controller> GetController()
         {
             return mController;
         }
@@ -47,7 +47,7 @@ namespace Tileon::Editor
         /// \brief Gets a reference to the repository from the world associated with the controller.
         ///
         /// \return A reference to the repository from the world associated with the controller.
-        ZYPHRYON_INLINE Ref<Repository> GetRepository()
+        ZY_INLINE Ref<Repository> GetRepository()
         {
             return mController.GetWorld().GetRepository();
         }
@@ -55,7 +55,7 @@ namespace Tileon::Editor
         /// \brief Gets a reference to the supervisor from the world associated with the controller.
         ///
         /// \return A reference to the supervisor from the world associated with the controller.
-        ZYPHRYON_INLINE Ref<Supervisor> GetSupervisor()
+        ZY_INLINE Ref<Supervisor> GetSupervisor()
         {
             return mController.GetWorld().GetSupervisor();
         }
@@ -63,7 +63,7 @@ namespace Tileon::Editor
         /// \brief Gets a reference to the director from the controller.
         ///
         /// \return A reference to the director from the controller.
-        ZYPHRYON_INLINE Ref<Director> GetDirector()
+        ZY_INLINE Ref<Director> GetDirector()
         {
             return mController.GetDirector();
         }
@@ -71,7 +71,7 @@ namespace Tileon::Editor
         /// \brief Gets a reference to the renderer from the controller.
         ///
         /// \return A reference to the renderer from the controller.
-        ZYPHRYON_INLINE Ref<Renderer> GetRenderer()
+        ZY_INLINE Ref<Renderer> GetRenderer()
         {
             return mController.GetRenderer();
         }
@@ -79,7 +79,7 @@ namespace Tileon::Editor
         /// \brief Gets a reference to the tileset from the renderer associated with the controller.
         ///
         /// \return A reference to the tileset from the renderer associated with the controller.
-        ZYPHRYON_INLINE Ref<Tileset> GetTileset()
+        ZY_INLINE Ref<Tileset> GetTileset()
         {
             return mController.GetRenderer().GetTileset();
         }

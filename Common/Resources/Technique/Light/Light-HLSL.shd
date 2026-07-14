@@ -1,52 +1,62 @@
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-// Copyright (C) 2025-2026 Tileon contributors (see AUTHORS.md)
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Copyright (C) 2025-2026 by Tileon contributors (see AUTHORS.md)
 //
 // This work is licensed under the terms of the MIT license.
 //
 // For a copy, see <https://opensource.org/licenses/MIT>.
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-// Resources
-
-Texture2D    NormalTexture : register(t0);
-SamplerState LinearSampler : register(s0);
-
-// Parameters
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Uniforms
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 cbuffer cb_Global : register(b0)
 {
     float4x4 u_Camera;
 };
 
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Attributes
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
 struct vs_Input
 {
-    uint   VertexID : SV_VertexID;
+    uint   VertexID  : SV_VertexID;
 
-    float4 Params0  : TEXCOORD0;		// center.xy, radius ||	range, falloff
+    float4 Params0   : TEXCOORD0;    // center.xy, radius || range, falloff
 	
-#if   defined(LIGHT_SPOT)
-    float4 Params1  : TEXCOORD1;		// direction.xy, angles.xy
-#endif 
+#if defined(LIGHT_SPOT)
 
-    float4 Color    : COLOR0;
-};
-
-struct ps_Input
-{
-    float4 Position  : SV_POSITION;
-    float4 World     : TEXCOORD0;   // world.xy, screen.xy
-    float4 Light     : TEXCOORD1;   // center.xy, radius || range, falloff
-    float4 Color     : COLOR0;
-
-#if   defined(LIGHT_SPOT) 
-    float4 Spot      : TEXCOORD2;   // direction.xy, angles.xy
+    float4 Params1   : TEXCOORD1;    // direction.xy, angles.xy
+	
 #endif
 
+    float4 Color     : COLOR0;
 };
+
+struct fs_Input
+{
+    float4 Position  : SV_POSITION;
+    float4 World     : TEXCOORD0;    // world.xy, screen.xy
+    float4 Light     : TEXCOORD1;    // center.xy, radius || range, falloff
+    float4 Color     : COLOR0;
+
+#if defined(LIGHT_SPOT)
+
+    float4 Spot      : TEXCOORD2;    // direction.xy, angles.xy
+	
+#endif
+};
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Vertex Shader
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef VERTEX_SHADER
 
 float2 TessellateRect(uint VertexID)
 {
-    static const float2 kUnitRectCorners[4] = {
+    const float2 kUnitRectCorners[4] = {
         float2(0, 0),
         float2(1, 0),
         float2(0, 1),
@@ -57,7 +67,7 @@ float2 TessellateRect(uint VertexID)
 
 float2 TessellateTriangle(uint VertexID)
 {
-    static const float2 kTriangleCorners[3] = {
+    const float2 kTriangleCorners[3] = {
         float2(0,  0),
         float2(1,  1),
         float2(1, -1)
@@ -65,9 +75,9 @@ float2 TessellateTriangle(uint VertexID)
     return kTriangleCorners[VertexID];
 }
 
-ps_Input vertex(vs_Input Input)
+fs_Input main(vs_Input Input)
 {
-    ps_Input Result;
+    fs_Input Result;
 
 #if defined(LIGHT_SPOT)
 
@@ -107,7 +117,18 @@ ps_Input vertex(vs_Input Input)
     return Result;
 }
 
-float4 fragment(ps_Input Input) : SV_Target0
+#endif // VERTEX_SHADER
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Fragment Shader
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef FRAGMENT_SHADER
+
+Texture2D    s_Normal 		 : register(t0);
+SamplerState s_NormalSampler : register(s0);
+
+float4 main(fs_Input Input) : SV_Target0
 {
     const float2 Relative   = Input.Light.xy - Input.World.xy;
     const float  Distance   = length(Relative);
@@ -125,7 +146,7 @@ float4 fragment(ps_Input Input) : SV_Target0
     clip(Attenuation - 0.001);
 
 #if   defined(ENABLE_NORMAL_MAPPING)
-    const float3 Normal     = NormalTexture.Sample(LinearSampler, Input.World.zw).rgb * 2.0 - 1.0;
+    const float3 Normal     = s_Normal.Sample(s_NormalSampler, Input.World.zw).rgb * 2.0 - 1.0;
     const float  NormalDotL = saturate(dot(Normal, normalize(float3(Distance2D, -0.5))));
 #else
     const float  NormalDotL = 1.0;
@@ -133,3 +154,5 @@ float4 fragment(ps_Input Input) : SV_Target0
 
     return float4(Input.Color.rgb * (Attenuation * NormalDotL), Attenuation);
 }
+
+#endif // FRAGMENT_SHADER

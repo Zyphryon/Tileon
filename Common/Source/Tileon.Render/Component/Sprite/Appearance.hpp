@@ -22,18 +22,18 @@
 namespace Tileon
 {
     /// \brief Represents the appearance of a sprite that contains runtime data for a sprite entity.
-    class Appaerance final
+    class Appearance final
     {
     public:
 
         /// \brief Default constructor.
-        ZYPHRYON_INLINE Appaerance() = default;
+        ZY_INLINE Appearance() = default;
 
         /// \brief Constructs an appearance with the specified material and source rectangle.
         ///
         /// \param Material The material to use for rendering the sprite.
         /// \param Source   The source rectangle for the sprite.
-        ZYPHRYON_INLINE Appaerance(ConstTracker<Graphic::Material> Material, Rect Source)
+        ZY_INLINE Appearance(ConstRetainer<Graphic::Material> Material, Rect Source)
             : mMaterial { Material },
               mSource   { Source }
         {
@@ -42,7 +42,7 @@ namespace Tileon
         /// \brief Sets the material for rendering the sprite.
         ///
         /// \param Material The material to set for rendering the sprite.
-        ZYPHRYON_INLINE void SetMaterial(ConstTracker<Graphic::Material> Material)
+        ZY_INLINE void SetMaterial(ConstRetainer<Graphic::Material> Material)
         {
             mMaterial = Material;
         }
@@ -50,7 +50,7 @@ namespace Tileon
         /// \brief Gets the material used for rendering the sprite.
         ///
         /// \return The material used for rendering the sprite.
-        ZYPHRYON_INLINE ConstTracker<Graphic::Material> GetMaterial() const
+        ZY_INLINE ConstRetainer<Graphic::Material> GetMaterial() const
         {
             return mMaterial;
         }
@@ -58,7 +58,7 @@ namespace Tileon
         /// \brief Sets the source rectangle for the sprite.
         ///
         /// \param Source The source rectangle to set for the sprite.
-        ZYPHRYON_INLINE void SetSource(Rect Source)
+        ZY_INLINE void SetSource(Rect Source)
         {
             mSource = Source;
         }
@@ -66,7 +66,7 @@ namespace Tileon
         /// \brief Gets the source rectangle for the sprite.
         ///
         /// \return The source rectangle for the sprite.
-        ZYPHRYON_INLINE Rect GetSource() const
+        ZY_INLINE Rect GetSource() const
         {
             return mSource;
         }
@@ -76,7 +76,7 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Tracker<Graphic::Material> mMaterial;
-        Rect                       mSource;
+        Retainer<Graphic::Material> mMaterial;
+        Rect                        mSource;
     };
 }

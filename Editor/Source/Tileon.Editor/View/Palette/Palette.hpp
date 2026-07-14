@@ -31,7 +31,7 @@ namespace Tileon::Editor::View
         /// \param Context The context associated with this activity.
         Palette(Ref<Context> Context);
 
-        /// \copydoc Activity::OnDraw(Ref<UI::Composer>)
+        /// \see Activity::OnDraw(Ref<UI::Composer>)
         void OnDraw(Ref<UI::Composer> Composer) override;
 
     private:

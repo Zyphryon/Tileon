@@ -31,7 +31,7 @@ namespace Tileon::Editor::View
         /// \param Context The context associated with this activity.
         Archetypes(Ref<Context> Context);
 
-        /// \copydoc Activity::OnDraw(Ref<UI::Composer>)
+        /// \see Activity::OnDraw(Ref<UI::Composer>)
         void OnDraw(Ref<UI::Composer> Composer) override;
 
     private:
@@ -55,7 +55,7 @@ namespace Tileon::Editor::View
         ///
         /// \param Composer The UI composer used to render the empty panel elements.
         /// \param Message  The message to display in the empty panel.
-        void DrawEmptyPanel(Ref<UI::Composer> Composer, ConstStr8 Message);
+        void DrawEmptyPanel(Ref<UI::Composer> Composer, Text Message);
 
     private:
 

@@ -32,15 +32,15 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Project::Load(Ref<TOMLParser> Archive)
+    Bool Project::Load(JsonObject Archive)
     {
-        const TOMLSection Metadata = Archive.GetSection("Metadata", false);
+        const JsonObject Metadata = Archive.GetObject("Metadata");
         mName        = Metadata.GetString("name",        mName);
         mAuthor      = Metadata.GetString("author",      mAuthor);
         mDescription = Metadata.GetString("description", mDescription);
 
-        const TOMLSection Configuration = Archive.GetSection("Configuration", false);
-        mDensity = Configuration.GetInteger("density", mDensity);
+        const JsonObject Configuration = Archive.GetObject("Configuration");
+        mDensity = Configuration.GetNumber("density", mDensity);
 
         return true;
     }
@@ -48,14 +48,14 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Project::Save(Ref<TOMLParser> Archive) const
+    void Project::Save(JsonObject Archive) const
     {
-        TOMLSection Metadata = Archive.GetSection("Metadata");
+        JsonObject Metadata = Archive.SetObject("Metadata");
         Metadata.SetString("name",        mName);
         Metadata.SetString("author",      mAuthor);
         Metadata.SetString("description", mDescription);
 
-        TOMLSection Configuration = Archive.GetSection("Configuration");
-        Configuration.SetInteger("density", mDensity);
+        JsonObject Configuration = Archive.SetObject("Configuration");
+        Configuration.SetNumber("density", mDensity);
     }
 }

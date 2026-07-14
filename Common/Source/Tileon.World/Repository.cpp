@@ -21,7 +21,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Repository::Repository(Ref<Service::Host> Host)
+    Repository::Repository(Ref<Engine::Subsystem::Host> Host)
         : Locator { Host }
     {
     }
@@ -31,20 +31,20 @@ namespace Tileon
 
     void Repository::Load()
     {
-        if (!LoadManifest())
-        {
-            LOG_WARNING("Failed to load manifest from '{}'", kManifestUri);
-        }
+        Ref<Content::Service> Content = GetService<Content::Service>();
 
-        if (!LoadArchetypeDatabase())
+        Content.Read(kManifestUri, [this](Filesystem::Result Result, Blob Data)
         {
-            LOG_WARNING("Failed to load archetypes from '{}'", kArchetypeUri);
-        }
-
-        if (!LoadTerrainDatabase())
+            LoadManifest(Result, Move(Data));
+        });
+        Content.Read(kArchetypeUri, [this](Filesystem::Result Result, Blob Data)
         {
-            LOG_WARNING("Failed to load terrains from '{}'", kTerrainUri);
-        }
+            LoadArchetypeDatabase(Result, Move(Data));
+        });
+        Content.Read(kTerrainUri, [this](Filesystem::Result Result, Blob Data)
+        {
+            LoadTerrainDatabase(Result, Move(Data));
+        });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -70,7 +70,7 @@ namespace Tileon
 
     void Repository::DeleteArchetype(Scene::Entity Archetype)
     {
-        LOG_ASSERT(Archetype.IsArchetype(), "Entity '{}' must be an archetype.", Archetype.GetID());
+        ZY_ASSERT(Archetype.IsArchetype(), "Must be an archetype.");
         Archetype.Destruct();
     }
 
@@ -94,18 +94,17 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Repository::LoadManifest()
+    void Repository::LoadManifest(Filesystem::Result Result, Blob Data)
     {
-        if (Blob File = GetService<Content::Service>().Find(Content::Uri(kManifestUri)); File)
+        if (Result == Filesystem::Result::Success)
         {
-            Reader Input(File.GetSpan<UInt8>());
+            Reader Input(Data.GetData(), Data.GetSize());
             GetService<Scene::Service>().LoadWorld(Input);
         }
         else
         {
-            return false;
+            LOG_W("Failed to load manifest from '{}'", kManifestUri);
         }
-        return true;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -116,24 +115,23 @@ namespace Tileon
         Writer Output;
         GetService<Scene::Service>().SaveWorld(Output);
 
-        GetService<Content::Service>().Save(kManifestUri, Output.GetData());
+        GetService<Content::Service>().Write(kManifestUri, Output.Detach(), { });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Repository::LoadArchetypeDatabase()
+    void Repository::LoadArchetypeDatabase(Filesystem::Result Result, Blob Data)
     {
-        if (Blob File = GetService<Content::Service>().Find(Content::Uri(kArchetypeUri)); File)
+        if (Result == Filesystem::Result::Success)
         {
-            Reader Input(File.GetSpan<UInt8>());
+            Reader Input(Data.GetData(), Data.GetSize());
             GetService<Scene::Service>().LoadArchetypes(Input);
         }
         else
         {
-            return false;
+            LOG_W("Failed to load archetypes from '{}'", kArchetypeUri);
         }
-        return true;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -144,24 +142,23 @@ namespace Tileon
         Writer Output;
         GetService<Scene::Service>().SaveArchetypes(Output);
 
-        GetService<Content::Service>().Save(kArchetypeUri, Output.GetData());
+        GetService<Content::Service>().Write(kArchetypeUri, Output.Detach(), { });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Repository::LoadTerrainDatabase()
+    void Repository::LoadTerrainDatabase(Filesystem::Result Result, Blob Data)
     {
-        if (Blob File = GetService<Content::Service>().Find(Content::Uri(kTerrainUri)); File)
+        if (Result == Filesystem::Result::Success)
         {
-            Reader Input(File.GetSpan<UInt8>());
-            mTerrains.OnSerialize(Archive(Input));
+            Reader  Input(Data.GetData(), Data.GetSize());
+            Archive(Input).Serialize(mTerrains);
         }
         else
         {
-            return false;
+            LOG_W("Failed to load terrains from '{}'", kTerrainUri);
         }
-        return true;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -169,9 +166,9 @@ namespace Tileon
 
     void Repository::SaveTerrainDatabase()
     {
-        Writer Output;
-        mTerrains.OnSerialize(Archive(Output));
+        Writer  Output;
+        Archive(Output).Serialize(mTerrains);
 
-        GetService<Content::Service>().Save(kTerrainUri, Output.GetData());
+        GetService<Content::Service>().Write(kTerrainUri, Output.Detach(), { });
     }
 }

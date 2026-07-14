@@ -17,7 +17,9 @@
 #include "View/Palette/Palette.hpp"
 #include "View/Scene/Scene.hpp"
 #include "Tileon.Editor.UI/Theme.hpp"
+#include "Tileon_Editor.Modules.hpp"
 #include <Zyphryon.Content/Mount/Disk.hpp>
+#include <Zyphryon.Platform/Service.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -39,11 +41,12 @@ namespace Tileon::Editor
     Bool Application::OnInitialize()
     {
         // Adds the main disk content mount for the editor, which allows loading assets from the local file system.
-        ConstTracker<Content::Service> Content = GetService<Content::Service>();
-        Content->AddMount("Editor", Tracker<Content::Disk>::Create("Editor"));
+        ConstRetainer<Content::Service> Content = GetService<Content::Service>();
+        Content->AddMount("Editor",    Retainer<Content::Disk>::Create("Editor"));
+        Content->AddMount("Resources", Retainer<Content::Disk>::Create("Editor"));
 
         // Initialize ImGui plugin and the UI theme system, which sets up the rendering the user interface.
-        mFrontend.Initialize(* this, GetDevice());
+        mFrontend.Initialize(* this);
         UI::Theme::Initialize();
 
         // TODO: Manage ImGUI configuration file manually
@@ -55,9 +58,9 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Application::OnTick(Time Time)
+    void Application::OnTick(Real64 Delta)
     {
-        ConstTracker<Graphic::Service> Graphics = GetService<Graphic::Service>();
+        ConstRetainer<Graphic::Service> Graphics = GetService<Graphic::Service>();
 
         switch (mState)
         {
@@ -65,7 +68,7 @@ namespace Tileon::Editor
             break;
         case State::Loading:
         {
-            ConstTracker<Content::Service> Content = GetService<Content::Service>();
+            ConstRetainer<Content::Service> Content = GetService<Content::Service>();
 
             if (Content->GetPending() == 0)
             {
@@ -81,24 +84,25 @@ namespace Tileon::Editor
         }
 
         // Render the editor interface or bootstrap view depending on whether the main context has been initialized.
-        const Graphic::Viewport Viewport(0.0f, 0.0f, GetDevice().GetWidth(), GetDevice().GetHeight());
+        ConstRef<Platform::Window> Window = GetService<Platform::Service>()->GetWindow();
+        const Graphic::Viewport Viewport(0.0f, 0.0f, Window.GetWidth(), Window.GetHeight());
 
         Graphics->Prepare(Graphic::kDisplay, Viewport, Color::Black(), 1.0f, 0);
         {
-            mFrontend.Begin(Time);
+            mFrontend.Begin(Delta);
             {
                 UI::Composer Composer;
 
                 switch (mState)
                 {
                 case State::Idle:
-                    switch (mBootstrap.Draw(Composer, GetDevice()))
+                    switch (mBootstrap.Draw(Composer))
                     {
                     case View::Bootstrap::Result::Done:
                         Launch(Move(mBootstrap.GetProject()));
                         break;
                     case View::Bootstrap::Result::Exit:
-                        Exit();
+                        Quit();
                         break;
                     default:
                         break;
@@ -108,7 +112,7 @@ namespace Tileon::Editor
                     DrawLoading(Composer);
                     break;
                 case State::Running:
-                    DrawEditor(Composer, Time);
+                    DrawEditor(Composer, Delta);
                     break;
                 }
             }
@@ -120,7 +124,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Application::OnTeardown()
+    void Application::OnTerminate()
     {
         if (mContext)
         {
@@ -133,22 +137,22 @@ namespace Tileon::Editor
 
     void Application::Launch(AnyRef<Project> Project)
     {
-        const Str8 Directory(Project.GetPath().substr(0, Project.GetPath().find_last_of("/\\") + 1));
+        Str Directory(StrBeforeLast(Project.GetPath(), '/'));
+        Directory.Append('/');
 
         // Add the project content mount, which allows loading assets from the project's directory.
-        ConstTracker<Content::Service> Content = GetService<Content::Service>();
-        Content->AddMount("Resources", Tracker<Content::Disk>::Create(Directory));
+        ConstRetainer<Content::Service> Content = GetService<Content::Service>();
+        Content->AddMount("Resources", Retainer<Content::Disk>::Create(Directory));
 
         // Initialize the main context for the editor.
         mContext = Unique<Context>::Create(* this, Move(Project));
-        mContext->GetTileset().Preload();
 
         // Add editor activities to the list of activities, which will be rendered in the interface.
-        mActivities.push_back(Tracker<View::Foundry>::Create(* mContext));
-        mActivities.push_back(Tracker<View::Archetypes>::Create(* mContext));
-        mActivities.push_back(Tracker<View::Inspector>::Create(* mContext));
-        mActivities.push_back(Tracker<View::Palette>::Create(* mContext));
-        mActivities.push_back(Tracker<View::Scene>::Create(* mContext));
+        mActivities.Append(Retainer<View::Foundry>::Create(* mContext, * GetService<Content::Service>()));
+        mActivities.Append(Retainer<View::Archetypes>::Create(* mContext));
+        mActivities.Append(Retainer<View::Inspector>::Create(* mContext));
+        mActivities.Append(Retainer<View::Palette>::Create(* mContext));
+        mActivities.Append(Retainer<View::Scene>::Create(* mContext));
 
         // Signal that we are waiting for the content service to finish loading all queued assets.
         mState = State::Loading;
@@ -157,7 +161,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Application::DrawEditor(Ref<UI::Composer> Composer, Time Time)
+    void Application::DrawEditor(Ref<UI::Composer> Composer, Real64 Delta)
     {
         // Draw the main menu bar at the top.
         if (Composer.BeginMainMenuBar())
@@ -174,7 +178,7 @@ namespace Tileon::Editor
 
                 if (Composer.MenuItem("Exit"))
                 {
-                    Exit();
+                    Quit();
                 }
 
                 Composer.EndMenu();
@@ -183,7 +187,7 @@ namespace Tileon::Editor
             // Draw the "View" menu.
             if (Composer.BeginMenu("View"))
             {
-                for (ConstTracker<Activity> Activity : mActivities)
+                for (ConstRetainer<Activity> Activity : mActivities)
                 {
                     Bool Visibility = Activity->IsVisible();
 
@@ -220,7 +224,7 @@ namespace Tileon::Editor
         }
 
         // Draw each visible activity, allowing them to render their respective user interfaces.
-        for (ConstTracker<Activity> Activity : mActivities)
+        for (ConstRetainer<Activity> Activity : mActivities)
         {
             if (Activity->IsVisible())
             {
@@ -237,14 +241,14 @@ namespace Tileon::Editor
     void Application::DrawGame()
     {
         // Render the game view to an off-screen buffer, which will be displayed in the scene activity's viewport.
-        const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(View::Scene::kTitle);
+        const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(View::Scene::kTitle.GetData());
 
         if (Parent && Parent->Active)
         {
-            const UInt32    ViewportID   = Parent->GetID("##viewport");
-            const ConstStr8 ViewportName = Format("{}/##viewport_{:08X}", View::Scene::kTitle, ViewportID);
+            const UInt32 ViewportID   = Parent->GetID("##viewport");
+            const Text   ViewportName = String<64>::Print<"{0}/##viewport_{1:08X}">(View::Scene::kTitle, ViewportID);
 
-            if (const ConstPtr<ImGuiWindow> Child = ImGui::FindWindowByName(ViewportName.data()); Child)
+            if (const ConstPtr<ImGuiWindow> Child = ImGui::FindWindowByName(ViewportName.GetData()); Child)
             {
                 const Real32 Width  = Child->ContentSize.x;
                 const Real32 Height = Child->ContentSize.y;
@@ -268,9 +272,9 @@ namespace Tileon::Editor
 
     void Application::DrawLoading(Ref<UI::Composer> Composer)
     {
-        ConstTracker<Content::Service> Content = GetService<Content::Service>();
+        ConstRetainer<Content::Service> Content = GetService<Content::Service>();
 
-        // Center a fixed-size, chrome-free loading window.
+        // Center a fixed-size, loading window.
         ImGui::SetNextWindowSize(ImVec2(300, 70), ImGuiCond_Always);
         Composer.SetNextWindowPos(Composer.GetViewportCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
         ImGui::SetNextWindowBgAlpha(0.88f);
@@ -289,16 +293,16 @@ namespace Tileon::Editor
             const UInt32 Dots  = static_cast<UInt32>(ImGui::GetTime() * 3.0) % 4;
             const UInt32 Count = Content->GetPending();
 
-            ConstStr8 Ellipsis = Dots == 0 ? "" : Dots == 1 ? "." : Dots == 2 ? ".." : "...";
+            auto Ellipsis = Dots == 0 ? "" : Dots == 1 ? "." : Dots == 2 ? ".." : "...";
 
-            const ConstStr8 Label = Format("Loading{} ({} asset{} remaining)", Ellipsis, Count, Count == 1u ? "" : "s");
+            const Text Label = String<128>::Print<"Loading{0} ({1} asset{2} remaining)">(Ellipsis, Count, Count == 1u ? "" : "s");
 
             // Center the text inside the window.
             const ImVec2 Available = ImGui::GetContentRegionAvail();
-            const ImVec2 TextSize  = ImGui::CalcTextSize(Label.data());
+            const ImVec2 TextSize  = ImGui::CalcTextSize(Label.GetData());
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (Available.x - TextSize.x) * 0.5f);
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (Available.y - TextSize.y) * 0.5f);
-            ImGui::TextUnformatted(Label.data());
+            ImGui::TextUnformatted(Label.GetData());
         }
         ImGui::End();
     }
@@ -311,23 +315,31 @@ namespace Tileon::Editor
 int main([[maybe_unused]] int Argc, [[maybe_unused]] Ptr<Char> Argv[])
 {
     // Load the editor configuration from the user's home directory "Tileon/Editor/Config.toml".
-    const Blob Configuration = Filesystem::Load(Filesystem::GetHome("Tileon", "Editor") + "Config.toml");
-    TOMLParser Archive(Configuration.GetText());
+    //Blob Configuration;
+    //Filesystem::Read(Filesystem::GetDataFolder("Tileon", "Editor") + "Config.toml", Configuration);
 
-    Engine::Properties Properties;
+    //JsonValue Archive = JsonDocument::Parse(Text(Configuration.GetData<Char>(), Configuration.GetSize()));
+
+    Engine::Config Properties;
     Properties.SetWindowTitle("Tileon Editor (v0.1)");
-    Properties.SetVideoDriver("D3D11");
-    Properties.Load(Archive);
+
+#if   defined(ZY_PLATFORM_WINDOWS)
+    Properties.SetGraphicsDriver("D3D11");
+#else
+    Properties.SetGraphicsDriver("GLES3");
+#endif
+
+   // Properties.Load(Archive);
 
     // Initialize 'Zyphryon Engine' and enter main loop.
     const Unique<Tileon::Editor::Application> Application = Unique<Tileon::Editor::Application>::Create();
-    Application->Initialize(Service::Host::Mode::Client, Move(Properties));
-    Application->Run();
-    Application->Sync(Properties);
-
+    Application->Run(Move(Properties), ZyRegisterModules());
+   // Application->Sync(Properties);
+    // TODO
     // Save the editor configuration back to the user's home directory.
-    Properties.Save(Archive);
-    Filesystem::Save(Filesystem::GetHome("Tileon", "Editor") + "Config.toml", Archive.Dump());
+    //Properties.Save(Archive);
+
+    //Filesystem::Write(Filesystem::GetDataFolder("Tileon", "Editor") + "Config.toml", Archive.Dump());
 
     return 0;
 }

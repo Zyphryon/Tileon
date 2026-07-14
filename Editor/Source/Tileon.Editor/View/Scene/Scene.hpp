@@ -27,7 +27,7 @@ namespace Tileon::Editor::View
     public:
 
         /// \brief Static name identifier for the scene activity.
-        static constexpr auto kTitle = "Scene";
+        static constexpr Symbol kTitle = "Scene";
 
     public:
 
@@ -36,7 +36,7 @@ namespace Tileon::Editor::View
         /// \param Context The context associated with this activity.
         Scene(Ref<Context> Context);
 
-        /// \copydoc Activity::OnDraw(Ref<UI::Composer>)
+        /// \see Activity::OnDraw(Ref<UI::Composer>)
         void OnDraw(Ref<UI::Composer> Composer) override;
 
     private:

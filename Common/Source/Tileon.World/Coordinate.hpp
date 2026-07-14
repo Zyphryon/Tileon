@@ -27,13 +27,13 @@ namespace Tileon
     public:
 
         /// \brief Bit shift value for converting world tile x-coordinates to region x-coordinates.
-        static constexpr SInt32 kBitShiftLocalX = Math::Log(Region::kTilesPerX);
+        static constexpr SInt32 kBitShiftLocalX = Base::Log(Region::kTilesPerX);
 
         /// \brief Bit mask for extracting the local x-coordinate within a region.
         static constexpr SInt32 kBitMaskLocalX  = (1u << kBitShiftLocalX) - 1u;
 
         /// \brief Bit shift value for converting world tile y-coordinates to region y-coordinates.
-        static constexpr SInt32 kBitShiftLocalY = Math::Log(Region::kTilesPerY);
+        static constexpr SInt32 kBitShiftLocalY = Base::Log(Region::kTilesPerY);
 
         /// \brief Bit mask for extracting the local y-coordinate within a region.
         static constexpr SInt32 kBitMaskLocalY  = (1u << kBitShiftLocalY) - 1u;
@@ -44,7 +44,7 @@ namespace Tileon
         ///
         /// \param WorldTileX The x-coordinate in world tile space.
         /// \return The corresponding x-coordinate in region space.
-        ZYPHRYON_INLINE static constexpr SInt16 GetRegionX(SInt32 WorldTileX)
+        ZY_INLINE static constexpr SInt16 GetRegionX(SInt32 WorldTileX)
         {
             return WorldTileX >> kBitShiftLocalX;
         }
@@ -53,7 +53,7 @@ namespace Tileon
         ///
         /// \param WorldTileX The x-coordinate in world tile space.
         /// \return The local x-coordinate within the region.
-        ZYPHRYON_INLINE static constexpr UInt8 GetLocalTileX(SInt32 WorldTileX)
+        ZY_INLINE static constexpr UInt8 GetLocalTileX(SInt32 WorldTileX)
         {
             return WorldTileX & kBitMaskLocalX;
         }
@@ -62,7 +62,7 @@ namespace Tileon
         ///
         /// \param WorldTileY The y-coordinate in world tile space.
         /// \return The corresponding y-coordinate in region space.
-        ZYPHRYON_INLINE static constexpr SInt16 GetRegionY(SInt32 WorldTileY)
+        ZY_INLINE static constexpr SInt16 GetRegionY(SInt32 WorldTileY)
         {
             return WorldTileY >> kBitShiftLocalY;
         }
@@ -71,7 +71,7 @@ namespace Tileon
         ///
         /// \param WorldTileY The y-coordinate in world tile space.
         /// \return The local y-coordinate within the region.
-        ZYPHRYON_INLINE static constexpr UInt8 GetLocalTileY(SInt32 WorldTileY)
+        ZY_INLINE static constexpr UInt8 GetLocalTileY(SInt32 WorldTileY)
         {
             return WorldTileY & kBitMaskLocalY;
         }
@@ -83,7 +83,7 @@ namespace Tileon
         /// \param Coordinates The rectangle representing the world coordinates to convert.
         /// \return A rect representing the cell coordinates corresponding to the given world coordinates
         template<SInt32 ShiftX, SInt32 ShiftY = ShiftX>
-        ZYPHRYON_INLINE static constexpr IntRect GetCell(IntRect Coordinates)
+        ZY_INLINE static constexpr IntRect GetCell(IntRect Coordinates)
         {
             const SInt32 MinX = Coordinates.GetMinimumX() >> ShiftX;
             const SInt32 MinY = Coordinates.GetMinimumY() >> ShiftY;
@@ -96,7 +96,7 @@ namespace Tileon
         ///
         /// \param Coordinates The rectangle representing the world coordinates to convert.
         /// \return A rect representing the region cell coordinates corresponding to the given world coordinates
-        ZYPHRYON_INLINE static constexpr IntRect GetRegionCell(IntRect Coordinates)
+        ZY_INLINE static constexpr IntRect GetRegionCell(IntRect Coordinates)
         {
             return GetCell<kBitShiftLocalX, kBitShiftLocalY>(Coordinates);
         }
@@ -108,7 +108,7 @@ namespace Tileon
         /// \param Coordinates The rectangle representing the world coordinates to convert.
         /// \return A rect representing the cell coordinates corresponding to the given world coordinates
         template<SInt32 ShiftX, SInt32 ShiftY = ShiftX>
-        ZYPHRYON_INLINE static constexpr IntRect GetCell(Rect Coordinates)
+        ZY_INLINE static constexpr IntRect GetCell(Rect Coordinates)
         {
             const SInt32 MinX = static_cast<SInt32>(Floor(Coordinates.GetMinimumX())) >> ShiftX;
             const SInt32 MinY = static_cast<SInt32>(Floor(Coordinates.GetMinimumY())) >> ShiftY;
@@ -121,7 +121,7 @@ namespace Tileon
         ///
         /// \param Coordinates The rectangle representing the world coordinates to convert.
         /// \return A rect representing the region cell coordinates corresponding to the given world coordinates
-        ZYPHRYON_INLINE static constexpr IntRect GetRegionCell(Rect Coordinates)
+        ZY_INLINE static constexpr IntRect GetRegionCell(Rect Coordinates)
         {
             return GetCell<kBitShiftLocalX, kBitShiftLocalY>(Coordinates);
         }

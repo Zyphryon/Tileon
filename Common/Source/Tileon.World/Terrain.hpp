@@ -27,17 +27,24 @@ namespace Tileon
 
     public:
 
+        /// \brief Constructs an empty terrain.
+        ZY_INLINE Terrain()
+            : mID         { 0 },
+              mProperties { 0 }
+        {
+        }
+
         /// \brief Constructs a terrain with the specified unique identifier.
         ///
         /// \param ID The unique identifier for the terrain.
-        ZYPHRYON_INLINE Terrain(UInt16 ID)
+        ZY_INLINE Terrain(UInt16 ID)
             : mID         { ID },
               mProperties { 0 }
         {
         }
 
         /// \brief Destructor for the Terrain class.
-        ZYPHRYON_INLINE ~Terrain()
+        ZY_INLINE ~Terrain()
         {
             mID = 0;
         }
@@ -45,7 +52,7 @@ namespace Tileon
         /// \brief Gets the unique identifier of the terrain.
         ///
         /// \return The unique identifier of the terrain.
-        ZYPHRYON_INLINE UInt16 GetID() const
+        ZY_INLINE UInt16 GetID() const
         {
             return mID;
         }
@@ -53,7 +60,7 @@ namespace Tileon
         /// \brief Sets the name of the terrain.
         ///
         /// \param Name The name to assign to the terrain.
-        ZYPHRYON_INLINE void SetName(ConstStr8 Name)
+        ZY_INLINE void SetName(Text Name)
         {
             mName = Name;
         }
@@ -61,7 +68,7 @@ namespace Tileon
         /// \brief Gets the name of the terrain.
         ///
         /// \return The name of the terrain.
-        ZYPHRYON_INLINE ConstStr8 GetName() const
+        ZY_INLINE Text GetName() const
         {
             return mName;
         }
@@ -70,7 +77,7 @@ namespace Tileon
         ///
         /// \param Mask   The property to set or clear.
         /// \param Enable `true` to set the property, `false` to clear it.
-        ZYPHRYON_INLINE void SetProperty(Property Mask, Bool Enable)
+        ZY_INLINE void SetProperty(Property Mask, Bool Enable)
         {
             mProperties = SetOrClearBit(mProperties, Enum::Cast(Mask), Enable);
         }
@@ -79,7 +86,7 @@ namespace Tileon
         ///
         /// \param Mask The property to check.
         /// \return `true` if the property is enabled, `false` otherwise.
-        ZYPHRYON_INLINE Bool HasProperty(Property Mask) const
+        ZY_INLINE Bool HasProperty(Property Mask) const
         {
             return HasBit(mProperties, Enum::Cast(Mask));
         }
@@ -88,11 +95,11 @@ namespace Tileon
         ///
         /// \param Archive The archive to serialize the object with.
         template<typename Serializer>
-        ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
+        ZY_INLINE void Serialize(Serializer Archive)
         {
-            Archive.SerializeUInt(mID);
-            Archive.SerializeUInt(mProperties);
-            Archive.SerializeText(mName);
+            Archive.Serialize(mID);
+            Archive.Serialize(mProperties);
+            Archive.Serialize(mName);
         }
 
     private:
@@ -100,7 +107,7 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Str8   mName;
+        Str    mName;
         UInt16 mID;
         UInt16 mProperties;
     };

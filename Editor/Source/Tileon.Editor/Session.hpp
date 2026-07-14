@@ -14,29 +14,32 @@
 
 namespace Tileon::Editor
 {
-    /// \brief Runtime property bag for the editor session, backed by a TOML document.
+    /// \brief Runtime property bag for the editor session, backed by a JSON document.
     class Session
     {
     public:
 
-        /// \brief Loads session data from a TOML string.
-        ///
-        /// \param Data A TOML string containing the session data to load.
-        /// \return `true` if the session data was successfully loaded, `false` otherwise.
-        Bool Load(ConstStr8 Data);
+        /// \brief Constructs a new session object.
+        Session();
 
-        /// \brief Saves the session data to a TOML string.
+        /// \brief Loads session data from a JSON string.
         ///
-        /// \return A TOML string representing the current session data.
-        Str8 Save() const;
+        /// \param Data A JSON string containing the session data to load.
+        /// \return `true` if the session data was successfully loaded, `false` otherwise.
+        Bool Load(Text Data);
+
+        /// \brief Saves the session data to a JSON string.
+        ///
+        /// \return A JSON string representing the current session data.
+        Str Save() const;
 
         /// \brief Sets a boolean value in the session with the specified key.
         ///
         /// \param Key   The key associated with the boolean value to set.
         /// \param Value The boolean value to set in the session.
-        ZYPHRYON_INLINE void SetBool(ConstStr8 Key, Bool Value)
+        ZY_INLINE void SetBool(Text Key, Bool Value)
         {
-            mData.GetRoot().SetBool(Key, Value);
+            mObject.SetBool(Key, Value);
         }
 
         /// \brief Gets a boolean value from the session with the specified key.
@@ -44,9 +47,9 @@ namespace Tileon::Editor
         /// \param Key     The key associated with the boolean value to retrieve.
         /// \param Default The default boolean value to return if the key does not exist.
         /// \return The boolean value associated with the specified key, or the default value if the key does not exist.
-        ZYPHRYON_INLINE Bool GetBool(ConstStr8 Key, Bool Default = false) const
+        ZY_INLINE Bool GetBool(Text Key, Bool Default = false) const
         {
-            return mData.GetRoot().GetBool(Key, Default);
+            return mObject.GetBool(Key, Default);
         }
 
         /// \brief Sets an enum value in the session with the specified key.
@@ -54,10 +57,10 @@ namespace Tileon::Editor
         /// \param Key   The key associated with the enum value to set.
         /// \param Value The enum value to set in the session.
         template<typename Type>
-        ZYPHRYON_INLINE void SetEnum(ConstStr8 Key, Type Value)
+        ZY_INLINE void SetEnum(Text Key, Type Value)
             requires IsEnum<Type>
         {
-            mData.GetRoot().SetEnum(Key, Value);
+            mObject.SetEnum(Key, Value);
         }
 
         /// \brief Gets an enum value from the session with the specified key.
@@ -66,19 +69,19 @@ namespace Tileon::Editor
         /// \param Default The default enum value to return if the key does not exist.
         /// \return The enum value associated with the specified key, or the default value if the key does not exist.
         template<typename Type>
-        ZYPHRYON_INLINE Type GetEnum(ConstStr8 Key, Type Default) const
+        ZY_INLINE Type GetEnum(Text Key, Type Default) const
             requires IsEnum<Type>
         {
-            return mData.GetRoot().GetEnum(Key, Default);
+            return mObject.GetEnum(Key, Default);
         }
 
         /// \brief Sets an integer value in the session with the specified key.
         ///
         /// \param Key   The key associated with the integer value to set.
         /// \param Value The integer value to set in the session.
-        ZYPHRYON_INLINE void SetInteger(ConstStr8 Key, SInt64 Value)
+        ZY_INLINE void SetInteger(Text Key, SInt64 Value)
         {
-            mData.GetRoot().SetInteger(Key, Value);
+            mObject.SetNumber(Key, Value);
         }
 
         /// \brief Gets an integer value from the session with the specified key.
@@ -86,18 +89,18 @@ namespace Tileon::Editor
         /// \param Key     The key associated with the integer value to retrieve.
         /// \param Default The default integer value to return if the key does not exist.
         /// \return The integer value associated with the specified key, or the default value if the key does not exist.
-        ZYPHRYON_INLINE SInt64 GetInteger(ConstStr8 Key, SInt64 Default = 0) const
+        ZY_INLINE SInt64 GetInteger(Text Key, SInt64 Default = 0) const
         {
-            return mData.GetRoot().GetInteger(Key, Default);
+            return mObject.GetNumber(Key, Default);
         }
 
         /// \brief Sets a real value in the session with the specified key.
         ///
         /// \param Key   The key associated with the real value to set.
         /// \param Value The real value to set in the session.
-        ZYPHRYON_INLINE void SetReal(ConstStr8 Key, Real64 Value)
+        ZY_INLINE void SetReal(Text Key, Real64 Value)
         {
-            mData.GetRoot().SetReal(Key, Value);
+            mObject.SetNumber(Key, Value);
         }
 
         /// \brief Gets a real value from the session with the specified key.
@@ -105,18 +108,18 @@ namespace Tileon::Editor
         /// \param Key     The key associated with the real value to retrieve.
         /// \param Default The default real value to return if the key does not exist.
         /// \return The real value associated with the specified key, or the default value if the key does not exist.
-        ZYPHRYON_INLINE Real64 GetReal(ConstStr8 Key, Real64 Default = 0.0) const
+        ZY_INLINE Real64 GetReal(Text Key, Real64 Default = 0.0) const
         {
-            return mData.GetRoot().GetReal(Key, Default);
+            return mObject.GetNumber(Key, Default);
         }
 
         /// \brief Sets a string value in the session with the specified key.
         ///
         /// \param Key   The key associated with the string value to set.
         /// \param Value The string value to set in the session.
-        ZYPHRYON_INLINE void SetString(ConstStr8 Key, ConstStr8 Value)
+        ZY_INLINE void SetString(Text Key, Text Value)
         {
-            mData.GetRoot().SetString(Key, Value);
+            mObject.SetString(Key, Value);
         }
 
         /// \brief Gets a string value from the session with the specified key.
@@ -124,9 +127,9 @@ namespace Tileon::Editor
         /// \param Key     The key associated with the string value to retrieve.
         /// \param Default The default string value to return if the key does not exist.
         /// \return The string value associated with the specified key, or the default value if the key does not exist.
-        ZYPHRYON_INLINE ConstStr8 GetString(ConstStr8 Key, ConstStr8 Default = "") const
+        ZY_INLINE Text GetString(Text Key, Text Default = "") const
         {
-            return mData.GetRoot().GetString(Key, Default);
+            return mObject.GetString(Key, Default);
         }
 
     private:
@@ -134,7 +137,8 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        mutable TOMLParser mData;
+        mutable JsonValue  mDocument;
+        mutable JsonObject mObject;
     };
 }
 

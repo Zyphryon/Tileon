@@ -32,7 +32,7 @@ namespace Tileon::Editor::UI
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Browser::Open(ConstStr8 Filter)
+    void Browser::Open(Text Filter)
     {
         mFilter = Filter;
 
@@ -50,7 +50,7 @@ namespace Tileon::Editor::UI
         // Invalidate the directory cache periodically so changes on disk are reflected.
         if (ImGui::GetTime() >= mTime)
         {
-            mEntries.clear();
+            mEntries.Clear();
             mTime = ImGui::GetTime() + kInterval;
         }
 
@@ -96,7 +96,7 @@ namespace Tileon::Editor::UI
         // Draw the action buttons at the bottom of the popup.
         Bool WasFinished = false;
 
-        if (Composer.DisabledButton("Open", mSelection.empty()))
+        if (Composer.DisabledButton("Open", mSelection.IsEmpty()))
         {
             WasFinished = true;
 
@@ -115,7 +115,7 @@ namespace Tileon::Editor::UI
         }
 
         // Display the currently selected item, if any.
-        if (!mSelection.empty())
+        if (!mSelection.IsEmpty())
         {
             Composer.SameLine();
 
@@ -160,21 +160,21 @@ namespace Tileon::Editor::UI
 
     void Browser::DrawSidebarTree(Ref<Composer> Composer, ConstRef<Content::Uri> Parent)
     {
-        for (ConstRef<Content::Mount::Item> Entry : GetEntries(Parent))
+        for (ConstRef<Filesystem::Record> Entry : GetEntries(Parent))
         {
-            if (Entry.Type != Content::Mount::Entry::Directory)
+            if (Entry.Type != Filesystem::Type::Directory)
             {
                 continue;
             }
 
-            const Content::Uri ChildUri(Format("{}{}/", Parent.GetUrl(), Entry.Name));
+            const Content::Uri ChildUri(Str::Print<"{0}{1}/">(Parent.GetUrl(), Entry.Name));
 
             // Check if the child directory is a leaf (i.e. it has no subdirectories).
             Bool IsLeaf = true;
 
-            for (ConstRef<Content::Mount::Item> Sub : GetEntries(ChildUri))
+            for (ConstRef<Filesystem::Record> Sub : GetEntries(ChildUri))
             {
-                if (Sub.Type == Content::Mount::Entry::Directory)
+                if (Sub.Type == Filesystem::Type::Directory)
                 {
                     IsLeaf = false;
                     break;
@@ -221,15 +221,15 @@ namespace Tileon::Editor::UI
 
         mGallery.Begin(Composer);
 
-        for (ConstRef<Content::Mount::Item> Entry : GetEntries(mPath))
+        for (ConstRef<Filesystem::Record> Entry : GetEntries(mPath))
         {
-            if (Entry.Type != Content::Mount::Entry::File)
+            if (Entry.Type != Filesystem::Type::File)
             {
                 continue;
             }
 
             // Apply the current filter, skipping it if it doesn't match.
-            if (!mFilter.empty() && !Entry.Name.ends_with(mFilter))
+            if (!mFilter.IsEmpty() && !StrEndsWith(Entry.Name, mFilter))
             {
                 continue;
             }
@@ -238,7 +238,7 @@ namespace Tileon::Editor::UI
 
             if (mGallery.DrawItem(Composer, ID, Entry.Name))
             {
-                mSelection = Format("{}{}", mPath.GetUrl(), Entry.Name);
+                mSelection.Format<"{0}{1}/">(mPath.GetUrl(), Entry.Name);
             }
         }
 
@@ -250,15 +250,13 @@ namespace Tileon::Editor::UI
 
     ConstRef<Browser::Entries> Browser::GetEntries(ConstRef<Content::Uri> Uri)
     {
-        const UInt64 Key = Hash(Uri);
+        Ref<Browser::Entries> Entries = mEntries.FindOrInsert(Hash(Uri.GetPath()));
 
-        auto Iterator = mEntries.find(Key);
-
-        if (Iterator == mEntries.end())
+        if (Entries.IsEmpty())
         {
-            Iterator = mEntries.emplace(Key, mService.Enumerate(Uri)).first;
+            // TODO: ENUMERATE_ASYNC? mService.Enumerate(Uri)
         }
-        return Iterator->second;
+        return Entries;
     }
 }
 

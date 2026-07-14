@@ -33,6 +33,8 @@ namespace Tileon::Editor::View
 
     void Scene::OnDraw(Ref<UI::Composer> Composer)
     {
+        mWorkshop.Tick();
+
         Composer.SetNextWindowPos(Composer.GetViewportCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
         Composer.SetNextWindowSize(800.0f, 600.0f, ImGuiCond_FirstUseEver);
         Composer.SetNextWindowSizeConstraints(320.0f, 200.0f);
@@ -117,13 +119,13 @@ namespace Tileon::Editor::View
 
         const Director::Mode CurrentMode = GetContext().GetDirector().GetMode();
 
-        if (Composer.BeginCombo("##mode", Enum::Name(CurrentMode)))
+        if (Composer.BeginCombo("##mode", Enum::GetName(CurrentMode)))
         {
-            for (const Director::Mode Type : Enum::Values<Director::Mode>())
+            for (const Director::Mode Type : Enum::GetValues<Director::Mode>())
             {
                 const Bool Selected = (CurrentMode == Type);
 
-                if (Composer.Selectable(Enum::Name(Type), Selected))
+                if (Composer.Selectable(Enum::GetName(Type), Selected))
                 {
                     GetContext().GetDirector().SetMode(Type);
                 }
@@ -139,13 +141,13 @@ namespace Tileon::Editor::View
         Composer.SameLine();
         Composer.SetNextItemWidth(96.0f);
 
-        if (Composer.BeginCombo("##frame", Enum::Name(mFrame)))
+        if (Composer.BeginCombo("##frame", Enum::GetName(mFrame)))
         {
-            for (const Renderer::Frame Type : Enum::Values<Renderer::Frame>())
+            for (const Renderer::Frame Type : Enum::GetValues<Renderer::Frame>())
             {
                 const Bool Selected = (mFrame == Type);
 
-                if (Composer.Selectable(Enum::Name(Type), Selected))
+                if (Composer.Selectable(Enum::GetName(Type), Selected))
                 {
                     mFrame = Type;
                 }
@@ -166,7 +168,7 @@ namespace Tileon::Editor::View
 
     void Scene::DrawTileToolbar(Ref<UI::Composer> Composer)
     {
-        const auto DrawBrushButton = [&](Workshop::Brush Brush, ConstStr8 Icon)
+        const auto DrawBrushButton = [&](Workshop::Brush Brush, Text Icon)
         {
             const Bool Active = (mWorkshop.GetBrush() == Brush);
 
@@ -176,7 +178,7 @@ namespace Tileon::Editor::View
                 Composer.PushStyleColor(ImGuiCol_ButtonHovered, Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
             }
 
-            if (Composer.Button(Base::Format("{}##{}", Icon, Enum::Name(Brush)), 32.0f))
+            if (Composer.Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Brush)), 32.0f))
             {
                 mWorkshop.SetBrush(Brush);
             }
@@ -203,7 +205,7 @@ namespace Tileon::Editor::View
         Composer.SameLine();
 
         // Draw the layer selection buttons for switching between layers.
-        const auto DrawLayerButton = [&](Workshop::Level Level, ConstStr8 Icon)
+        const auto DrawLayerButton = [&](Workshop::Level Level, Text Icon)
         {
             const Bool Active = (mWorkshop.GetLevel() == Level);
 
@@ -213,7 +215,7 @@ namespace Tileon::Editor::View
                 Composer.PushStyleColor(ImGuiCol_ButtonHovered, Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
             }
 
-            if (Composer.Button(Base::Format("{}##{}", Icon, Enum::Name(Level)), 32.0f))
+            if (Composer.Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Level)), 32.0f))
             {
                 mWorkshop.SetLevel(Level);
             }

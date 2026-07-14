@@ -24,27 +24,27 @@
 namespace Tileon
 {
     /// \brief Manages regions and cells in the world, providing spatial queries and entity management
-    class Supervisor final : public Locator<Scene::Service, Content::Service>
+    class Supervisor final : public Engine::Locator<Job::Service, Scene::Service, Content::Service>
     {
         friend class World;
 
     public:
 
         /// \brief Default filename format for storing region data.
-        static constexpr ConstStr8 kRegionFilename       = "Resources://World/{}_{}.region";
+        static constexpr Symbol kRegionFilename       = "Resources://World/{0}_{1}.region";
 
         /// \brief Extent of the cell hierarchy for loose spatial partitioning (in tiles).
-        static constexpr UInt32    kHierarchyLooseExtent = 8;
+        static constexpr UInt32 kHierarchyLooseExtent = 8;
 
         /// \brief Extent of the cell hierarchy for tight spatial partitioning (in tiles).
-        static constexpr UInt32    kHierarchyTightExtent = 4;
+        static constexpr UInt32 kHierarchyTightExtent = 4;
 
     public:
 
         /// \brief Constructs a supervisor instance with the specified service host.
         ///
         /// \param Host The service host to associate with the supervisor.
-        explicit Supervisor(Ref<Service::Host> Host);
+        explicit Supervisor(Ref<Engine::Subsystem::Host> Host);
 
         /// \brief Tears down releasing resources.
         void Teardown();
@@ -91,7 +91,7 @@ namespace Tileon
         /// \param Hitbox   The area to query for intersecting entities.
         /// \param Callback The callback function to apply to each entity that intersects the hitbox.
         template<typename Function>
-        ZYPHRYON_INLINE void QueryEach(IntRect Hitbox, AnyRef<Function> Callback)
+        ZY_INLINE void QueryEach(IntRect Hitbox, AnyRef<Function> Callback)
         {
             ForEachEntity(Hitbox, Callback);
         }
@@ -102,7 +102,7 @@ namespace Tileon
         /// \param Predicate The condition function to apply to each entity that intersects the hitbox.
         /// \return `true` if any entity satisfies the condition, `false` otherwise.
         template<typename Function>
-        ZYPHRYON_INLINE Bool QueryAnyOf(IntRect Hitbox, AnyRef<Function> Predicate)
+        ZY_INLINE Bool QueryAnyOf(IntRect Hitbox, AnyRef<Function> Predicate)
         {
             return AnyOfEntity(Hitbox, Predicate);
         }
@@ -111,7 +111,7 @@ namespace Tileon
         ///
         /// \param Hitbox The area to query for intersecting entities.
         /// \return The frontmost entity that intersects the hitbox, or an empty entity if none are found.
-        ZYPHRYON_INLINE Scene::Entity QueryFrontmost(IntRect Hitbox)
+        ZY_INLINE Scene::Entity QueryFrontmost(IntRect Hitbox)
         {
             Scene::Entity Result;
 
@@ -145,9 +145,9 @@ namespace Tileon
         /// \param Y          The Y-coordinate of the cell.
         /// \param Boundaries The boundaries of the grid.
         /// \return The unique key representing the cell's position within the grid.
-        ZYPHRYON_INLINE static constexpr UInt32 GetKey(SInt32 X, SInt32 Y, IntRect Boundaries)
+        ZY_INLINE static constexpr UInt32 GetKey(SInt32 X, SInt32 Y, IntRect Boundaries)
         {
-            return Index2D<UInt32>(X - Boundaries.GetMinimumX(), Y - Boundaries.GetMinimumY(), Boundaries.GetWidth());
+            return ConvertTo1D<UInt32>(X - Boundaries.GetMinimumX(), Y - Boundaries.GetMinimumY(), Boundaries.GetWidth());
         }
 
         /// \brief Represents a cell in a loose spatial hierarchy, managing entities and their boundaries.
@@ -163,19 +163,30 @@ namespace Tileon
             Mutex       Mutex;
 
             /// \brief Flat array of cells in the region.
-            Set<UInt64> Entities;
+            Bag<UInt64> Entities;
+
+            /// \brief Default constructor.
+            ZY_INLINE HierarchyLooseCell() = default;
+
+            /// \brief Move constructor.
+            ZY_INLINE HierarchyLooseCell(AnyRef<HierarchyLooseCell> Other) noexcept
+                : Dirty      { Other.Dirty },
+                  Boundaries { Other.Boundaries },
+                  Entities   { Move(Other.Entities) }
+            {
+            }
 
             /// \brief Refreshes the cell's boundaries based on its entities.
             ///
             /// \param Scene The scene service to access entity data.
             /// \return The previous boundaries before the refresh.
-            ZYPHRYON_INLINE IntRect Refresh(Ref<Scene::Service> Scene)
+            ZY_INLINE IntRect Refresh(Ref<Scene::Service> Scene)
             {
                 const IntRect Previous = Boundaries;
 
                 if (Dirty)
                 {
-                    if (Entities.empty())
+                    if (Entities.IsEmpty())
                     {
                         Boundaries = IntRect::Zero();
                     }
@@ -199,10 +210,10 @@ namespace Tileon
             ///
             /// \param Actor The entity to insert.
             /// \return `true` if the cell was previously dirty, `false` otherwise.
-            ZYPHRYON_INLINE Bool Insert(Scene::Entity Actor)
+            ZY_INLINE Bool Insert(Scene::Entity Actor)
             {
                 Guard Guard(Mutex);
-                Entities.emplace(Actor.GetID());
+                Entities.Insert(Actor.GetID());
 
                 // Mark cell as dirty to recalculate boundaries later.
                 const Bool WasDirty = Dirty;
@@ -214,10 +225,10 @@ namespace Tileon
             ///
             /// \param Actor The entity to remove.
             /// \return `true` if the cell was previously dirty, `false` otherwise.
-            ZYPHRYON_INLINE Bool Remove(Scene::Entity Actor)
+            ZY_INLINE Bool Remove(Scene::Entity Actor)
             {
                 Guard Guard(Mutex);
-                Entities.erase(Actor.GetID());
+                Entities.Erase(Actor.GetID());
 
                 // Mark cell as dirty to recalculate boundaries later.
                 const Bool WasDirty = Dirty;
@@ -229,7 +240,7 @@ namespace Tileon
             ///
             /// \param Actor The entity to update.
             /// \return `true` if the cell was previously dirty, `false` otherwise.
-            ZYPHRYON_INLINE Bool Update(Scene::Entity Actor)
+            ZY_INLINE Bool Update(Scene::Entity Actor)
             {
                 Guard Guard(Mutex);
 
@@ -242,7 +253,7 @@ namespace Tileon
             ///
             /// \param Action The callback function to apply to each entity.
             template<typename Function>
-            ZYPHRYON_INLINE void ForEach(AnyRef<Function> Action) const
+            ZY_INLINE void ForEach(AnyRef<Function> Action) const
             {
                 for (const UInt64 ID : Entities)
                 {
@@ -255,7 +266,7 @@ namespace Tileon
             /// \param Predicate The condition function to apply to each entity.
             /// \return `true` if any entity satisfies the condition, `false` otherwise.
             template<typename Function>
-            ZYPHRYON_INLINE Bool AnyOf(AnyRef<Function> Predicate) const
+            ZY_INLINE Bool AnyOf(AnyRef<Function> Predicate) const
             {
                 for (const UInt64 ID : Entities)
                 {
@@ -268,7 +279,7 @@ namespace Tileon
             }
 
             /// \brief Move assignment operator.
-            ZYPHRYON_INLINE Ref<HierarchyLooseCell> operator=(AnyRef<HierarchyLooseCell> Other) noexcept
+            ZY_INLINE Ref<HierarchyLooseCell> operator=(AnyRef<HierarchyLooseCell> Other) noexcept
             {
                 Boundaries = Move(Other.Boundaries);
                 Entities   = Move(Other.Entities);
@@ -280,36 +291,40 @@ namespace Tileon
         struct HierarchyTightCell final
         {
             /// \brief Indices of loose cells contained within this tight cell.
-            Vector<UInt32> Indices;
+            Sequence<UInt32> Indices;
 
             /// \brief Default constructor.
-            ZYPHRYON_INLINE HierarchyTightCell() = default;
+            ZY_INLINE HierarchyTightCell() = default;
+
+            ZY_INLINE HierarchyTightCell(AnyRef<HierarchyTightCell> Other) noexcept
+                : Indices { Move(Other.Indices) }
+            {
+            }
 
             /// \brief Inserts a loose cell index into the tight cell.
             ///
             /// \param Index The index of the loose cell to insert.
-            ZYPHRYON_INLINE void Insert(UInt32 Index)
+            ZY_INLINE void Insert(UInt32 Index)
             {
-                Indices.push_back(Index);
+                Indices.Append(Index);
             }
 
             /// \brief Removes a loose cell index from the tight cell.
             ///
             /// \param Index The index of the loose cell to remove.
-            ZYPHRYON_INLINE void Remove(UInt32 Index)
+            ZY_INLINE void Remove(UInt32 Index)
             {
-                if (const auto Iterator = std::ranges::find(Indices, Index); Iterator != Indices.end())
+                Indices.RemoveFastIf([Index](UInt32 Cell)
                 {
-                    (* Iterator) = Indices.back();
-                    Indices.pop_back();
-                }
+                    return Index == Cell;
+                });
             }
 
             /// \brief Iterates over all loose cell indices in the tight cell and applies a callback function.
             ///
             /// \param Action The callback function to apply to each loose cell index.
             template<typename Function>
-            ZYPHRYON_INLINE void ForEach(AnyRef<Function> Action) const
+            ZY_INLINE void ForEach(AnyRef<Function> Action) const
             {
                 for (const UInt32 Index : Indices)
                 {
@@ -322,7 +337,7 @@ namespace Tileon
             /// \param Predicate The condition function to apply to each loose cell index.
             /// \return `true` if any index satisfies the condition, `false` otherwise.
             template<typename Function>
-            ZYPHRYON_INLINE Bool AnyOf(AnyRef<Function> Predicate) const
+            ZY_INLINE Bool AnyOf(AnyRef<Function> Predicate) const
             {
                 for (const UInt32 Index : Indices)
                 {
@@ -335,7 +350,7 @@ namespace Tileon
             }
 
             /// \brief Move assignment operator.
-            ZYPHRYON_INLINE Ref<HierarchyTightCell> operator=(AnyRef<HierarchyTightCell> Other) noexcept
+            ZY_INLINE Ref<HierarchyTightCell> operator=(AnyRef<HierarchyTightCell> Other) noexcept
             {
                 Indices = Move(Other.Indices);
                 return (* this);
@@ -352,10 +367,10 @@ namespace Tileon
         /// \param Volume The area to query for intersecting entities.
         /// \param Action The function invoked for each candidate entity.
         template<typename Function>
-        ZYPHRYON_INLINE void ForEachEntity(IntRect Volume, AnyRef<Function> Action)
+        ZY_INLINE void ForEachEntity(IntRect Volume, AnyRef<Function> Action)
         {
-            thread_local Set<UInt32> LooseAlreadyProcessed;
-            LooseAlreadyProcessed.clear();
+            thread_local Bag<UInt32> LooseAlreadyProcessed;
+            LooseAlreadyProcessed.Clear();
 
             // Iterate all tight cells within the specified volume.
             ForEachTightCell(GetTightCoordinates(Volume), [&](ConstRef<HierarchyTightCell> TightCell)
@@ -363,7 +378,7 @@ namespace Tileon
                 TightCell.ForEach([&](UInt32 LooseKey)
                 {
                     // Early reject if the loose cell was already processed.
-                    if (!LooseAlreadyProcessed.emplace(LooseKey).second)
+                    if (!LooseAlreadyProcessed.Insert(LooseKey))
                     {
                         return;
                     }
@@ -391,10 +406,10 @@ namespace Tileon
         /// \param Predicate The condition function to apply to each entity that intersects the hitbox.
         /// \return `true` if any entity satisfies the condition, `false` otherwise.
         template<typename Function>
-        ZYPHRYON_INLINE Bool AnyOfEntity(IntRect Volume, AnyRef<Function> Predicate)
+        ZY_INLINE Bool AnyOfEntity(IntRect Volume, AnyRef<Function> Predicate)
         {
-            thread_local Set<UInt32> LooseAlreadyProcessed;
-            LooseAlreadyProcessed.clear();
+            thread_local Bag<UInt32> LooseAlreadyProcessed;
+            LooseAlreadyProcessed.Clear();
 
             // Iterate all tight cells within the specified volume.
             return AnyOfTightCell(GetTightCoordinates(Volume), [&](ConstRef<HierarchyTightCell> TightCell)
@@ -402,7 +417,7 @@ namespace Tileon
                 return TightCell.AnyOf([&](UInt32 LooseKey)
                 {
                     // Early reject if the loose cell was already processed.
-                    if (!LooseAlreadyProcessed.emplace(LooseKey).second)
+                    if (!LooseAlreadyProcessed.Insert(LooseKey))
                     {
                         return false;
                     }
@@ -429,11 +444,11 @@ namespace Tileon
         /// \param Volume   The volume to iterate over.
         /// \param Callback The function invoked once per loose cell.
         template<typename Function>
-        ZYPHRYON_INLINE void ForEachTightCell(IntRect Volume, AnyRef<Function> Callback)
+        ZY_INLINE void ForEachTightCell(IntRect Volume, AnyRef<Function> Callback)
         {
             const UInt32 GridWidth = mTightBoundaries.GetWidth();
 
-            const UInt32 GridStart = Index2D<UInt32>(
+            const UInt32 GridStart = ConvertTo1D<UInt32>(
                 Volume.GetMinimumX() - mTightBoundaries.GetMinimumX(),
                 Volume.GetMinimumY() - mTightBoundaries.GetMinimumY(),
                 GridWidth);
@@ -456,11 +471,11 @@ namespace Tileon
         /// \param Predicate The condition function to apply to each loose cell.
         /// \return `true` if any loose cell satisfies the condition, `false` otherwise
         template<typename Function>
-        ZYPHRYON_INLINE Bool AnyOfTightCell(IntRect Volume, AnyRef<Function> Predicate)
+        ZY_INLINE Bool AnyOfTightCell(IntRect Volume, AnyRef<Function> Predicate)
         {
             const UInt32 GridWidth = mTightBoundaries.GetWidth();
 
-            const UInt32 GridStart = Index2D<UInt32>(
+            const UInt32 GridStart = ConvertTo1D<UInt32>(
                 Volume.GetMinimumX() - mTightBoundaries.GetMinimumX(),
                 Volume.GetMinimumY() - mTightBoundaries.GetMinimumY(),
                 GridWidth);
@@ -485,9 +500,9 @@ namespace Tileon
         ///
         /// \param Volume The volume to get tight cell coordinates for.
         /// \return The tight cell coordinates.
-        ZYPHRYON_INLINE IntRect GetTightCoordinates(IntRect Volume)
+        ZY_INLINE IntRect GetTightCoordinates(IntRect Volume)
         {
-            return IntRect::Intersection(Coordinate::GetCell<Math::Log(kHierarchyTightExtent)>(Volume), mTightBoundaries);
+            return IntRect::Intersection(Coordinate::GetCell<Base::Log(kHierarchyTightExtent)>(Volume), mTightBoundaries);
         }
 
         /// \brief Inserts an entity into the appropriate cell based on its volume.
@@ -509,22 +524,32 @@ namespace Tileon
         /// \param NewestCenter The new center coordinates of the entity's volume after the update.
         void UpdateEntityOnCell(Scene::Entity Actor, IntVector2 OldestCenter, IntVector2 NewestCenter);
 
+        /// \brief Handles asynchronous load result of a \ref Region.
+        ///
+        /// \param Result         The result of the asynchronous load operation.
+        /// \param File            The loaded file blob.
+        /// \param Handle          The handle of the entity associated with the load operation.
+        /// \param RegionX         The X coordinate of the region.
+        /// \param RegionY         The Y coordinate of the region.
+        /// \param CreateIfMissing Whether to create the region if it is missing.
+        void OnAsyncLoad(Filesystem::Result Result, Blob File, UInt64 Handle, SInt16 RegionX, SInt16 RegionY, Bool CreateIfMissing);
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        IntRect                    mRegionBoundaries;
-        Vector<Scene::Entity>      mRegionList;
+        IntRect                      mRegionBoundaries;
+        Sequence<Scene::Entity>      mRegionList;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        IntRect                    mLooseBoundaries;
-        IntRect                    mTightBoundaries;
-        Mutex                      mLooseMutex;
-        Vector<HierarchyLooseCell> mLooseRegistry;
-        Vector<UInt32>             mLooseDirty;
-        Vector<HierarchyTightCell> mTightRegistry;
+        IntRect                      mLooseBoundaries;
+        IntRect                      mTightBoundaries;
+        Mutex                        mLooseMutex;
+        Sequence<HierarchyLooseCell> mLooseRegistry;
+        Sequence<UInt32>             mLooseDirty;
+        Sequence<HierarchyTightCell> mTightRegistry;
     };
 }

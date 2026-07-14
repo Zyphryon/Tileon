@@ -62,10 +62,13 @@ namespace Tileon::Editor
         /// \param Controller The reference to the controller that the workshop will interact with.
         Workshop(Ref<Controller> Controller);
 
+        /// \brief Updates the workshop, typically called once per frame.
+        void Tick();
+
         /// \brief Sets the current editing mode.
         ///
         /// \param Mode The mode to set.
-        ZYPHRYON_INLINE void SetMode(Mode Mode)
+        ZY_INLINE void SetMode(Mode Mode)
         {
             mMode = Mode;
         }
@@ -73,7 +76,7 @@ namespace Tileon::Editor
         /// \brief Gets the current editing mode.
         ///
         /// \return The current editing mode.
-        ZYPHRYON_INLINE Mode GetMode() const
+        ZY_INLINE Mode GetMode() const
         {
             return mMode;
         }
@@ -81,7 +84,7 @@ namespace Tileon::Editor
         /// \brief Sets the current level.
         ///
         /// \param Level The level to set.
-        ZYPHRYON_INLINE void SetLevel(Level Level)
+        ZY_INLINE void SetLevel(Level Level)
         {
             mLevel = Level;
         }
@@ -89,7 +92,7 @@ namespace Tileon::Editor
         /// \brief Gets the current level.
         ///
         /// \return The current level.
-        ZYPHRYON_INLINE Level GetLevel() const
+        ZY_INLINE Level GetLevel() const
         {
             return mLevel;
         }
@@ -97,7 +100,7 @@ namespace Tileon::Editor
         /// \brief Sets the current brush type.
         ///
         /// \param Brush The brush type to set.
-        ZYPHRYON_INLINE void SetBrush(Brush Brush)
+        ZY_INLINE void SetBrush(Brush Brush)
         {
             mBrush = Brush;
         }
@@ -105,12 +108,12 @@ namespace Tileon::Editor
         /// \brief Gets the current brush type.
         ///
         /// \return The current brush type.
-        ZYPHRYON_INLINE Brush GetBrush() const
+        ZY_INLINE Brush GetBrush() const
         {
             return mBrush;
         }
 
-        /// \brief Executes a editing command at the specified placement in the world.
+        /// \brief Executes an editing command at the specified placement in the world.
         ///
         /// \param Command   The editing command to execute (e.g., add or remove).
         /// \param Placement The placement in the world where the command should be executed.
@@ -118,6 +121,28 @@ namespace Tileon::Editor
         void Execute(Command Command, Placement Placement, UInt32 Object);
 
     private:
+
+        /// \brief Represents a tile operation to be applied to a region.
+        struct OpTile
+        {
+            /// The region's actor to apply the operation.
+            Scene::Entity Actor;
+
+            /// The command to apply (e.g., add or remove).
+            Command       Command;
+
+            /// The layer of the tiles to apply the command to (e.g., base or detail).
+            Tile::Layer   Layer;
+
+            /// The unique identifier for the terrain type to apply when adding tiles.
+            UInt16        Terrain;
+
+            /// The dimensions of the tile being applied.
+            IntVector2    Span;
+
+            /// The rectangular area of tiles to apply the command to, specified in tile coordinates.
+            IntRect       Area;
+        };
 
         /// \brief Executes a tile editing command at the specified placement in the world.
         ///
@@ -142,14 +167,21 @@ namespace Tileon::Editor
         /// \param Span    The dimensions of the tile being applied.
         void ApplyTiles(Command Command, IntRect Area, Tile::Layer Layer, UInt16 Handle, IntVector2 Span);
 
+        /// \brief Applies the specified operation to an area of tiles.
+        ///
+        /// \param Region    The region to apply the operation to.
+        /// \param Operation The operation containing the details of the tile command to apply.
+        void ApplyTiles(Ptr<Region> Region, ConstRef<OpTile> Operation);
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Ref<Controller> mController;
-        Mode            mMode;
-        Level           mLevel;
-        Brush           mBrush;
+        Ref<Controller>  mController;
+        Mode             mMode;
+        Level            mLevel;
+        Brush            mBrush;
+        Sequence<OpTile> mOperations;
     };
 }

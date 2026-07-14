@@ -21,7 +21,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Controller::Controller(Ref<Service::Host> Host)
+    Controller::Controller(Ref<Engine::Subsystem::Host> Host)
         : Locator   { Host },
           mWorld    { Host },
           mRenderer { Host }
@@ -102,13 +102,13 @@ namespace Tileon
     void Controller::OnRegister(Ref<Scene::Service> Scene)
     {
         // System to update the camera's position and view based on the director's state.
-        Scene.CreateSystem<Scene::DSL::In<const Time>>(
+        Scene.CreateSystem<Scene::DSL::In<const Scene::Clock>>(
             "Controller::UpdateVisibility",
             EcsOnLoad,
             Scene::Execution::Immediate,
-            [this](Time Time)
+            [this](ConstRef<Scene::Clock> Clock)
             {
-                if (mDirector.Tick(Time.GetDelta()))
+                if (mDirector.Tick(Clock.GetDelta()))
                 {
                     const IntRect Frustum = Coordinate::GetRegionCell(mDirector.GetFrustum());
                     mWorld.GetSupervisor().Navigate(Frustum.Expand(1));

@@ -27,7 +27,7 @@ namespace Tileon
     public:
 
         /// \brief Default constructor initializing the skylight with default values.
-        ZYPHRYON_INLINE Skylight()
+        ZY_INLINE Skylight()
             : mSunDirection { Vector2::UnitY() },
               mSunTint      { IntColor8::White() },
               mSkyTint      { IntColor8::White() },
@@ -43,7 +43,7 @@ namespace Tileon
         /// \param SkyTint      The tint of ambient light coming from the sky in the scene.
         /// \param GroundTint   The tint of ambient light reflected from the ground in the scene.
         /// \param Brightness   The overall brightness of the environment, defining the intensity of all lighting effects in the scene.
-        ZYPHRYON_INLINE Skylight(Vector2 SunDirection, IntColor8 SunTint, IntColor8 SkyTint, IntColor8 GroundTint, Real32 Brightness)
+        ZY_INLINE Skylight(Vector2 SunDirection, IntColor8 SunTint, IntColor8 SkyTint, IntColor8 GroundTint, Real32 Brightness)
             : mSunDirection { SunDirection },
               mSunTint      { SunTint },
               mSkyTint      { SkyTint },
@@ -55,7 +55,7 @@ namespace Tileon
         /// \brief Sets the direction of the sun.
         ///
         /// \param Direction The new direction of the sun.
-        ZYPHRYON_INLINE void SetSunDirection(Vector2 Direction)
+        ZY_INLINE void SetSunDirection(Vector2 Direction)
         {
             mSunDirection = Direction;
         }
@@ -63,7 +63,7 @@ namespace Tileon
         /// \brief Gets the current direction of the sun.
         ///
         /// \return The current direction of the sun.
-        ZYPHRYON_INLINE Vector2 GetSunDirection() const
+        ZY_INLINE Vector2 GetSunDirection() const
         {
             return mSunDirection;
         }
@@ -71,7 +71,7 @@ namespace Tileon
         /// \brief Sets the tint of the sun.
         ///
         /// \param Tint The new tint of the sun.
-        ZYPHRYON_INLINE void SetSunTint(IntColor8 Tint)
+        ZY_INLINE void SetSunTint(IntColor8 Tint)
         {
             mSunTint = Tint;
         }
@@ -79,7 +79,7 @@ namespace Tileon
         /// \brief Gets the current tint of the sun.
         ///
         /// \return The current tint of the sun.
-        ZYPHRYON_INLINE IntColor8 GetSunTint() const
+        ZY_INLINE IntColor8 GetSunTint() const
         {
             return mSunTint;
         }
@@ -87,7 +87,7 @@ namespace Tileon
         /// \brief Sets the tint of the sky.
         ///
         /// \param Tint The new tint of the sky.
-        ZYPHRYON_INLINE void SetSkyTint(IntColor8 Tint)
+        ZY_INLINE void SetSkyTint(IntColor8 Tint)
         {
             mSkyTint = Tint;
         }
@@ -95,7 +95,7 @@ namespace Tileon
         /// \brief Gets the current tint of the sky.
         ///
         /// \return The current tint of the sky.
-        ZYPHRYON_INLINE IntColor8 GetSkyTint() const
+        ZY_INLINE IntColor8 GetSkyTint() const
         {
             return mSkyTint;
         }
@@ -103,7 +103,7 @@ namespace Tileon
         /// \brief Sets the tint of the ground.
         ///
         /// \param Tint The new tint of the ground.
-        ZYPHRYON_INLINE void SetGroundTint(IntColor8 Tint)
+        ZY_INLINE void SetGroundTint(IntColor8 Tint)
         {
             mGroundTint = Tint;
         }
@@ -111,7 +111,7 @@ namespace Tileon
         /// \brief Gets the current tint of the ground.
         ///
         /// \return The current tint of the ground.
-        ZYPHRYON_INLINE IntColor8 GetGroundTint() const
+        ZY_INLINE IntColor8 GetGroundTint() const
         {
             return mGroundTint;
         }
@@ -119,7 +119,7 @@ namespace Tileon
         /// \brief Sets the overall brightness of the environment.
         ///
         /// \param Brightness The new brightness value for the environment.
-        ZYPHRYON_INLINE void SetBrightness(Real32 Brightness)
+        ZY_INLINE void SetBrightness(Real32 Brightness)
         {
             mBrightness = Brightness;
         }
@@ -127,22 +127,9 @@ namespace Tileon
         /// \brief Gets the current overall brightness of the environment.
         ///
         /// \return The current brightness value of the environment.
-        ZYPHRYON_INLINE Real32 GetBrightness() const
+        ZY_INLINE Real32 GetBrightness() const
         {
             return mBrightness;
-        }
-
-        /// \brief Serializes the state of the object to or from the specified archive.
-        ///
-        /// \param Archive The archive to serialize the object with.
-        template<typename Serializer>
-        ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
-        {
-            Archive.SerializeObject(mSunDirection);
-            Archive.SerializeObject(mSunTint);
-            Archive.SerializeObject(mSkyTint);
-            Archive.SerializeObject(mGroundTint);
-            Archive.SerializeReal32(mBrightness);
         }
 
     private:

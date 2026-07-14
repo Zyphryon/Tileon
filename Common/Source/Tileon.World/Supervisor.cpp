@@ -21,7 +21,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Supervisor::Supervisor(Ref<Service::Host> Host)
+    Supervisor::Supervisor(Ref<Engine::Subsystem::Host> Host)
         : Locator { Host }
     {
     }
@@ -49,7 +49,7 @@ namespace Tileon
         {
             if (Actor.IsValid() && Actor.Has<Persist>())
             {
-                SaveRegion(Actor);  // TODO: Multithreaden (System?)
+                SaveRegion(Actor);
             }
         }
     }
@@ -64,7 +64,8 @@ namespace Tileon
             return false;
         }
 
-        Vector<Scene::Entity> Registry(Boundaries.GetWidth() * Boundaries.GetHeight());
+        Sequence<Scene::Entity> Registry(Boundaries.GetWidth() * Boundaries.GetHeight());
+        Registry.Advance(Registry.GetCapacity());
 
         // Dispose regions that fall outside new boundaries.
         IntRect::ForEachRectDiff(mRegionBoundaries, Boundaries, [&](IntRect Difference)
@@ -75,7 +76,7 @@ namespace Tileon
                 {
                     Scene::Entity Actor = mRegionList[GetKey(X, Y, mRegionBoundaries)];
 
-                    if (Actor.IsValid())   // TODO: Multithreaden (System?)
+                    if (Actor.IsValid())
                     {
                         if (Actor.Has<Persist>())
                         {
@@ -99,7 +100,7 @@ namespace Tileon
             {
                 for (SInt32 X = Difference.GetMinimumX(); X < Difference.GetMaximumX(); ++X)
                 {
-                    Registry[GetKey(X, Y, Boundaries)] = LoadRegion(X, Y, false);   // TODO: Multithreaden (System?)
+                    Registry[GetKey(X, Y, Boundaries)] = LoadRegion(X, Y, false);
                 }
             }
         });
@@ -130,7 +131,7 @@ namespace Tileon
     {
         Scene::Entity Actor;
 
-        if (const UInt32 Key = GetKey(RegionX, RegionY, mRegionBoundaries); Key < mRegionList.size())
+        if (const UInt32 Key = GetKey(RegionX, RegionY, mRegionBoundaries); Key < mRegionList.GetSize())
         {
             Actor = mRegionList[Key];
         }
@@ -162,36 +163,30 @@ namespace Tileon
 
     Scene::Entity Supervisor::LoadRegion(SInt16 RegionX, SInt16 RegionY, Bool CreateIfMissing)
     {
-        Scene::Entity Actor = GetService<Scene::Service>().GetEntity(Format("Region.{}_{}", RegionX, RegionY));
+        const Str32 Name = Str32::Print<"Region.{0}_{1}">(RegionX, RegionY);
 
-        if (!Actor.IsValid())
+        if (Scene::Entity Actor = GetService<Scene::Service>().GetEntity(Name); Actor.IsValid())
         {
-            LOG_DEBUG("Supervisor: Loading ({} {})", RegionX, RegionY);
-
-            const ConstStr8 Filename = Format(kRegionFilename, RegionX, RegionY);
-
-            if (Blob File = GetService<Content::Service>().Find(Content::Uri(Filename)); File)
-            {
-                Reader Input(File.GetSpan<UInt8>());
-                Actor = GetService<Scene::Service>().LoadHierarchy(Input);
-            }
-            else
-            {
-                if (CreateIfMissing)
-                {
-                    Actor = GetService<Scene::Service>().CreateEntity();
-                    Actor.SetName(Format("Region.{}_{}", RegionX, RegionY));
-                    Actor.Emplace<Region>(RegionX, RegionY);
-                }
-            }
-
-            if (Actor.IsValid())
-            {
-                const IntVector2 Origin(RegionX * Region::kTilesPerX, RegionY * Region::kTilesPerY);
-                Actor.Emplace<Transform>(Matrix3x2::Identity(), Origin);
-            }
+            return Actor;
         }
-        return Actor;
+        else
+        {
+            LOG_D("Supervisor: Loading ({0} {1})", RegionX, RegionY);
+
+            Actor = GetService<Scene::Service>().CreateEntity();
+            Actor.SetName(Name);
+            Actor.Emplace<Transform>(Matrix3x2::Identity(), IntVector2(RegionX * Region::kTilesPerX, RegionY * Region::kTilesPerY));
+
+            Str Filename = Str::Print<kRegionFilename>(RegionX, RegionY);
+
+            const auto OnResult = [this, Handle = Actor.GetID(), RegionX, RegionY, CreateIfMissing](Filesystem::Result Result, Blob File)
+            {
+                OnAsyncLoad(Result, Move(File), Handle, RegionX, RegionY, CreateIfMissing);
+            };
+            GetService<Content::Service>().Read(Str::Print<kRegionFilename>(RegionX, RegionY), OnResult);
+
+            return Actor;
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -201,13 +196,13 @@ namespace Tileon
     {
         ConstRef<Region> Region = Actor.Get<const Tileon::Region>();
 
+        LOG_D("Supervisor: Saving {0} {1}", Region.GetX(), Region.GetY());
+
         Writer Output;
         GetService<Scene::Service>().SaveHierarchy(Output, Actor);
 
-        LOG_DEBUG("Supervisor: Saving {} {}", Region.GetX(), Region.GetY());
-
-        const ConstStr8 Filename = Format(kRegionFilename, Region.GetX(), Region.GetY());
-        GetService<Content::Service>().Save(Filename, Output.GetData());
+        Str Filename = Str::Print<kRegionFilename>(Region.GetX(), Region.GetY());
+        GetService<Content::Service>().Write(Move(Filename), Output.Detach(), { });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -215,11 +210,14 @@ namespace Tileon
 
     void Supervisor::AdjustHierarchy(IntRect Boundaries)
     {
-        const IntRect NewLooseBoundaries = Coordinate::GetCell<Math::Log(kHierarchyLooseExtent)>(Boundaries);
-        const IntRect NewTightBoundaries = Coordinate::GetCell<Math::Log(kHierarchyTightExtent)>(Boundaries);
+        const IntRect NewLooseBoundaries = Coordinate::GetCell<Base::Log(kHierarchyLooseExtent)>(Boundaries);
+        const IntRect NewTightBoundaries = Coordinate::GetCell<Base::Log(kHierarchyTightExtent)>(Boundaries);
 
-        Vector<HierarchyLooseCell> NewLooseRegistry(NewLooseBoundaries.GetWidth() * NewLooseBoundaries.GetHeight());
-        Vector<HierarchyTightCell> NewTightRegistry(NewTightBoundaries.GetWidth() * NewTightBoundaries.GetHeight());
+        Sequence<HierarchyLooseCell> NewLooseRegistry(NewLooseBoundaries.GetWidth() * NewLooseBoundaries.GetHeight());
+        Sequence<HierarchyTightCell> NewTightRegistry(NewTightBoundaries.GetWidth() * NewTightBoundaries.GetHeight());
+
+        NewLooseRegistry.Advance(NewLooseRegistry.GetCapacity());
+        NewTightRegistry.Advance(NewTightRegistry.GetCapacity());
 
         // Preserve loose cells that overlap old and new boundaries.
         const IntRect LooseIntersect = IntRect::Intersection(mLooseBoundaries, NewLooseBoundaries);
@@ -242,7 +240,7 @@ namespace Tileon
                 const UInt32 LooseKey = GetKey(LooseX, LooseY, NewLooseBoundaries);
                 Ref<HierarchyLooseCell> LooseCell = NewLooseRegistry[LooseKey];
 
-                if (LooseCell.Entities.empty())
+                if (LooseCell.Entities.IsEmpty())
                 {
                     continue;
                 }
@@ -252,7 +250,7 @@ namespace Tileon
 
                 // Calculate which tight cells this loose cell belongs to
                 const IntRect TightCoords = IntRect::Intersection(
-                    Coordinate::GetCell<Math::Log(kHierarchyTightExtent)>(LooseCell.Boundaries), NewTightBoundaries);
+                    Coordinate::GetCell<Base::Log(kHierarchyTightExtent)>(LooseCell.Boundaries), NewTightBoundaries);
 
                 for (SInt32 TightY = TightCoords.GetMinimumY(); TightY < TightCoords.GetMaximumY(); ++TightY)
                 {
@@ -289,7 +287,7 @@ namespace Tileon
             {
                 const IntRect OldestIntersect = GetTightCoordinates(PreviousBoundaries);
 
-                if (!Loose.Entities.empty())
+                if (!Loose.Entities.IsEmpty())
                 {
                     const IntRect NewestIntersect = GetTightCoordinates(Loose.Boundaries);
 
@@ -321,7 +319,7 @@ namespace Tileon
                 }
             }
         }
-        mLooseDirty.clear();
+        mLooseDirty.Clear();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -330,7 +328,7 @@ namespace Tileon
     void Supervisor::InsertEntityOnCell(Scene::Entity Actor, IntVector2 Center)
     {
         // Link entity to loose cell.
-        IntVector2 Loose = Center >> Math::Log(kHierarchyLooseExtent);
+        IntVector2 Loose = Center >> Base::Log(kHierarchyLooseExtent);
         Loose.SetX(Clamp(Loose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
         Loose.SetY(Clamp(Loose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
 
@@ -339,7 +337,7 @@ namespace Tileon
         {
             // Mark cell as dirty for next hierarchy update.
             Guard Guard(mLooseMutex);
-            mLooseDirty.emplace_back(LooseKey);
+            mLooseDirty.Append(LooseKey);
         }
     }
 
@@ -349,7 +347,7 @@ namespace Tileon
     void Supervisor::RemoveEntityOnCell(Scene::Entity Actor, IntVector2 Center)
     {
         // Unlink entity from loose cell.
-        IntVector2 Loose    = Center >> Math::Log(kHierarchyLooseExtent);
+        IntVector2 Loose    = Center >> Base::Log(kHierarchyLooseExtent);
         Loose.SetX(Clamp(Loose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
         Loose.SetY(Clamp(Loose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
 
@@ -358,7 +356,7 @@ namespace Tileon
         {
             // Mark cell as dirty for next hierarchy update.
             Guard Guard(mLooseMutex);
-            mLooseDirty.emplace_back(LooseKey);
+            mLooseDirty.Append(LooseKey);
         }
     }
 
@@ -367,11 +365,11 @@ namespace Tileon
 
     void Supervisor::UpdateEntityOnCell(Scene::Entity Actor, IntVector2 OldestCenter, IntVector2 NewestCenter)
     {
-        IntVector2 OldLoose  = OldestCenter >> Math::Log(kHierarchyLooseExtent);
+        IntVector2 OldLoose  = OldestCenter >> Base::Log(kHierarchyLooseExtent);
         OldLoose.SetX(Clamp(OldLoose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
         OldLoose.SetY(Clamp(OldLoose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
 
-        IntVector2 NewLoose  = NewestCenter >> Math::Log(kHierarchyLooseExtent);
+        IntVector2 NewLoose  = NewestCenter >> Base::Log(kHierarchyLooseExtent);
         NewLoose.SetX(Clamp(NewLoose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
         NewLoose.SetY(Clamp(NewLoose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
 
@@ -382,13 +380,44 @@ namespace Tileon
             {
                 // Mark cell as dirty for next hierarchy update.
                 Guard Guard(mLooseMutex);
-                mLooseDirty.emplace_back(LooseKey);
+                mLooseDirty.Append(LooseKey);
             }
         }
         else
         {
             RemoveEntityOnCell(Actor, OldestCenter);
             InsertEntityOnCell(Actor, NewestCenter);
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Supervisor::OnAsyncLoad(Filesystem::Result Result, Blob File, UInt64 Handle, SInt16 RegionX, SInt16 RegionY, Bool CreateIfMissing)
+    {
+        const Scene::Entity Actor = GetService<Scene::Service>().GetEntity(Handle);
+
+        if (Result == Filesystem::Result::Success && File)
+        {
+            GetService<Job::Service>().SubmitOnMain([this, Actor, File = Move(File)]
+            {
+                Reader Input(File.GetData(), File.GetSize());
+                GetService<Scene::Service>().LoadHierarchy(Input, Actor);
+            });
+        }
+        else if (CreateIfMissing)
+        {
+            GetService<Job::Service>().SubmitOnMain([Actor, RegionX, RegionY]
+            {
+                Actor.Emplace<Region>(RegionX, RegionY);
+            });
+        }
+        else
+        {
+            GetService<Job::Service>().SubmitOnMain([Actor]
+            {
+                Actor.Destruct();
+            });
         }
     }
 }

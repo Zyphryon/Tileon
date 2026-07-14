@@ -58,7 +58,7 @@ namespace Tileon
         /// \brief Sets the camera mode.
         ///
         /// \param Mode The camera mode to set.
-        ZYPHRYON_INLINE void SetMode(Mode Mode)
+        ZY_INLINE void SetMode(Mode Mode)
         {
             if (mMode != Mode)
             {
@@ -71,7 +71,7 @@ namespace Tileon
         /// \brief Gets the current camera mode.
         ///
         /// \return The current camera mode.
-        ZYPHRYON_INLINE Mode GetMode() const
+        ZY_INLINE Mode GetMode() const
         {
             return mMode;
         }
@@ -79,7 +79,7 @@ namespace Tileon
         /// \brief Sets the pixel density of the camera's viewport.
         ///
         /// \param Density The pixel density of the camera's viewport, in pixels per logical unit.
-        ZYPHRYON_INLINE void SetDensity(UInt16 Density)
+        ZY_INLINE void SetDensity(UInt16 Density)
         {
             mDensity = Density;
         }
@@ -87,7 +87,7 @@ namespace Tileon
         /// \brief Gets the pixel density of the camera's viewport.
         ///
         /// \return The pixel density of the camera's viewport, in pixels per logical unit.
-        ZYPHRYON_INLINE UInt16 GetDensity() const
+        ZY_INLINE UInt16 GetDensity() const
         {
             return mDensity;
         }
@@ -101,7 +101,7 @@ namespace Tileon
         /// \brief Gets the current viewport dimensions of the camera.
         ///
         /// \return The current viewport dimensions of the camera, in logical units (e.g., world units).
-        ZYPHRYON_INLINE Vector2 GetViewport() const
+        ZY_INLINE Vector2 GetViewport() const
         {
             return mViewport;
         }
@@ -109,7 +109,7 @@ namespace Tileon
         /// \brief Sets the camera's position to a specific placement, immediately applying the change.
         ///
         /// \param Position The new placement to set for the camera.
-        ZYPHRYON_INLINE void SetPosition(Placement Position)
+        ZY_INLINE void SetPosition(Placement Position)
         {
             // Reset any active position tween to immediately apply the new translation.
             mTweenPosition = Tween<Placement>();
@@ -126,7 +126,7 @@ namespace Tileon
         /// \brief Gets the current placement of the camera.
         ///
         /// \return The current placement of the camera, including region coordinates and sub-region offset.
-        ZYPHRYON_INLINE Placement GetPosition() const
+        ZY_INLINE Placement GetPosition() const
         {
             return mPosition;
         }
@@ -134,7 +134,7 @@ namespace Tileon
         /// \brief Sets the camera's zoom level to a specific magnitude, immediately applying the change.
         ///
         /// \param Magnitude The new zoom level to set for the camera.
-        ZYPHRYON_INLINE void SetZoom(Real32 Magnitude)
+        ZY_INLINE void SetZoom(Real32 Magnitude)
         {
             // Reset any active zoom tween to immediately apply the new zoom.
             mTweenZoom = Tween<Real32>();
@@ -146,7 +146,7 @@ namespace Tileon
         /// \brief Gets the current zoom level of the camera.
         ///
         /// \return The current zoom level of the camera.
-        ZYPHRYON_INLINE Real32 GetZoom() const
+        ZY_INLINE Real32 GetZoom() const
         {
             return mZoom;
         }
@@ -154,7 +154,7 @@ namespace Tileon
         /// \brief Moves the camera by a specified translation vector.
         ///
         /// \param Delta The translation vector to move the camera by, in logical units (e.g., world units).
-        ZYPHRYON_INLINE void Move(Vector2 Delta)
+        ZY_INLINE void Move(Vector2 Delta)
         {
             if (mTweenPosition.IsComplete())
             {
@@ -171,7 +171,7 @@ namespace Tileon
         /// \brief Checks if the camera is currently moving due to an active tween.
         ///
         /// \return `true` if the camera is currently moving, `false` otherwise.
-        ZYPHRYON_INLINE Bool IsMoving() const
+        ZY_INLINE Bool IsMoving() const
         {
             return !mTweenPosition.IsComplete();
         }
@@ -179,7 +179,7 @@ namespace Tileon
         /// \brief Zooms the camera by a specified magnitude.
         ///
         /// \param Magnitude The magnitude to zoom the camera by.
-        ZYPHRYON_INLINE void Zoom(Real32 Magnitude)
+        ZY_INLINE void Zoom(Real32 Magnitude)
         {
             if (mTweenZoom.IsComplete())
             {
@@ -191,7 +191,7 @@ namespace Tileon
         ///
         /// \param Anchor The anchor point to focus on, specified as a placement in the world.
         /// \param Zoom   The new zoom level to transition to while focusing on the anchor point.
-        ZYPHRYON_INLINE void Focus(Placement Anchor, Real32 Zoom)
+        ZY_INLINE void Focus(Placement Anchor, Real32 Zoom)
         {
             if (mTweenZoom.IsComplete() && mTweenPosition.IsComplete())
             {
@@ -212,7 +212,7 @@ namespace Tileon
         /// \brief Checks if the camera is currently zooming due to an active tween.
         ///
         /// \return `true` if the camera is currently zooming, `false` otherwise.
-        ZYPHRYON_INLINE Bool IsZooming() const
+        ZY_INLINE Bool IsZooming() const
         {
             return !mTweenZoom.IsComplete();
         }
@@ -220,7 +220,7 @@ namespace Tileon
         /// \brief Gets the view-projection matrix of the camera.
         ///
         /// \return The view-projection matrix of the camera.
-        ZYPHRYON_INLINE ConstRef<Matrix4x4> GetViewProjection() const
+        ZY_INLINE ConstRef<Matrix4x4> GetViewProjection() const
         {
             return mCamera.GetViewProjection();
         }
@@ -228,7 +228,7 @@ namespace Tileon
         /// \brief Gets the inverse of the view-projection matrix of the camera.
         ///
         /// \return The inverse of the view-projection matrix of the camera.
-        ZYPHRYON_INLINE ConstRef<Matrix4x4> GetViewProjectionInverse() const
+        ZY_INLINE ConstRef<Matrix4x4> GetViewProjectionInverse() const
         {
             return mCamera.GetViewProjectionInverse();
         }
@@ -236,7 +236,7 @@ namespace Tileon
         /// \brief Gets the current frustum of the camera's view in logical units (e.g., world units).
         ///
         /// \return The current frustum of the camera's view.
-        ZYPHRYON_INLINE IntRect GetFrustum() const
+        ZY_INLINE IntRect GetFrustum() const
         {
             return mFrustum;
         }
@@ -245,12 +245,12 @@ namespace Tileon
         ///
         /// \param Pixel The screen pixel coordinates to convert, where (0, 0) is the top-left corner of the viewport.
         /// \return The corresponding world coordinates, including region coordinates and sub-region offset.
-        ZYPHRYON_INLINE Placement GetWorldCoordinates(Vector2 Pixel) const
+        ZY_INLINE Placement GetWorldCoordinates(Vector2 Pixel) const
         {
             const Graphic::Viewport Viewport(0, 0, mViewport.GetX(), mViewport.GetY());
 
             const Vector2 Tile(Pixel.GetX() / mDensity, Pixel.GetY() / mDensity);
-            const Vector2 Local = mCamera.GetWorldCoordinates<Graphic::Coordinates::Northwest>(Tile, Viewport);
+            const Vector2 Local = mCamera.GetWorldCoordinates<Graphic::Camera::Origin::Northwest>(Tile, Viewport);
 
             return Placement::Clamp(Placement(mPosition.GetRegionX(), mPosition.GetRegionY(), Local.GetX(), Local.GetY()));
         }
@@ -259,14 +259,14 @@ namespace Tileon
         ///
         /// \param World The world coordinates to convert, including region coordinates and sub-region offset.
         /// \return The corresponding screen pixel coordinates, where (0, 0) is the top-left corner of the viewport.
-        ZYPHRYON_INLINE Vector2 GetScreenCoordinates(Placement World) const
+        ZY_INLINE Vector2 GetScreenCoordinates(Placement World) const
         {
             const Graphic::Viewport Viewport(0, 0, mViewport.GetX(), mViewport.GetY());
 
             const Placement Local = World - mPosition;
             const Vector2 Absolute(Local.GetAbsoluteX(), Local.GetAbsoluteY());
 
-            const Vector2 Tile = mCamera.GetScreenCoordinates<Graphic::Coordinates::Northwest>(Absolute, Viewport);
+            const Vector2 Tile = mCamera.GetScreenCoordinates<Graphic::Camera::Origin::Northwest>(Absolute, Viewport);
             return Tile * mDensity;
         }
 
@@ -277,7 +277,7 @@ namespace Tileon
         /// \param Input The value to snap in logical units (e.g., world units).
         /// return The snapped value aligned to the effective pixel grid.
         template<typename Type>
-        ZYPHRYON_INLINE Type Snap(Type Input) const
+        ZY_INLINE Type Snap(Type Input) const
         {
             const Real32 Scale = mZoom / mDensity;
             return Round(Input / Scale) * Scale;

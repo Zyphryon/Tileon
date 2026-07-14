@@ -52,7 +52,7 @@ namespace Tileon::Editor::UI
         /// \brief Gets the current zoom level for the previewer.
         ///
         /// \return The current zoom level.
-        ZYPHRYON_INLINE Real32 GetZoom() const
+        ZY_INLINE Real32 GetZoom() const
         {
             return mZoom;
         }
@@ -60,15 +60,15 @@ namespace Tileon::Editor::UI
         /// \brief Sets the zoom level for the previewer.
         ///
         /// \param Zoom The zoom level to set.
-        ZYPHRYON_INLINE void SetZoom(Real32 Zoom)
+        ZY_INLINE void SetZoom(Real32 Zoom)
         {
-            mZoom = Math::Clamp(Zoom, kZoomMin, kZoomMax);
+            mZoom = Clamp(Zoom, kZoomMin, kZoomMax);
         }
 
         /// \brief Gets the pan offset for the previewer.
         ///
         /// \return The current pan offset.
-        ZYPHRYON_INLINE Vector2 GetPan() const
+        ZY_INLINE Vector2 GetPan() const
         {
             return mPan;
         }
@@ -76,25 +76,25 @@ namespace Tileon::Editor::UI
         /// \brief Sets the pan offset for the previewer.
         ///
         /// \param Pan The pan offset to set, where (0, 0) .
-        ZYPHRYON_INLINE void SetPan(Vector2 Pan)
+        ZY_INLINE void SetPan(Vector2 Pan)
         {
             mPan = Pan;
         }
 
         /// \brief Resets the zoom level to its default value (1.0).
-        ZYPHRYON_INLINE void ResetZoom()
+        ZY_INLINE void ResetZoom()
         {
             mZoom = 1.0f;
         }
 
         /// \brief Resets the pan offset to its default value (0, 0).
-        ZYPHRYON_INLINE void ResetPan()
+        ZY_INLINE void ResetPan()
         {
             mPan.Set(0.0f, 0.0f);
         }
 
         /// \brief Resets both the zoom level and pan offset to their default values.
-        ZYPHRYON_INLINE void Reset()
+        ZY_INLINE void Reset()
         {
             ResetZoom();
             ResetPan();

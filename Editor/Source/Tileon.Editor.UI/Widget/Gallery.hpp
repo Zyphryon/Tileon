@@ -13,7 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Editor.UI/Composer.hpp"
-#include <Zyphryon.Graphic/Texture.hpp>
+#include <Zyphryon.Graphic/Image.hpp>
 #include <Zyphryon.Math/Geometry/Rect.hpp>
 #include <Zyphryon.Math/Color.hpp>
 
@@ -65,7 +65,7 @@ namespace Tileon::Editor::UI
         /// \param Crop      The rectangular region of the thumbnail to display.
         /// \param Tint      The tint color to apply to the thumbnail when rendering.
         /// \return `true` if the item was selected, `false` otherwise.
-        Bool DrawItem(Ref<Composer> Composer, UInt32 ID, ConstStr8 Name, Graphic::Object Thumbnail, Rect Crop, IntColor8 Tint);
+        Bool DrawItem(Ref<Composer> Composer, UInt32 ID, Text Name, Graphic::Object Thumbnail, Rect Crop, IntColor8 Tint);
 
         /// \brief Overload of `DrawItem` that allows drawing an item without a thumbnail.
         ///
@@ -73,7 +73,7 @@ namespace Tileon::Editor::UI
         /// \param ID       The unique identifier for the item being drawn.
         /// \param Name     The display name of the item, shown in the gallery.
         /// \return `true` if the item was selected, `false` otherwise.
-        ZYPHRYON_INLINE Bool DrawItem(Ref<Composer> Composer, UInt32 ID, ConstStr8 Name)
+        ZY_INLINE Bool DrawItem(Ref<Composer> Composer, UInt32 ID, Text Name)
         {
             return DrawItem(Composer, ID, Name, 0, Rect::One(), IntColor8::White());
         }
@@ -86,7 +86,7 @@ namespace Tileon::Editor::UI
         /// \brief Sets the display mode for the gallery.
         ///
         /// \param Mode The display mode to set for the gallery.
-        ZYPHRYON_INLINE void SetMode(Mode Mode)
+        ZY_INLINE void SetMode(Mode Mode)
         {
             mMode = Mode;
         }
@@ -94,7 +94,7 @@ namespace Tileon::Editor::UI
         /// \brief Gets the current display mode of the gallery.
         ///
         /// \return The current display mode of the gallery.
-        ZYPHRYON_INLINE Mode GetMode() const
+        ZY_INLINE Mode GetMode() const
         {
             return mMode;
         }
@@ -102,7 +102,7 @@ namespace Tileon::Editor::UI
         /// \brief Sets the size of the thumbnails in the gallery.
         ///
         /// \param Size The new size to set for the thumbnails in the gallery, in pixels.
-        ZYPHRYON_INLINE void SetSize(Real32 Size)
+        ZY_INLINE void SetSize(Real32 Size)
         {
             mSize = Clamp(Size, kThumbnailMinSize, kThumbnailMaxSize);
         }
@@ -110,7 +110,7 @@ namespace Tileon::Editor::UI
         /// \brief Gets the current size of the thumbnails in the gallery.
         ///
         /// \return The current size of the thumbnails in the gallery, in pixels.
-        ZYPHRYON_INLINE Real32 GetSize() const
+        ZY_INLINE Real32 GetSize() const
         {
             return mSize;
         }
@@ -118,7 +118,7 @@ namespace Tileon::Editor::UI
         /// \brief Sets the filter string used to filter items in the gallery based on their names.
         ///
         /// \param Filter The new filter string to set for the gallery.
-        ZYPHRYON_INLINE void SetFilter(ConstStr8 Filter)
+        ZY_INLINE void SetFilter(Text Filter)
         {
             mFilter = Filter;
         }
@@ -126,7 +126,7 @@ namespace Tileon::Editor::UI
         /// \brief Gets the current filter string used to filter items in the gallery based on their names.
         ///
         /// \return The current filter string used to filter items in the gallery.
-        ZYPHRYON_INLINE ConstStr8 GetFilter() const
+        ZY_INLINE Text GetFilter() const
         {
             return mFilter;
         }
@@ -134,7 +134,7 @@ namespace Tileon::Editor::UI
         /// \brief Sets the currently selected item in the gallery by its unique identifier.
         ///
         /// \param Selection The unique identifier of the item to set as selected in the gallery.
-        ZYPHRYON_INLINE void SetSelection(UInt32 Selection)
+        ZY_INLINE void SetSelection(UInt32 Selection)
         {
             mSelection = Selection;
         }
@@ -142,7 +142,7 @@ namespace Tileon::Editor::UI
         /// \brief Gets the unique identifier of the currently selected item in the gallery.
         ///
         /// \return The unique identifier of the currently selected item in the gallery.
-        ZYPHRYON_INLINE UInt32 GetSelection() const
+        ZY_INLINE UInt32 GetSelection() const
         {
             return mSelection;
         }
@@ -153,7 +153,7 @@ namespace Tileon::Editor::UI
         ///
         /// \param Name The name of the item to check against the current filter string.
         /// \return `true` if the item matches the filter and should be displayed in the gallery, `false` otherwise.
-        Bool Filter(ConstStr8 Name) const;
+        Bool Filter(Text Name) const;
 
     private:
 
@@ -163,7 +163,7 @@ namespace Tileon::Editor::UI
         Bool    mActive;
         Mode    mMode;
         Real32  mSize;
-        Str8    mFilter;
+        Str     mFilter;
         UInt32  mSelection;
     };
 }

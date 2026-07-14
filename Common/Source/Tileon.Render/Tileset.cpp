@@ -21,7 +21,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Tileset::Tileset(Ref<Service::Host> Host)
+    Tileset::Tileset(Ref<Engine::Subsystem::Host> Host)
         : Locator { Host }
     {
     }
@@ -31,10 +31,10 @@ namespace Tileon
 
     void Tileset::Load()
     {
-        if (!LoadDatabase())
+        GetService<Content::Service>().Read(kFilename, [this](Filesystem::Result Result, Blob Data)
         {
-            LOG_WARNING("Failed to load tileset from '{}'", kFilename);
-        }
+            LoadDatabase(Result, Move(Data));
+        });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -61,7 +61,11 @@ namespace Tileon
         mRegistry.ForEach([this, Time](ConstRef<Motif> Motif)
         {
             const UInt8 Keyframe = Animator::Sample(Motif.GetAnimation(), Time, 0, Motif.GetEasing());
-            mGlyphs[Motif.GetID()].Crop = Motif.GetAnimation().GetFrameData(Keyframe);
+
+            if (!Motif.GetAnimation().IsEmpty())
+            {
+                mGlyphs[Motif.GetID()].Crop = Motif.GetAnimation().GetFrameData(Keyframe);
+            }
         });
     }
 
@@ -76,7 +80,6 @@ namespace Tileon
         {
             Glyph.Material = GetService<Content::Service>().Load<Graphic::Material>(Url);
         }
-
         Glyph.Span = Motif.GetSpan();
         Glyph.Tint = Motif.GetTint();
     }
@@ -84,18 +87,19 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Tileset::LoadDatabase()
+    void Tileset::LoadDatabase(Filesystem::Result Result, Blob Data)
     {
-        if (Blob File = GetService<Content::Service>().Find(Content::Uri(kFilename)); File)
+        if (Result == Filesystem::Result::Success)
         {
-            Reader Input(File.GetSpan<UInt8>());
-            mRegistry.OnSerialize(Archive(Input));
+            Reader  Input(Data.GetData(), Data.GetSize());
+            Archive(Input).Serialize(mRegistry);
+
+            Preload();
         }
         else
         {
-            return false;
+            LOG_W("Failed to load tileset from '{}'", kFilename);
         }
-        return true;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -103,9 +107,9 @@ namespace Tileon
 
     void Tileset::SaveDatabase()
     {
-        Writer Output;
-        mRegistry.OnSerialize(Archive(Output));
+        Writer  Output;
+        Archive(Output).Serialize(mRegistry);
 
-        GetService<Content::Service>().Save(kFilename, Output.GetData());
+        GetService<Content::Service>().Write(kFilename, Output.Detach(), { });
     }
 }

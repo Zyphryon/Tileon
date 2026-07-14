@@ -1,0 +1,47 @@
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Copyright (C) 2025-2026 Tileon contributors (see AUTHORS.md)
+//
+// This work is licensed under the terms of the MIT license.
+//
+// For a copy, see <https://opensource.org/licenses/MIT>.
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Vertex
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef VERTEX_SHADER
+
+out vec2 v_Texture;
+
+void main()
+{
+    gl_Position = vec4(v_Texture * 2.0 - 1.0, 0.0, 1.0);
+
+    v_Texture   = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+    v_Texture.y = 1.0 - v_Texture.y;
+}
+
+#endif // VERTEX_SHADER
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Fragment
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef FRAGMENT_SHADER
+
+layout(location = 0) out vec4 out_Color;
+
+uniform sampler2D s_Geometry;
+uniform sampler2D s_Radiance;
+
+in vec2 v_Texture;
+
+void main()
+{
+    vec3 Albedo   = texture(s_Geometry, v_Texture).rgb;
+    vec3 Radiance = texture(s_Radiance, v_Texture).rgb;
+    out_Color = vec4(Albedo * Radiance, 1.0);
+}
+
+#endif // FRAGMENT_SHADER

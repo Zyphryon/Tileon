@@ -27,13 +27,13 @@ namespace Tileon
     public:
 
         /// \brief Constructs a default typeface with no associated font resource.
-        ZYPHRYON_INLINE Typeface() = default;
+        ZY_INLINE Typeface() = default;
 
         /// \brief Constructs a typeface with the specified font resource and size.
         ///
         /// \param Path The path to the font resource to associate with the typeface.
         /// \param Size The size to set for the typeface.
-        ZYPHRYON_INLINE Typeface(AnyRef<Content::Uri> Path, Real32 Size)
+        ZY_INLINE Typeface(AnyRef<Content::Uri> Path, Real32 Size)
             : mFont { Move(Path) },
               mSize { Size }
         {
@@ -42,7 +42,7 @@ namespace Tileon
         /// \brief Sets the font resource associated with the typeface.
         ///
         /// \param Path The path to the font resource to associate with the typeface.
-        ZYPHRYON_INLINE void SetFont(AnyRef<Content::Uri> Path)
+        ZY_INLINE void SetFont(AnyRef<Content::Uri> Path)
         {
             mFont = Content::Proxy<Render::Font>(Move(Path));
         }
@@ -50,7 +50,7 @@ namespace Tileon
         /// \brief Gets the font resource associated with the typeface.
         ///
         /// \return The font resource associated with the typeface.
-        ZYPHRYON_INLINE ConstTracker<Render::Font> GetFont() const
+        ZY_INLINE ConstRetainer<Render::Font> GetFont() const
         {
             return mFont.GetResource();
         }
@@ -58,7 +58,7 @@ namespace Tileon
         /// \brief Sets the size of the typeface.
         ///
         /// \param Size The size to set for the typeface.
-        ZYPHRYON_INLINE void SetSize(Real32 Size)
+        ZY_INLINE void SetSize(Real32 Size)
         {
             mSize = Size;
         }
@@ -66,7 +66,7 @@ namespace Tileon
         /// \brief Gets the size of the typeface.
         ///
         /// \return The size of the typeface.
-        ZYPHRYON_INLINE Real32 GetSize() const
+        ZY_INLINE Real32 GetSize() const
         {
             return mSize;
         }
@@ -74,7 +74,7 @@ namespace Tileon
         /// \brief Resolves the deferred resources of the object using the provided service.
         ///
         /// \param Service The service used to load the object resources.
-        ZYPHRYON_INLINE void OnResolve(Ref<Content::Service> Service)
+        ZY_INLINE void OnResolve(Ref<Content::Service> Service)
         {
             mFont.Resolve(Service);
         }
@@ -83,10 +83,10 @@ namespace Tileon
         ///
         /// \param Archive The archive to serialize the object with.
         template<typename Serializer>
-        ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
+        ZY_INLINE void Serialize(Serializer Archive)
         {
-            Archive.SerializeObject(mFont);
-            Archive.SerializeObject(mSize);
+            Archive.Serialize(mFont);
+            Archive.Serialize(mSize);
         }
 
     private:

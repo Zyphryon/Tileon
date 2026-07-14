@@ -21,12 +21,12 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Foundry::Foundry(Ref<Context> Context)
+    Foundry::Foundry(Ref<Context> Context, Ref<Content::Service> Content)
         : Activity     { Context, "Foundry" },
           mRepository  { Context.GetRepository() },
           mTileset     { Context.GetTileset() },
           mSelection   { 0 },
-          mBrowser     { Context.GetService<Content::Service>(), UI::Browser::Mode::Popup }
+          mBrowser     { Content, UI::Browser::Mode::Popup }
     {
     }
 
@@ -83,7 +83,7 @@ namespace Tileon::Editor::View
         Composer.End();
 
         // Handle the file browser popup for selecting material resources for motifs.
-        if (mBrowser.Draw(Composer) && !mBrowser.GetSelection().empty())
+        if (mBrowser.Draw(Composer) && !mBrowser.GetSelection().IsEmpty())
         {
             Ref<Motif> Motif = mTileset.GetMotif(mSelection);
             Motif.SetMaterial(Content::Uri(mBrowser.GetSelection()));
@@ -113,7 +113,7 @@ namespace Tileon::Editor::View
         {
             const Bool Selected = (mSelection == Terrain.GetID());
 
-            Composer.Selectable(Base::Format("{:04} {}", Terrain.GetID(), Terrain.GetName()), Selected);
+            Composer.Selectable(String<256>::Print<"{0:04} {1}">(Terrain.GetID(), Terrain.GetName()), Selected);
 
             if (Composer.IsItemClicked())
             {
@@ -155,7 +155,7 @@ namespace Tileon::Editor::View
 
         Composer.Field("Name");
         Composer.PushItemWidth(-1);
-        Composer.InputText("##name", Terrain.GetName(), [&](ConstStr8 Value)
+        Composer.InputText("##name", Terrain.GetName(), [&](Text Value)
         {
             Terrain.SetName(Value);
         });
@@ -167,11 +167,11 @@ namespace Tileon::Editor::View
 
         Composer.Field("Resource");
         Composer.InputTextWithButton("##url", Motif.GetMaterial().GetPath(),
-            [&](ConstStr8 Url)
+            [&](Text Url)
             {
-                if (!Url.empty())
+                if (!Url.IsEmpty())
                 {
-                    Motif.SetMaterial(Format("Resources://{}", Url));
+                    Motif.SetMaterial(Str::Print<"Resources://{0}">(Url));
 
                     Dirty = true;
                 }
@@ -179,7 +179,7 @@ namespace Tileon::Editor::View
             "...",
             [&]()
             {
-                mBrowser.Open(".material");
+                mBrowser.Open(".mtl");
             },
             ImGuiInputTextFlags_EnterReturnsTrue);
         Composer.Spacing();
@@ -218,13 +218,13 @@ namespace Tileon::Editor::View
 
         Composer.Field("Easing");
         Composer.PushItemWidth(-1);
-        if (Composer.BeginCombo("##easing", Format("{}", Enum::Name(Motif.GetEasing()))))
+        if (Composer.BeginCombo("##easing", Enum::GetName(Motif.GetEasing())))
         {
-            for (const Easing Option : Enum::Values<Easing>())
+            for (const Easing Option : Enum::GetValues<Easing>())
             {
                 const Bool Selected = (Motif.GetEasing() == Option);
 
-                if (Composer.Selectable(Enum::Name(Option), Selected))
+                if (Composer.Selectable(Enum::GetName(Option), Selected))
                 {
                     Motif.SetEasing(Option);
                 }
@@ -259,7 +259,7 @@ namespace Tileon::Editor::View
         // Draw empty hint when there are no frames in the animation.
         if (Animation.IsEmpty())
         {
-            constexpr ConstStr8 kHint = "No Frames";
+            constexpr Text kHint = "No Frames";
 
             Composer.SetCursorPosX((Composer.GetContentRegionAvail().x - Composer.CalcTextSize(kHint).x) * 0.5f);
             Composer.TextDisabled(kHint);
@@ -290,7 +290,7 @@ namespace Tileon::Editor::View
 
             if (Glyph.Material)
             {
-                ConstTracker<Graphic::Texture> Albedo = Glyph.Material->GetTexture(Graphic::TextureSemantic::Albedo);
+                ConstRetainer<Graphic::Image> Albedo = Glyph.Material->GetImage(Graphic::TextureSlot::Albedo);
                 TextureWidth  = Albedo ? static_cast<Real32>(Albedo->GetWidth())  : 1.0f;
                 TextureHeight = Albedo ? static_cast<Real32>(Albedo->GetHeight()) : 1.0f;
             }
@@ -315,11 +315,11 @@ namespace Tileon::Editor::View
                 Composer.TableNextRow();
 
                 Composer.TableSetColumnIndex(0);
-                Composer.Label("{}", Keyframe + 1);
+                Composer.Label("{0}", Keyframe + 1);
 
                 Composer.TableSetColumnIndex(1);
                 Composer.PushItemWidth(-1);
-                if (Composer.InputFloat(Base::Format("##ax{}", Keyframe), X, 0.0f, 0.0f, "%.0f"))
+                if (Composer.InputFloat(Str32::Print<"##ax{0}">(Keyframe), X, 0.0f, 0.0f, "%.0f"))
                 {
                     Animation.SetFrameData(Keyframe, NormalizeRect(X, Y, W, H));
 
@@ -329,7 +329,7 @@ namespace Tileon::Editor::View
 
                 Composer.TableSetColumnIndex(2);
                 Composer.PushItemWidth(-1);
-                if (Composer.InputFloat(Base::Format("##ay{}", Keyframe), Y, 0.0f, 0.0f, "%.0f"))
+                if (Composer.InputFloat(Str32::Print<"##ay{0}">(Keyframe), Y, 0.0f, 0.0f, "%.0f"))
                 {
                     Animation.SetFrameData(Keyframe, NormalizeRect(X, Y, W, H));
 
@@ -339,7 +339,7 @@ namespace Tileon::Editor::View
 
                 Composer.TableSetColumnIndex(3);
                 Composer.PushItemWidth(-1);
-                if (Composer.InputFloat(Base::Format("##aw{}", Keyframe), W, 0.0f, 0.0f, "%.0f"))
+                if (Composer.InputFloat(Str32::Print<"##aw{0}">(Keyframe), W, 0.0f, 0.0f, "%.0f"))
                 {
                     Animation.SetFrameData(Keyframe, NormalizeRect(X, Y, W, H));
 
@@ -349,7 +349,7 @@ namespace Tileon::Editor::View
 
                 Composer.TableSetColumnIndex(4);
                 Composer.PushItemWidth(-1);
-                if (Composer.InputFloat(Base::Format("##ah{}", Keyframe), H, 0.0f, 0.0f, "%.0f"))
+                if (Composer.InputFloat(Str32::Print<"##ah{0}">(Keyframe), H, 0.0f, 0.0f, "%.0f"))
                 {
                     Animation.SetFrameData(Keyframe, NormalizeRect(X, Y, W, H));
 
@@ -359,7 +359,7 @@ namespace Tileon::Editor::View
 
                 Composer.TableSetColumnIndex(5);
                 Composer.PushItemWidth(-1);
-                if (Composer.InputFloat(Base::Format("##ad{}", Keyframe), Duration, 0.0f, 0.0f, "%.2f"))
+                if (Composer.InputFloat(Str32::Print<"##ad{0}">(Keyframe), Duration, 0.0f, 0.0f, "%.2f"))
                 {
                     Animation.SetFrameDuration(Keyframe, Max(Duration, 0.01f));
 
@@ -368,7 +368,7 @@ namespace Tileon::Editor::View
                 Composer.PopItemWidth();
 
                 Composer.TableSetColumnIndex(6);
-                if (Composer.SmallButton(Base::Format("x##{}", Keyframe)))
+                if (Composer.SmallButton(Str32::Print<"x##{0}">(Keyframe)))
                 {
                     RemoveMotifAt = static_cast<SInt32>(Keyframe);
                 }
@@ -398,27 +398,27 @@ namespace Tileon::Editor::View
     {
         if (Composer.BeginTabBar("##right_tabs"))
         {
-            if (ConstTracker<Graphic::Texture> Albedo = Glyph.Material->GetTexture(Graphic::TextureSemantic::Albedo))
+            if (ConstRetainer<Graphic::Image> Albedo = Glyph.Material->GetImage(Graphic::TextureSlot::Albedo))
             {
                 if (Composer.BeginTabItem("Preview"))
                 {
                     const Real32  Density = GetContext().GetDirector().GetDensity();
                     const Vector2 Size(Glyph.Span.GetX() * Density, Glyph.Span.GetY() * Density);
 
-                    mPreviewer.Draw(Composer, Albedo->GetID(), Size, Glyph.Crop, Color::FromColor8(Glyph.Tint));
+                    mPreviewer.Draw(Composer, Albedo->GetHandle(), Size, Glyph.Crop, Color::FromColor8(Glyph.Tint));
 
                     Composer.EndTabItem();
                 }
             }
 
-            for (const Graphic::TextureSemantic Semantic : Enum::Values<Graphic::TextureSemantic>())
+            for (const Graphic::TextureSlot Semantic : Enum::GetValues<Graphic::TextureSlot>())
             {
-                if (ConstTracker<Graphic::Texture> Texture = Glyph.Material->GetTexture(Semantic))
+                if (ConstRetainer<Graphic::Image> Texture = Glyph.Material->GetImage(Semantic))
                 {
-                    if (Composer.BeginTabItem(Enum::Name(Semantic)))
+                    if (Composer.BeginTabItem(Enum::GetName(Semantic)))
                     {
                         const Vector2 Size(Texture->GetWidth(), Texture->GetHeight());
-                        mPreviewer.Draw(Composer, Texture->GetID(), Size, Rect::One());
+                        mPreviewer.Draw(Composer, Texture->GetHandle(), Size, Rect::One());
 
                         Composer.EndTabItem();
                     }
@@ -451,9 +451,9 @@ namespace Tileon::Editor::View
             ConstRef<Tileset::Glyph> Glyph   = mTileset.GetGlyph(Motif.GetID());
 
             Composer.SetCursorPosX(Composer.GetStyle().ItemSpacing.x);
-            Composer.Label("{:04}  {}", Terrain.GetID(), Terrain.GetName().empty() ? "(Unnamed)" : Terrain.GetName());
+            Composer.Label("{0:04}  {1}", Terrain.GetID(), Terrain.GetName().IsEmpty() ? "(Unnamed)" : Terrain.GetName());
 
-            constexpr ConstStr8 kStatusLabel[] = {
+            constexpr Text kStatusLabel[] = {
                 "[--] Empty",
                 "[..] Loading",
                 "[OK] Ready",
@@ -475,7 +475,7 @@ namespace Tileon::Editor::View
         }
         else
         {
-            constexpr ConstStr8 Hint = "No terrain selected";
+            constexpr Text Hint = "No terrain selected";
 
             Composer.SetCursorPosX((Composer.GetWindowWidth() - Composer.CalcTextSize(Hint).x) * 0.5f);
             Composer.TextDisabled(Hint);
@@ -487,9 +487,9 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Foundry::DrawEmptyPanel(Ref<UI::Composer> Composer, ConstStr8 Message)
+    void Foundry::DrawEmptyPanel(Ref<UI::Composer> Composer, Text Message)
     {
-        constexpr ConstStr8 kIcon = "?";
+        constexpr Text kIcon = "?";
 
         const ImVec2 Available = Composer.GetContentRegionAvail();
         const ImVec2 IconSize  = Composer.CalcTextSize(kIcon);

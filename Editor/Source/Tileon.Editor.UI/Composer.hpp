@@ -13,8 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Icon.hpp"
-#include <Zyphryon.Graphic/Common.hpp>
-#include <Zyphryon.Math/Color.hpp>
+#include <Zyphryon.Graphic/Types.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -29,391 +28,395 @@ namespace Tileon::Editor::UI
     {
     public:
 
-        ZYPHRYON_INLINE Bool Begin(ConstStr8 Title, ImGuiWindowFlags Flags = ImGuiWindowFlags_None)
+        ZY_INLINE Bool Begin(Text Title, ImGuiWindowFlags Flags = ImGuiWindowFlags_None)
         {
-            return ImGui::Begin(Title.data(), nullptr, Flags);
+            return ImGui::Begin(Title.GetData(), nullptr, Flags);
         }
 
-        ZYPHRYON_INLINE Bool Begin(ConstStr8 Title, Ref<Bool> Open, ImGuiWindowFlags Flags = ImGuiWindowFlags_None)
+        ZY_INLINE Bool Begin(Text Title, Ref<Bool> Open, ImGuiWindowFlags Flags = ImGuiWindowFlags_None)
         {
-            return ImGui::Begin(Title.data(), &Open, Flags);
+            return ImGui::Begin(Title.GetData(), AddressOf(Open), Flags);
         }
 
-        ZYPHRYON_INLINE void End()
+        ZY_INLINE void End()
         {
             ImGui::End();
         }
 
-        ZYPHRYON_INLINE void BeginChild(ConstStr8 ID, ImVec2 Size = ImVec2(0, 0), ImGuiChildFlags ChildFlags = ImGuiChildFlags_None, ImGuiWindowFlags Flags = ImGuiWindowFlags_None)
+        ZY_INLINE void BeginChild(Text ID, ImVec2 Size = ImVec2(0, 0), ImGuiChildFlags ChildFlags = ImGuiChildFlags_None, ImGuiWindowFlags Flags = ImGuiWindowFlags_None)
         {
-            ImGui::BeginChild(ID.data(), Size, ChildFlags, Flags);
+            ImGui::BeginChild(ID.GetData(), Size, ChildFlags, Flags);
         }
 
-        ZYPHRYON_INLINE void EndChild()
+        ZY_INLINE void EndChild()
         {
             ImGui::EndChild();
         }
 
-        ZYPHRYON_INLINE Bool TreeNode(ConstStr8 Label, ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_None)
+        ZY_INLINE Bool TreeNode(Text Label, ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_None)
         {
-            return ImGui::TreeNodeEx(Label.data(), Flags);
+            return ImGui::TreeNodeEx(Label.GetData(), Flags);
         }
 
-        ZYPHRYON_INLINE void TreePop()
+        ZY_INLINE void TreePop()
         {
             ImGui::TreePop();
         }
 
-        ZYPHRYON_INLINE void SetNextItemOpen(Bool Open, ImGuiCond Condition = ImGuiCond_None)
+        ZY_INLINE void SetNextItemOpen(Bool Open, ImGuiCond Condition = ImGuiCond_None)
         {
             ImGui::SetNextItemOpen(Open, Condition);
         }
 
-        ZYPHRYON_INLINE Bool BeginMainMenuBar()
+        ZY_INLINE Bool BeginMainMenuBar()
         {
             return ImGui::BeginMainMenuBar();
         }
 
-        ZYPHRYON_INLINE void EndMainMenuBar()
+        ZY_INLINE void EndMainMenuBar()
         {
             ImGui::EndMainMenuBar();
         }
 
-        ZYPHRYON_INLINE Bool BeginMenu(ConstStr8 Label, Bool Enabled = true)
+        ZY_INLINE Bool BeginMenu(Text Label, Bool Enabled = true)
         {
-            return ImGui::BeginMenu(Label.data(), Enabled);
+            return ImGui::BeginMenu(Label.GetData(), Enabled);
         }
 
-        ZYPHRYON_INLINE void EndMenu()
+        ZY_INLINE void EndMenu()
         {
             ImGui::EndMenu();
         }
 
-        ZYPHRYON_INLINE ImVec2 GetViewportCenter() const
+        ZY_INLINE ImVec2 GetViewportCenter() const
         {
             return ImGui::GetMainViewport()->GetCenter();
         }
 
-        ZYPHRYON_INLINE void SetNextWindowPos(ImVec2 Position, ImGuiCond Condition = ImGuiCond_None, ImVec2 Pivot = ImVec2(0.0f, 0.0f))
+        ZY_INLINE void SetNextWindowPos(ImVec2 Position, ImGuiCond Condition = ImGuiCond_None, ImVec2 Pivot = ImVec2(0.0f, 0.0f))
         {
             ImGui::SetNextWindowPos(Position, Condition, Pivot);
         }
 
-        ZYPHRYON_INLINE void SetNextWindowSize(Real32 Width, Real32 Height, ImGuiCond Condition = ImGuiCond_None)
+        ZY_INLINE void SetNextWindowSize(Real32 Width, Real32 Height, ImGuiCond Condition = ImGuiCond_None)
         {
             ImGui::SetNextWindowSize(ImVec2(Width, Height), Condition);
         }
 
-        ZYPHRYON_INLINE void SetNextWindowSizeConstraints(Real32 MinWidth, Real32 MinHeight, Real32 MaxWidth = FLT_MAX, Real32 MaxHeight = FLT_MAX)
+        ZY_INLINE void SetNextWindowSizeConstraints(Real32 MinWidth, Real32 MinHeight, Real32 MaxWidth = FLT_MAX, Real32 MaxHeight = FLT_MAX)
         {
             ImGui::SetNextWindowSizeConstraints(ImVec2(MinWidth, MinHeight), ImVec2(MaxWidth, MaxHeight));
         }
 
-        ZYPHRYON_INLINE ImVec2 GetDisplaySize() const
+        ZY_INLINE ImVec2 GetDisplaySize() const
         {
             return ImGui::GetIO().DisplaySize;
         }
 
-        ZYPHRYON_INLINE Real32 GetWindowBottom(UInt32 Rows = 1) const
+        ZY_INLINE Real32 GetWindowBottom(UInt32 Rows = 1) const
         {
             return ImGui::GetWindowHeight()
                 - ImGui::GetFrameHeightWithSpacing() * static_cast<Real32>(Rows)
                 - ImGui::GetStyle().WindowPadding.y;
         }
 
-        ZYPHRYON_INLINE void SliderFloat(ConstStr8 ID, Ref<Real32> Value, Real32 Min, Real32 Max, ConstStr8 Format = "%.2f")
+        ZY_INLINE void SliderFloat(Text ID, Ref<Real32> Value, Real32 Min, Real32 Max, Text Format = "%.2f")
         {
-            ImGui::SliderFloat(ID.data(), &Value, Min, Max, Format.data());
+            ImGui::SliderFloat(ID.GetData(), AddressOf(Value), Min, Max, Format.GetData());
         }
 
-        ZYPHRYON_INLINE void BeginTooltip()
+        ZY_INLINE void BeginTooltip()
         {
             ImGui::BeginTooltip();
         }
 
-        ZYPHRYON_INLINE void EndTooltip()
+        ZY_INLINE void EndTooltip()
         {
             ImGui::EndTooltip();
         }
 
-        ZYPHRYON_INLINE void SetTooltip(ConstStr8 Text)
+        ZY_INLINE void SetTooltip(Text Text)
         {
-            ImGui::SetTooltip("%s", Text.data());
+            if (ImGui::BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_None))
+            {
+                ImGui::TextUnformatted(Text.GetData(), Text.GetData() + Text.GetSize());
+                ImGui::EndTooltip();
+            }
         }
 
-        ZYPHRYON_INLINE void SameLine(Real32 OffsetX = 0.0f, Real32 Spacing = -1.0f)
+        ZY_INLINE void SameLine(Real32 OffsetX = 0.0f, Real32 Spacing = -1.0f)
         {
             ImGui::SameLine(OffsetX, Spacing);
         }
 
-        ZYPHRYON_INLINE void Spacing()
+        ZY_INLINE void Spacing()
         {
             ImGui::Spacing();
         }
 
-        ZYPHRYON_INLINE void Separator()
+        ZY_INLINE void Separator()
         {
             ImGui::Separator();
         }
 
-        ZYPHRYON_INLINE void SeparatorEx(ImGuiSeparatorFlags Flags = ImGuiSeparatorFlags_None)
+        ZY_INLINE void SeparatorEx(ImGuiSeparatorFlags Flags = ImGuiSeparatorFlags_None)
         {
             ImGui::SeparatorEx(Flags);
         }
 
-        ZYPHRYON_INLINE ImVec2 GetContentRegionAvail() const
+        ZY_INLINE ImVec2 GetContentRegionAvail() const
         {
             return ImGui::GetContentRegionAvail();
         }
 
-        ZYPHRYON_INLINE ImVec2 GetCursorScreenPos() const
+        ZY_INLINE ImVec2 GetCursorScreenPos() const
         {
             return ImGui::GetCursorScreenPos();
         }
 
-        ZYPHRYON_INLINE Real32 GetFrameHeightWithSpacing() const
+        ZY_INLINE Real32 GetFrameHeightWithSpacing() const
         {
             return ImGui::GetFrameHeightWithSpacing();
         }
 
-        ZYPHRYON_INLINE Real32 GetTextLineHeight() const
+        ZY_INLINE Real32 GetTextLineHeight() const
         {
             return ImGui::GetTextLineHeight();
         }
 
-        ZYPHRYON_INLINE void SetCursorScreenPos(ImVec2 Pos)
+        ZY_INLINE void SetCursorScreenPos(ImVec2 Pos)
         {
             ImGui::SetCursorScreenPos(Pos);
         }
 
-        ZYPHRYON_INLINE ImVec2 CalcTextSize(ConstStr8 Text) const
+        ZY_INLINE ImVec2 CalcTextSize(Text Text) const
         {
-            return ImGui::CalcTextSize(Text.data());
+            return ImGui::CalcTextSize(Text.GetData(), Text.GetData() + Text.GetSize());
         }
 
-        ZYPHRYON_INLINE void PushItemWidth(Real32 Width)
+        ZY_INLINE void PushItemWidth(Real32 Width)
         {
             ImGui::PushItemWidth(Width);
         }
 
-        ZYPHRYON_INLINE void PopItemWidth()
+        ZY_INLINE void PopItemWidth()
         {
             ImGui::PopItemWidth();
         }
 
-        ZYPHRYON_INLINE void SetNextItemWidth(Real32 Width)
+        ZY_INLINE void SetNextItemWidth(Real32 Width)
         {
             ImGui::SetNextItemWidth(Width);
         }
 
-        ZYPHRYON_INLINE void SetCursorPosX(Real32 X)
+        ZY_INLINE void SetCursorPosX(Real32 X)
         {
             ImGui::SetCursorPosX(X);
         }
 
-        ZYPHRYON_INLINE void SetCursorPosY(Real32 Y)
+        ZY_INLINE void SetCursorPosY(Real32 Y)
         {
             ImGui::SetCursorPosY(Y);
         }
 
-        ZYPHRYON_INLINE void SetScrollHereY(Real32 CenterRatio = 0.5f)
+        ZY_INLINE void SetScrollHereY(Real32 CenterRatio = 0.5f)
         {
             ImGui::SetScrollHereY(CenterRatio);
         }
 
-        ZYPHRYON_INLINE ImVec2 GetItemRectMin() const
+        ZY_INLINE ImVec2 GetItemRectMin() const
         {
             return ImGui::GetItemRectMin();
         }
 
-        ZYPHRYON_INLINE ImVec2 GetItemRectSize() const
+        ZY_INLINE ImVec2 GetItemRectSize() const
         {
             return ImGui::GetItemRectSize();
         }
 
-        ZYPHRYON_INLINE ImVec2 GetMousePos() const
+        ZY_INLINE ImVec2 GetMousePos() const
         {
             return ImGui::GetMousePos();
         }
 
-        ZYPHRYON_INLINE ImVec2 GetMouseDelta() const
+        ZY_INLINE ImVec2 GetMouseDelta() const
         {
             return ImGui::GetIO().MouseDelta;
         }
 
-        ZYPHRYON_INLINE Real32 GetMouseWheel() const
+        ZY_INLINE Real32 GetMouseWheel() const
         {
             return ImGui::GetIO().MouseWheel;
         }
 
-        ZYPHRYON_INLINE Bool IsMouseClicked(ImGuiMouseButton Button = ImGuiMouseButton_Left, Bool Repeat = false) const
+        ZY_INLINE Bool IsMouseClicked(ImGuiMouseButton Button = ImGuiMouseButton_Left, Bool Repeat = false) const
         {
             return ImGui::IsMouseClicked(Button, Repeat);
         }
 
-        ZYPHRYON_INLINE Bool IsMouseDragging(ImGuiMouseButton Button = ImGuiMouseButton_Left, Real32 LockThreshold = -1.0f) const
+        ZY_INLINE Bool IsMouseDragging(ImGuiMouseButton Button = ImGuiMouseButton_Left, Real32 LockThreshold = -1.0f) const
         {
             return ImGui::IsMouseDragging(Button, LockThreshold);
         }
 
-        ZYPHRYON_INLINE Bool IsMouseHoveringRect(ImVec2 Min, ImVec2 Max, Bool Clip = true) const
+        ZY_INLINE Bool IsMouseHoveringRect(ImVec2 Min, ImVec2 Max, Bool Clip = true) const
         {
             return ImGui::IsMouseHoveringRect(Min, Max, Clip);
         }
 
-        ZYPHRYON_INLINE ConstRef<ImGuiStyle> GetStyle() const
+        ZY_INLINE ConstRef<ImGuiStyle> GetStyle() const
         {
             return ImGui::GetStyle();
         }
 
-        ZYPHRYON_INLINE ImU32 GetColorU32(ImGuiCol Index) const
+        ZY_INLINE ImU32 GetColorU32(ImGuiCol Index) const
         {
             return ImGui::GetColorU32(Index);
         }
 
-        ZYPHRYON_INLINE ImU32 GetColorU32(ImGuiCol Index, Real32 Alpha) const
+        ZY_INLINE ImU32 GetColorU32(ImGuiCol Index, Real32 Alpha) const
         {
             return ImGui::GetColorU32(Index, Alpha);
         }
 
-        ZYPHRYON_INLINE void PushStyleVar(ImGuiStyleVar Index, Real32 Value)
+        ZY_INLINE void PushStyleVar(ImGuiStyleVar Index, Real32 Value)
         {
             ImGui::PushStyleVar(Index, Value);
         }
 
-        ZYPHRYON_INLINE void PushStyleVar(ImGuiStyleVar Index, ImVec2 Value)
+        ZY_INLINE void PushStyleVar(ImGuiStyleVar Index, ImVec2 Value)
         {
             ImGui::PushStyleVar(Index, Value);
         }
 
-        ZYPHRYON_INLINE void PopStyleVar(SInt32 Count = 1)
+        ZY_INLINE void PopStyleVar(SInt32 Count = 1)
         {
             ImGui::PopStyleVar(Count);
         }
 
-        ZYPHRYON_INLINE ImVec4 GetStyleColorVec4(ImGuiCol Index) const
+        ZY_INLINE ImVec4 GetStyleColorVec4(ImGuiCol Index) const
         {
             return ImGui::GetStyleColorVec4(Index);
         }
 
-        ZYPHRYON_INLINE Ptr<ImDrawList> GetWindowDrawList() const
+        ZY_INLINE Ptr<ImDrawList> GetWindowDrawList() const
         {
             return ImGui::GetWindowDrawList();
         }
 
-        ZYPHRYON_INLINE void BeginDisabled(Bool Disabled = true)
+        ZY_INLINE void BeginDisabled(Bool Disabled = true)
         {
             ImGui::BeginDisabled(Disabled);
         }
 
-        ZYPHRYON_INLINE void EndDisabled()
+        ZY_INLINE void EndDisabled()
         {
             ImGui::EndDisabled();
         }
 
-        ZYPHRYON_INLINE void Header(ConstStr8 Label)
+        ZY_INLINE void Header(Text Label)
         {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.70f, 0.85f, 1.0f));
-            ImGui::SeparatorText(Label.data());
+            ImGui::SeparatorTextEx(0, Label.GetData(), Label.GetData() + Label.GetSize(), 0.0f);
             ImGui::PopStyleColor();
         }
 
-        ZYPHRYON_INLINE void Section(ConstStr8 Label)
+        ZY_INLINE void Section(Text Label)
         {
             Header(Label);
             Spacing();
         }
 
-        ZYPHRYON_INLINE void Field(ConstStr8 Label)
+        ZY_INLINE void Field(Text Label)
         {
             PushStyleColor(ImGuiCol_Text, GetStyle().Colors[ImGuiCol_TextDisabled]);
-            ImGui::TextUnformatted(Label.data(), Label.data() + Label.size());
+            ImGui::TextUnformatted(Label.GetData(), Label.GetData() + Label.GetSize());
             PopStyleColor();
         }
 
-        ZYPHRYON_INLINE void Indent(Real32 Width = 0.0f)
+        ZY_INLINE void Indent(Real32 Width = 0.0f)
         {
             ImGui::Indent(Width);
         }
 
-        ZYPHRYON_INLINE void Unindent(Real32 Width = 0.0f)
+        ZY_INLINE void Unindent(Real32 Width = 0.0f)
         {
             ImGui::Unindent(Width);
         }
 
         template<typename... Arguments>
-        ZYPHRYON_INLINE void Label(ConstStr8 Format, AnyRef<Arguments>... Parameters)
+        ZY_INLINE void Label(Text Format, AnyRef<Arguments>... Parameters)
         {
             ImGui::AlignTextToFramePadding();
 
-            const ConstStr8 Text = Base::Format(Format, Parameters...);
-            ImGui::TextUnformatted(Text.data(), Text.data() + Text.size());
+            const Text Text = String<1024>::Print(Format::Pattern(Format), Parameters...);
+            ImGui::TextUnformatted(Text.GetData(), Text.GetData() + Text.GetSize());
         }
 
         template<typename... Arguments>
-        ZYPHRYON_INLINE void TextDisabled(ConstStr8 Format, AnyRef<Arguments>... Parameters)
+        ZY_INLINE void TextDisabled(Text Format, AnyRef<Arguments>... Parameters)
         {
-            const ConstStr8 Text = Base::Format(Format, Parameters...);
+            const Text Text = String<1024>::Print(Format::Pattern(Format), Parameters...);
 
             PushStyleColor(ImGuiCol_Text, GetStyle().Colors[ImGuiCol_TextDisabled]);
-            ImGui::TextUnformatted(Text.data(), Text.data() + Text.size());
+            ImGui::TextUnformatted(Text.GetData(), Text.GetData() + Text.GetSize());
             PopStyleColor();
         }
 
         template<typename... Arguments>
-        ZYPHRYON_INLINE void TextColored(ImVec4 Color, ConstStr8 Format, AnyRef<Arguments>... Parameters)
+        ZY_INLINE void TextColored(ImVec4 Color, Text Format, AnyRef<Arguments>... Parameters)
         {
-            const ConstStr8 Text = Base::Format(Format, Parameters...);
+            const Text Text = String<1024>::Print(Format::Pattern(Format), Parameters...);
 
             PushStyleColor(ImGuiCol_Text, Color);
-            ImGui::TextUnformatted(Text.data(), Text.data() + Text.size());
+            ImGui::TextUnformatted(Text.GetData(), Text.GetData() + Text.GetSize());
             PopStyleColor();
         }
 
-        ZYPHRYON_INLINE Real32 GetWindowWidth() const
+        ZY_INLINE Real32 GetWindowWidth() const
         {
             return ImGui::GetWindowWidth();
         }
 
-        ZYPHRYON_INLINE Real32 GetWindowHeight() const
+        ZY_INLINE Real32 GetWindowHeight() const
         {
             return ImGui::GetWindowHeight();
         }
 
-        ZYPHRYON_INLINE Real32 GetCursorPosX() const
+        ZY_INLINE Real32 GetCursorPosX() const
         {
             return ImGui::GetCursorPosX();
         }
 
-        ZYPHRYON_INLINE void Image(Graphic::Object ID, ImVec2 Size, ImVec4 UV = ImVec4(0, 0, 1, 1))
+        ZY_INLINE void Image(Graphic::Object ID, ImVec2 Size, ImVec4 UV = ImVec4(0, 0, 1, 1))
         {
             const ImVec2 UV0(UV.x, UV.y);
             const ImVec2 UV1(UV.z, UV.w);
             ImGui::Image(ID, ImVec2(Size.x, Size.y), UV0, UV1);
         }
 
-        ZYPHRYON_INLINE void PushStyleColor(ImGuiCol Index, ImVec4 Color)
+        ZY_INLINE void PushStyleColor(ImGuiCol Index, ImVec4 Color)
         {
 
             ImGui::PushStyleColor(Index, Color);
         }
 
-        ZYPHRYON_INLINE void PopStyleColor(SInt32 Count = 1)
+        ZY_INLINE void PopStyleColor(SInt32 Count = 1)
         {
             ImGui::PopStyleColor(Count);
         }
 
-        ZYPHRYON_INLINE Bool MenuItem(ConstStr8 Label, ConstStr8 Shortcut = {}, Bool Enabled = true)
+        ZY_INLINE Bool MenuItem(Text Label, Text Shortcut = {}, Bool Enabled = true)
         {
-            return ImGui::MenuItem(Label.data(), Shortcut.empty() ? nullptr : Shortcut.data(), false, Enabled);
+            return ImGui::MenuItem(Label.GetData(), Shortcut.IsEmpty() ? nullptr : Shortcut.GetData(), false, Enabled);
         }
 
-        ZYPHRYON_INLINE Bool Button(ConstStr8 Label, Real32 Width = 0.0f, Real32 Height = 0.0f)
+        ZY_INLINE Bool Button(Text Label, Real32 Width = 0.0f, Real32 Height = 0.0f)
         {
-            return ImGui::Button(Label.data(), ImVec2(Width, Height));
+            return ImGui::Button(Label.GetData(), ImVec2(Width, Height));
         }
 
-        ZYPHRYON_INLINE Bool DisabledButton(ConstStr8 Label, Bool Disable, Real32 Width = 0.0f, Real32 Height = 0.0f)
+        ZY_INLINE Bool DisabledButton(Text Label, Bool Disable, Real32 Width = 0.0f, Real32 Height = 0.0f)
         {
             ImGui::BeginDisabled(Disable);
 
@@ -424,152 +427,157 @@ namespace Tileon::Editor::UI
             return Result;
         }
 
-        ZYPHRYON_INLINE Bool SmallButton(ConstStr8 Label)
+        ZY_INLINE Bool SmallButton(Text Label)
         {
-            return ImGui::SmallButton(Label.data());
+            return ImGui::SmallButton(Label.GetData());
         }
 
-        ZYPHRYON_INLINE Bool Checkbox(ConstStr8 Label, Ref<Bool> State)
+        ZY_INLINE Bool Checkbox(Text Label, Ref<Bool> State)
         {
-            return ImGui::Checkbox(Label.data(), &State);
+            return ImGui::Checkbox(Label.GetData(), AddressOf(State));
         }
 
-        ZYPHRYON_INLINE Bool RadioButton(ConstStr8 Label, Bool Active)
+        ZY_INLINE Bool RadioButton(Text Label, Bool Active)
         {
-            return ImGui::RadioButton(Label.data(), Active);
+            return ImGui::RadioButton(Label.GetData(), Active);
         }
 
-        ZYPHRYON_INLINE Bool Selectable(ConstStr8 Label, Bool Selected = false, ImGuiSelectableFlags Flags = ImGuiSelectableFlags_None)
+        ZY_INLINE Bool Selectable(Text Label, Bool Selected = false, ImGuiSelectableFlags Flags = ImGuiSelectableFlags_None)
         {
-            return ImGui::Selectable(Label.data(), Selected, Flags);
+            return ImGui::Selectable(Label.GetData(), Selected, Flags);
         }
 
-        ZYPHRYON_INLINE Bool IsItemClicked(ImGuiMouseButton Button = ImGuiMouseButton_Left)
+        ZY_INLINE Bool IsItemClicked(ImGuiMouseButton Button = ImGuiMouseButton_Left)
         {
             return ImGui::IsItemClicked(Button);
         }
 
-        ZYPHRYON_INLINE Bool IsItemToggledOpen() const
+        ZY_INLINE Bool IsItemToggledOpen() const
         {
             return ImGui::IsItemToggledOpen();
         }
 
-        ZYPHRYON_INLINE Bool IsItemHovered(ImGuiHoveredFlags Flags = ImGuiHoveredFlags_None) const
+        ZY_INLINE Bool IsItemHovered(ImGuiHoveredFlags Flags = ImGuiHoveredFlags_None) const
         {
             return ImGui::IsItemHovered(Flags);
         }
 
-        ZYPHRYON_INLINE Bool IsKeyPressed(ImGuiKey Key, Bool Repeat = false) const
+        ZY_INLINE Bool IsKeyPressed(ImGuiKey Key, Bool Repeat = false) const
         {
             return ImGui::IsKeyPressed(Key, Repeat);
         }
 
-        ZYPHRYON_INLINE Bool InvisibleButton(ConstStr8 ID, ImVec2 Size, ImGuiButtonFlags Flags = ImGuiButtonFlags_None)
+        ZY_INLINE Bool InvisibleButton(Text ID, ImVec2 Size, ImGuiButtonFlags Flags = ImGuiButtonFlags_None)
         {
-            return ImGui::InvisibleButton(ID.data(), Size, Flags);
+            return ImGui::InvisibleButton(ID.GetData(), Size, Flags);
         }
 
-        ZYPHRYON_INLINE void OpenPopup(ConstStr8 ID, ImGuiPopupFlags Flags = ImGuiPopupFlags_None)
+        ZY_INLINE Bool IsPopupOpen(Text ID)
         {
-            ImGui::OpenPopup(ID.data(), Flags);
+            return ImGui::IsPopupOpen(ID.GetData());
         }
 
-        ZYPHRYON_INLINE Bool BeginPopupModal(ConstStr8 ID, ImGuiWindowFlags Flags = ImGuiWindowFlags_None)
+        ZY_INLINE void OpenPopup(Text ID, ImGuiPopupFlags Flags = ImGuiPopupFlags_None)
         {
-            return ImGui::BeginPopupModal(ID.data(), nullptr, Flags);
+            ImGui::OpenPopup(ID.GetData(), Flags);
         }
 
-        ZYPHRYON_INLINE void CloseCurrentPopup()
+        ZY_INLINE Bool BeginPopupModal(Text ID, ImGuiWindowFlags Flags = ImGuiWindowFlags_None)
+        {
+            return ImGui::BeginPopupModal(ID.GetData(), nullptr, Flags);
+        }
+
+        ZY_INLINE void CloseCurrentPopup()
         {
             ImGui::CloseCurrentPopup();
         }
 
-        ZYPHRYON_INLINE Bool BeginPopupContextItem(ConstStr8 ID = {})
+        ZY_INLINE Bool BeginPopupContextItem(Text ID = {})
         {
-            return ImGui::BeginPopupContextItem(ID.empty() ? nullptr : ID.data());
+            return ImGui::BeginPopupContextItem(ID.IsEmpty() ? nullptr : ID.GetData());
         }
 
-        ZYPHRYON_INLINE void EndPopup()
+        ZY_INLINE void EndPopup()
         {
             ImGui::EndPopup();
         }
 
-        ZYPHRYON_INLINE Bool BeginTabBar(ConstStr8 ID, ImGuiTabBarFlags Flags = ImGuiTabBarFlags_None)
+        ZY_INLINE Bool BeginTabBar(Text ID, ImGuiTabBarFlags Flags = ImGuiTabBarFlags_None)
         {
-            return ImGui::BeginTabBar(ID.data(), Flags);
+            return ImGui::BeginTabBar(ID.GetData(), Flags);
         }
 
-        ZYPHRYON_INLINE void EndTabBar()
+        ZY_INLINE void EndTabBar()
         {
             ImGui::EndTabBar();
         }
 
-        ZYPHRYON_INLINE Bool BeginTabItem(ConstStr8 Label, ImGuiTabItemFlags Flags = ImGuiTabItemFlags_None)
+        ZY_INLINE Bool BeginTabItem(Text Label, ImGuiTabItemFlags Flags = ImGuiTabItemFlags_None)
         {
-            return ImGui::BeginTabItem(Label.data(), nullptr, Flags);
+            return ImGui::BeginTabItem(Label.GetData(), nullptr, Flags);
         }
 
-        ZYPHRYON_INLINE void EndTabItem()
+        ZY_INLINE void EndTabItem()
         {
             ImGui::EndTabItem();
         }
 
-        ZYPHRYON_INLINE Bool BeginCombo(ConstStr8 ID, ConstStr8 Preview, ImGuiComboFlags Flags = ImGuiComboFlags_None)
+        ZY_INLINE Bool BeginCombo(Text ID, Text Preview, ImGuiComboFlags Flags = ImGuiComboFlags_None)
         {
-            return ImGui::BeginCombo(ID.data(), Preview.data(), Flags);
+            return ImGui::BeginCombo(ID.GetData(), Preview.GetData(), Flags);
         }
 
-        ZYPHRYON_INLINE void EndCombo()
+        ZY_INLINE void EndCombo()
         {
             ImGui::EndCombo();
         }
 
-        ZYPHRYON_INLINE Bool BeginTable(ConstStr8 ID, SInt32 Columns, ImGuiTableFlags Flags = ImGuiTableFlags_None, ImVec2 Size = ImVec2(0, 0))
+        ZY_INLINE Bool BeginTable(Text ID, SInt32 Columns, ImGuiTableFlags Flags = ImGuiTableFlags_None, ImVec2 Size = ImVec2(0, 0))
         {
-            return ImGui::BeginTable(ID.data(), Columns, Flags, Size);
+            return ImGui::BeginTable(ID.GetData(), Columns, Flags, Size);
         }
 
-        ZYPHRYON_INLINE void EndTable()
+        ZY_INLINE void EndTable()
         {
             ImGui::EndTable();
         }
 
-        ZYPHRYON_INLINE void TableSetupColumn(ConstStr8 Label, ImGuiTableColumnFlags Flags = ImGuiTableColumnFlags_None, Real32 InitWidth = 0.0f)
+        ZY_INLINE void TableSetupColumn(Text Label, ImGuiTableColumnFlags Flags = ImGuiTableColumnFlags_None, Real32 InitWidth = 0.0f)
         {
-            ImGui::TableSetupColumn(Label.data(), Flags, InitWidth);
+            ImGui::TableSetupColumn(Label.GetData(), Flags, InitWidth);
         }
 
-        ZYPHRYON_INLINE void TableNextColumn()
+        ZY_INLINE void TableNextColumn()
         {
             ImGui::TableNextColumn();
         }
 
-        ZYPHRYON_INLINE void TableHeadersRow()
+        ZY_INLINE void TableHeadersRow()
         {
             ImGui::TableHeadersRow();
         }
 
-        ZYPHRYON_INLINE void TableNextRow(ImGuiTableRowFlags Flags = ImGuiTableRowFlags_None, Real32 MinHeight = 0.0f)
+        ZY_INLINE void TableNextRow(ImGuiTableRowFlags Flags = ImGuiTableRowFlags_None, Real32 MinHeight = 0.0f)
         {
             ImGui::TableNextRow(Flags, MinHeight);
         }
 
-        ZYPHRYON_INLINE Bool TableSetColumnIndex(SInt32 Column)
+        ZY_INLINE Bool TableSetColumnIndex(SInt32 Column)
         {
             return ImGui::TableSetColumnIndex(Column);
         }
 
-        ZYPHRYON_INLINE Bool InputFloat(ConstStr8 ID, Ref<Real32> Value, Real32 Step = 0.0f, Real32 StepFast = 0.0f, ConstStr8 Format = "%.2f", ImGuiInputTextFlags Flags = ImGuiInputTextFlags_None)
+        ZY_INLINE Bool InputFloat(Text ID, Ref<Real32> Value, Real32 Step = 0.0f, Real32 StepFast = 0.0f, Text Format = "%.2f", ImGuiInputTextFlags Flags = ImGuiInputTextFlags_None)
         {
-            return ImGui::InputFloat(ID.data(), &Value, Step, StepFast, Format.data(), Flags);
+            return ImGui::InputFloat(ID.GetData(), AddressOf(Value), Step, StepFast, Format.GetData(), Flags);
         }
 
         template<typename Type>
-        ZYPHRYON_INLINE Bool InputInt(ConstStr8 ID, Ref<Type> Value, Type Step = Type(1), Type StepFast = Type(1), ImGuiInputTextFlags Flags = ImGuiInputTextFlags_None)
+        ZY_INLINE Bool InputInt(Text ID, Ref<Type> Value, Type Step = Type(1), Type StepFast = Type(1), ImGuiInputTextFlags Flags = ImGuiInputTextFlags_None)
         {
-            int Temp = static_cast<int>(Value);
+            SInt32 Temp = static_cast<SInt32>(Value);
 
-            if (ImGui::InputInt(ID.data(), &Temp, Step, StepFast, Flags))
+            if (ImGui::InputInt(ID.GetData(), AddressOf(Temp), Step, StepFast, Flags))
             {
                 Value = static_cast<Type>(Temp);
                 return true;
@@ -578,74 +586,78 @@ namespace Tileon::Editor::UI
         }
 
         template<typename Type>
-        ZYPHRYON_INLINE Bool InputIntPair(
-            ConstStr8           ID,
+        ZY_INLINE Bool InputIntPair(
+            Text                ID,
             Ref<Type>           X,
             Ref<Type>           Y,
-            ConstStr8           Separator = "x",
+            Text                Separator = "x",
             Type                Step      = Type(1),
             Type                StepFast  = Type(1),
             ImGuiInputTextFlags Flags     = ImGuiInputTextFlags_None)
         {
-            const Real32 Size    = ImGui::CalcTextSize(Separator.data()).x;
+            const Real32 Size    = ImGui::CalcTextSize(Separator.GetData()).x;
             const Real32 Spacing = ImGui::GetStyle().ItemSpacing.x;
             const Real32 Width   = (ImGui::GetContentRegionAvail().x - Size - Spacing * 2.0f) * 0.5f;
 
             Bool Dirty = false;
 
             ImGui::SetNextItemWidth(Width);
-            Dirty |= InputInt(Base::Format("{}_x", ID), X, Step, StepFast, Flags);
+            Dirty |= InputInt(String<32>::Print<"{}_x">(ID), X, Step, StepFast, Flags);
 
             ImGui::SameLine();
-            ImGui::TextDisabled("%s", Separator.data());
+
+            PushStyleColor(ImGuiCol_Text, GetStyle().Colors[ImGuiCol_TextDisabled]);
+            ImGui::TextUnformatted(Separator.GetData(), Separator.GetData() + Separator.GetSize());
+            PopStyleColor();
+
             ImGui::SameLine();
 
             ImGui::SetNextItemWidth(Width);
-            Dirty |= InputInt(Base::Format("{}_y", ID), Y, Step, StepFast, Flags);
+            Dirty |= InputInt(String<32>::Print<"{}_y">(ID), Y, Step, StepFast, Flags);
 
             return Dirty;
         }
 
         template<typename Callback>
-        ZYPHRYON_INLINE void InputText(
-            ConstStr8           ID,
-            ConstStr8           Value,
+        ZY_INLINE void InputText(
+            Text                ID,
+            Text                Value,
             AnyRef<Callback>    Action,
             ImGuiInputTextFlags Flags = ImGuiInputTextFlags_None)
         {
-            static char kBuffer[256];
-            strncpy_s(kBuffer, sizeof(kBuffer), Value.data(), sizeof(kBuffer) - 1);
+            String<1024> Buffer;
+            Buffer.Append(Value);
 
-            if (ImGui::InputText(ID.data(), kBuffer, sizeof(kBuffer), Flags))
+            if (ImGui::InputText(ID.GetData(), Buffer.GetData(), 1024, Flags))
             {
-                Action(ConstStr8(kBuffer));
+                Action(StrConvert(Buffer.GetData()));
             }
         }
 
         template<typename InputCallback, typename ButtonCallback>
-        ZYPHRYON_INLINE void InputTextWithButton(
-            ConstStr8              ID,
-            ConstStr8              TextValue,
+        ZY_INLINE void InputTextWithButton(
+            Text                   ID,
+            Text                   TextValue,
             AnyRef<InputCallback>  TextAction,
-            ConstStr8              ButtonLabel,
+            Text                   ButtonLabel,
             AnyRef<ButtonCallback> ButtonAction,
             ImGuiInputTextFlags    Flags = ImGuiInputTextFlags_None)
         {
-            const Real32 Width = ImGui::CalcTextSize(ButtonLabel.data()).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+            const Real32 Width = ImGui::CalcTextSize(ButtonLabel.GetData()).x + ImGui::GetStyle().FramePadding.x * 2.0f;
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - Width - ImGui::GetStyle().ItemSpacing.x);
             InputText(ID, TextValue, TextAction, Flags);
 
             ImGui::SameLine();
-            if (ImGui::SmallButton(ButtonLabel.data()))
+            if (ImGui::SmallButton(ButtonLabel.GetData()))
             {
                 ButtonAction();
             }
         }
 
         template<typename Tint>
-        ZYPHRYON_INLINE Bool InputTint(ConstStr8 ID, Ref<Tint> Value, ImGuiColorEditFlags Flags = ImGuiColorEditFlags_None)
+        ZY_INLINE Bool InputTint(Text ID, Ref<Tint> Value, ImGuiColorEditFlags Flags = ImGuiColorEditFlags_None)
         {
-            constexpr Bool IsFloatColor = IsEqual<Tint, Color>;
+            constexpr Bool IsFloatColor = IsAnyOf<Tint, Color>;
 
             Real32 RGBA[] = {
                 IsFloatColor ? Value.GetRed()   : Value.GetRed()   / 255.0f,
@@ -654,7 +666,7 @@ namespace Tileon::Editor::UI
                 IsFloatColor ? Value.GetAlpha() : Value.GetAlpha() / 255.0f
             };
 
-            if (ImGui::ColorEdit4(ID.data(), RGBA, Flags))
+            if (ImGui::ColorEdit4(ID.GetData(), RGBA, Flags))
             {
                 if constexpr (IsFloatColor)
                 {
@@ -670,7 +682,7 @@ namespace Tileon::Editor::UI
         }
 
         template<typename Tint>
-        ZYPHRYON_INLINE Bool InputTintSmall(ConstStr8 ID, Ref<Tint> Value)
+        ZY_INLINE Bool InputTintSmall(Text ID, Ref<Tint> Value)
         {
             constexpr ImGuiColorEditFlags Flags =
                 ImGuiColorEditFlags_AlphaBar |

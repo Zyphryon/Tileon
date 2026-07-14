@@ -21,7 +21,7 @@ namespace Tileon::Editor::UI
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-     Previewer::Previewer()
+    Previewer::Previewer()
          : mZoom { 1.0f }
      {
      }
@@ -29,7 +29,7 @@ namespace Tileon::Editor::UI
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-     void Previewer::Draw(Ref<Composer> Composer, Graphic::Object Texture, Vector2 Size, Rect Source, Color Tint)
+    void Previewer::Draw(Ref<Composer> Composer, Graphic::Object Texture, Vector2 Size, Rect Source, Color Tint)
      {
         const ImVec2 Available = Composer.GetContentRegionAvail();
         const ImVec2 Origin    = Composer.GetCursorScreenPos();
@@ -55,7 +55,7 @@ namespace Tileon::Editor::UI
             {
                 const Real32 OldZoom = mZoom;
                 const Real32 Factor  = (Wheel > 0.0f) ? kZoomStep : (1.0f / kZoomStep);
-                const Real32 NewZoom = Math::Clamp(mZoom * Factor, kZoomMin, kZoomMax);
+                const Real32 NewZoom = Clamp(mZoom * Factor, kZoomMin, kZoomMax);
 
                 // Current display at old zoom.
                 const ImVec2 OldDisplay(Size.GetX() * OldZoom, Size.GetY() * OldZoom);
@@ -128,23 +128,24 @@ namespace Tileon::Editor::UI
 
         // Draw the status bar in the bottom-right corner (zoom + pixel coords when hovered).
         {
-            const ConstStr8 ZoomLabel = Base::Format("{:.0f}%", mZoom * 100.0f);
+            const Text ZoomLabel = String<128>::Print<"{0:.0f}%">(mZoom * 100.0f);
 
-            ConstStr8 CoordLabel;
+            Text CoordLabel;
             if (Size.GetX() > 0.0f && Size.GetY() > 0.0f && Hovered)
             {
-                const Real32 PX = Math::Clamp((Mouse.x - ImageTL.x) / mZoom, 0.0f, Size.GetX() - 1.0f);
-                const Real32 PY = Math::Clamp((Mouse.y - ImageTL.y) / mZoom, 0.0f, Size.GetY() - 1.0f);
-                CoordLabel = Base::Format("X: {:.0f}  Y: {:.0f}    {}    R to reset", PX, PY, ZoomLabel);
+                const Real32 PX = Clamp((Mouse.x - ImageTL.x) / mZoom, 0.0f, Size.GetX() - 1.0f);
+                const Real32 PY = Clamp((Mouse.y - ImageTL.y) / mZoom, 0.0f, Size.GetY() - 1.0f);
+
+                CoordLabel = String<128>::Print<"X: {0:.0f}  Y: {1:.0f}    {2}    R to reset">(PX, PY, ZoomLabel);
             }
             else
             {
-                CoordLabel = Base::Format("{}    R to reset", ZoomLabel);
+                CoordLabel = String<128>::Print<"{0}    R to reset">(ZoomLabel);
             }
 
             const ImVec2 LabelSize = Composer.CalcTextSize(CoordLabel);
             const ImVec2 LabelPos(Origin.x + Available.x - LabelSize.x - 6.0f, Origin.y + Available.y - LabelSize.y - 6.0f);
-            DrawList->AddText(LabelPos, IM_COL32(255, 255, 255, 180), CoordLabel.data());
+            DrawList->AddText(LabelPos, IM_COL32(255, 255, 255, 180), CoordLabel.GetData());
         }
 
         DrawList->PopClipRect();

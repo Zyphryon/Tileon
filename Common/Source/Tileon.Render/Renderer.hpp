@@ -23,7 +23,7 @@
 namespace Tileon
 {
     /// \brief Represents the renderer responsible for rendering the scene using a deferred rendering pipeline.
-    class Renderer final : public Locator<Graphic::Service, Content::Service>
+    class Renderer final : public Engine::Locator<Graphic::Service, Content::Service>
     {
     public:
 
@@ -50,12 +50,12 @@ namespace Tileon
         /// \brief Constructs a renderer with the specified service host.
         ///
         /// \param Host The service host to associate with the renderer.
-        Renderer(Ref<Service::Host> Host);
+        Renderer(Ref<Engine::Subsystem::Host> Host);
 
         /// \brief Gets the tileset associated with the renderer.
         ///
         /// \return The tileset associated with the renderer.
-        ZYPHRYON_INLINE Ref<Tileset> GetTileset()
+        ZY_INLINE Ref<Tileset> GetTileset()
         {
             return mTileset;
         }
@@ -82,15 +82,15 @@ namespace Tileon
         ///
         /// \param Type The type of frame to retrieve (e.g., Albedo, Normal, Depth).
         /// \return The GPU texture handle for the requested frame, valid until the next resize call.
-        ZYPHRYON_INLINE Graphic::Object GetFrame(Frame Type) const
+        ZY_INLINE Graphic::Object GetFrame(Frame Type) const
         {
             return mFrames[Enum::Cast(Type)];
         }
 
     private:
 
-        /// \brief Represents the rendering pipeline, which manages the sequence of rendering stages.
-        struct Pipeline
+        /// \brief Represents the rendering passes, which manages the sequence of rendering stages.
+        struct Passes
         {
             /// \brief The geometry stage of the pipeline, responsible for rendering scene geometry.
             Stage::Geometry  Geometry;
@@ -101,10 +101,10 @@ namespace Tileon
             /// \brief The composition stage of the pipeline, responsible for composing the final image.
             Stage::Composite Composite;
 
-            /// \brief Constructs the pipeline with the specified service host.
+            /// \brief Constructs the passes with the specified service host.
             ///
-            /// \param Host The service host to associate with the pipeline and its stages.
-            ZYPHRYON_INLINE Pipeline(Ref<Service::Host> Host)
+            /// \param Host The service host to associate with the passes and its stages.
+            ZY_INLINE Passes(Ref<Engine::Subsystem::Host> Host)
                 : Geometry  { Host },
                   Light     { Host },
                   Composite { Host }
@@ -122,11 +122,10 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Graphic::Encoder                             mEncoder;
         Graphic::Viewport                            mViewport;
         Array<Graphic::Object, Enum::Count<Phase>()> mPhases;
         Array<Graphic::Object, Enum::Count<Frame>()> mFrames;
-        Pipeline                                     mPipeline;
+        Passes                                       mPasses;
         Tileset                                      mTileset;
     };
 }

@@ -14,7 +14,7 @@
 
 #include "Tileon.Editor/Project.hpp"
 #include "Tileon.Editor.UI/Composer.hpp"
-#include <Zyphryon.Engine/Device.hpp>
+#include "Tileon.Editor.UI/Widget/Picker.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -43,7 +43,7 @@ namespace Tileon::Editor::View
         /// \brief Gets the project associated with the bootstrap activity.
         ///
         /// \return The project associated with the bootstrap activity.
-        ZYPHRYON_INLINE AnyRef<Project> GetProject()
+        ZY_INLINE AnyRef<Project> GetProject()
         {
             return Move(mProject);
         }
@@ -51,9 +51,8 @@ namespace Tileon::Editor::View
         /// \brief Draws the bootstrap activity, rendering the user interface for launching projects.
         ///
         /// \param Composer The UI composer used to render the bootstrap interface elements.
-        /// \param Device   The window device used for rendering the bootstrap interface.
         /// \return The result of the operation, indicating whether to continue, exit, or launch a project.
-        Result Draw(Ref<UI::Composer> Composer, ConstRef<Engine::Device> Device);
+        Result Draw(Ref<UI::Composer> Composer);
 
     private:
 
@@ -68,44 +67,39 @@ namespace Tileon::Editor::View
         /// \brief Draws the main menu interface of the bootstrap activity.
         ///
         /// \param Composer The UI composer used to render the menu interface elements.
-        /// \param Device   The window device used for rendering the menu interface.
         /// \return The result of the operation, indicating whether to continue, exit, or launch a project.
-        Result DrawInMenu(Ref<UI::Composer> Composer, ConstRef<Engine::Device> Device);
+        Result DrawInMenu(Ref<UI::Composer> Composer);
 
         /// \brief Draws the project creation wizard interface of the bootstrap activity.
         ///
         /// \param Composer The UI composer used to render the wizard interface elements.
-        /// \param Device   The window device used for rendering the wizard interface.
         /// \return The result of the operation, indicating whether to continue, exit, or launch a project.
-        Result DrawInWizard(Ref<UI::Composer> Composer, ConstRef<Engine::Device> Device);
+        Result DrawInWizard(Ref<UI::Composer> Composer);
 
         /// \brief Opens a file dialog to allow the user to select an existing project file to open.
-        ///
-        /// \param Device The window device used for rendering the file dialog interface.
-        void OpenFileDialog(ConstRef<Engine::Device> Device);
+        void OpenFileDialog();
 
         /// \brief Opens a file dialog to allow the user to specify a location and name for saving a new project.
-        ///
-        /// \param Device The window device used for rendering the file dialog interface.
-        void OpenSaveDialog(ConstRef<Engine::Device> Device);
+        void OpenSaveDialog();
 
         /// \brief Handles the result of a file dialog operation.
         ///
         /// \param Path The file path returned from the file dialog.
-        void OnDialogResult(ConstStr8 Path);
+        void OnDialogResult(Text Path);
 
         /// \brief Prepare the project directory by copying necessary bootstrap files.
         ///
         /// \param Path The file path of the project to prepare.
         /// \return `true` if the project directory was successfully prepared, otherwise `false`.
-        Bool Scaffold(ConstStr8 Path);
+        Bool Scaffold(Text Path);
 
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        State   mState;
-        Project mProject;
+        State      mState;
+        Project    mProject;
+        UI::Picker mPicker;
     };
 }

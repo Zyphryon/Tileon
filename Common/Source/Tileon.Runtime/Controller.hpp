@@ -23,16 +23,16 @@
 namespace Tileon
 {
     /// \brief Represents the controller responsible for coordinating the world.
-    class Controller final : public Locator<Scene::Service>
+    class Controller final : public Engine::Locator<Scene::Service>
     {
-        // TODO: Split into common, client and server orquestrator
+        // TODO: Split into common, client and server orchestrator
 
     public:
 
         /// \brief Constructs a Controller instance with the specified service host.
         ///
         /// \param Host The service host to associate with the controller.
-        explicit Controller(Ref<Service::Host> Host);
+        explicit Controller(Ref<Engine::Subsystem::Host> Host);
 
         /// \brief Tears down the controller, releasing any allocated resources.
         void Teardown();
@@ -64,7 +64,7 @@ namespace Tileon
         /// \brief Gets the world instance associated with the controller.
         ///
         /// \return The world instance managed by the controller.
-        ZYPHRYON_INLINE Ref<World> GetWorld()
+        ZY_INLINE Ref<World> GetWorld()
         {
             return mWorld;
         }
@@ -72,7 +72,7 @@ namespace Tileon
         /// \brief Gets the director instance associated with the controller.
         ///
         /// \return The director instance managed by the controller.
-        ZYPHRYON_INLINE Ref<Director> GetDirector()
+        ZY_INLINE Ref<Director> GetDirector()
         {
             return mDirector;
         }
@@ -80,7 +80,7 @@ namespace Tileon
         /// \brief Gets the renderer instance associated with the controller.
         ///
         /// \return The renderer instance managed by the controller.
-        ZYPHRYON_INLINE Ref<Renderer> GetRenderer()
+        ZY_INLINE Ref<Renderer> GetRenderer()
         {
             return mRenderer;
         }

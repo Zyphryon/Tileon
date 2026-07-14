@@ -24,7 +24,7 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Geometry::Geometry(Ref<Service::Host> Host)
+    Geometry::Geometry(Ref<Engine::Subsystem::Host> Host)
         : Locator { Host },
           mCanvas { Host }
     {
@@ -44,11 +44,11 @@ namespace Tileon::Stage
         {
             // Draw sprite entities.
             // TODO: Frustum Culling
-            mCanvas.SetPipeline(mPipelines[Enum::Cast(Technique::SpriteOpaqueWithNormal)]);
-            mQrDrawSprites.Run<const Transform, const Extent, const Appaerance, ConstPtr<IntColor8>>([&](
+            mCanvas.SetTechnique(Render::Canvas::Type::Sprite, mTechniques[Enum::Cast(Kind::SpriteOpaqueWithNormal)]);
+            mQrDrawSprites.Run<const Transform, const Extent, const Appearance, ConstPtr<IntColor8>>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
-                ConstRef<Appaerance> Appearance,
+                ConstRef<Appearance> Appearance,
                 ConstPtr<IntColor8>  Tint)
             {
                 const IntColor8 Color  = Tint ? (* Tint) : IntColor8::White();
@@ -69,13 +69,13 @@ namespace Tileon::Stage
                 const IntColor8 Color = Tint ? (* Tint) : IntColor8::White();
                 const Real32    Depth = Depth::Midground(Frustum, Transform.GetOrigin(), Transform.GetWorldspace());
 
-                const Render::Text Command(Typeface.GetFont(), Typeface.GetSize(), Color, Text.GetSpacing());
-                mCanvas.DrawText(Command, Text.GetContent(), Transform.Rebase(Origin), Depth, Text.GetEffect());
+                const Render::TextStyle Stype(Typeface.GetFont(), Typeface.GetSize(), Color, Text.GetSpacing());
+                mCanvas.DrawText(Stype, Text.GetContent(), Transform.Rebase(Origin), Depth, {});
             });
 
             // Draw tile regions, culling against the view frustum to minimize overdraw.
             // TODO: SpriteOpaqueWithNormal?
-            mCanvas.SetPipeline(mPipelines[Enum::Cast(Technique::SpriteOpaque)]);
+            mCanvas.SetTechnique(Render::Canvas::Type::Sprite, mTechniques[Enum::Cast(Kind::SpriteOpaque)]);
             mQrDrawRegions.Run<const Region>([&](ConstRef<Region> Region)
             {
                 const SInt32 WorldRegionX = Region.GetX() * Region::kTilesPerX;
@@ -104,7 +104,7 @@ namespace Tileon::Stage
     {
         Scene.GetComponent<IntColor8>("Tint").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Animator>("Animator");
-        Scene.GetComponent<Appaerance>("Appaerance");
+        Scene.GetComponent<Appearance>("Appearance");
         Scene.GetComponent<Animation>("Animation").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Sprite>("Sprite").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Text>("Text").Grant(Scene::Trait::Serializable);
@@ -112,12 +112,12 @@ namespace Tileon::Stage
 
         // Observe changes to the sprite component to resolve material resources and trigger updates when necessary.
         Scene.CreateObserver<Scene::DSL::In<const Sprite>>(
-            "Render::Geometry::ObsUpdateAppaeranceOnSpriteUpdate",
+            "Render::Geometry::ObsUpdateAppearanceOnSpriteUpdate",
             EcsOnSet,
             [this](Scene::Entity Actor, ConstRef<Sprite> Sprite)
             {
                 Ref<Content::Service> Content = GetService<Content::Service>();
-                Actor.Set(Appaerance(Content.Load<Graphic::Material>(Sprite.GetPath()), Sprite.GetSource()));
+                Actor.Set(Appearance(Content.Load<Graphic::Material>(Sprite.GetPath()), Sprite.GetSource()));
             }, Scene::DSL::Not(EcsPrefab));
 
         // Observe when an Animation component is attached, and automatically initialize the animator for playback.
@@ -139,9 +139,9 @@ namespace Tileon::Stage
                 Ref<Content::Service> Content = GetService<Content::Service>();
                 Component.OnResolve(Content);
 
-                if (ConstTracker<::Render::Font> Font = Component.GetFont(); !Font->HasFinished())
+                if (ConstRetainer<::Render::Font> Font = Component.GetFont(); !Font->HasFinished())
                 {
-                    Content::Service::AssetDelegate Callback = [&Content, Actor](Ref<Content::Resource> Resource)
+                    Content::Service::Callback Callback = [&Content, Actor](Ref<Content::Resource> Resource)
                     {
                         Content.Unsubscribe(Resource.GetKey());
 
@@ -157,35 +157,35 @@ namespace Tileon::Stage
             EcsOnSet,
             [](Scene::Entity Actor, ConstRef<Typeface> Typeface, ConstRef<Text> Text)
             {
-                if (ConstTracker<::Render::Font> Font = Typeface.GetFont(); Font && Font->HasFinished())
+                if (ConstRetainer<::Render::Font> Font = Typeface.GetFont(); Font && Font->HasFinished())
                 {
-                    const Pivot   Pivot   = Text.GetPivot();
-                    const Vector2 Measure = Font->Measure(Text.GetContent(), Typeface.GetSize(), Text.GetSpacing());
+                    const Pivot2D Pivot   = Text.GetPivot();
+                    const Rect    AABB    = Font->Enclose(Text.GetContent(), Typeface.GetSize()); // TODO: Spacing
+                    const Vector2 Measure = AABB.GetSize();
                     const Vector2 Value(Measure.GetX() * Pivot.GetX(), Measure.GetY() * Pivot.GetY());
 
-                    const Rect AABB = Font->Enclose(Text.GetContent(), Typeface.GetSize(), Text.GetSpacing());
                     Actor.Set(Extent { AABB.GetPosition(), AABB.GetSize() });
                     Actor.Set(Anchor { Value });
                 }
             });
 
         // System that advances animations and updates sprite appearances.
-        Scene.CreateSystem<Scene::DSL::In<const Time, const Animation, Animator, Appaerance>>(
+        Scene.CreateSystem<Scene::DSL::In<const Scene::Clock, const Animation, Animator, Appearance>>(
             "Render::Geometry::ComputeAnimation",
             EcsOnUpdate,
             Scene::Execution::Concurrent,
-            [](Time Time, ConstRef<Animation> Animation, Ref<Animator> Animator, Ref<Appaerance> Appaerance)
+            [](ConstRef<Scene::Clock> Clock, ConstRef<Animation> Animation, Ref<Animator> Animator, Ref<Appearance> Appearance)
             {
                 // Advance the animator's timestamp and update the current keyframe based on the elapsed time.
-                Animator.Advance(Time.GetAbsolute(), Animation);
+                Animator.Advance(Clock.GetAbsolute(), Animation);
 
                 // Update the sprite's appearance with the frame data of the current keyframe.
-                Appaerance.SetSource(Animation.GetFrameData(Animator.GetKeyframe()));
+                Appearance.SetSource(Animation.GetFrameData(Animator.GetKeyframe()));
             });
 
         // Create the queries for retrieving renderable components.
         mQrDrawSprites = Scene.CreateQuery<
-            Scene::DSL::In<const Transform, const Extent, const Appaerance, ConstPtr<IntColor8>>
+            Scene::DSL::In<const Transform, const Extent, const Appearance, ConstPtr<IntColor8>>
         >("Render::Geometry::DrawSprites", Scene::Cache::Auto);
 
         mQrDrawTexts = Scene.CreateQuery<
@@ -202,11 +202,11 @@ namespace Tileon::Stage
 
     void Geometry::OnLoad(Ref<Content::Service> Content)
     {
-        for (const Technique Type : Enum::Values<Technique>())
+        for (const Kind Type : Enum::GetValues<Kind>())
         {
-            const ConstStr8 Path = Format("Resources://Pipeline/Geometry/{}.effect", Enum::Name(Type));
+            Str Path = Str::Print<"Resources://Technique/Geometry/{0}.vfx">(Enum::GetName(Type));
 
-            mPipelines[Enum::Cast(Type)] = Content.Load<Graphic::Pipeline>(Path);
+            mTechniques[Enum::Cast(Type)] = Content.Load<Graphic::Technique>(Move(Path));
         }
     }
 
@@ -222,7 +222,7 @@ namespace Tileon::Stage
         const UInt32 TileYMask = ((1ull << (Boundaries.GetWidth())) - 1ull) << Boundaries.GetX();
 
         // Iterate through each layer of the region and draw the visible tiles within the specified boundaries.
-        for (const Tile::Layer Layer : Enum::Values<Tile::Layer>())
+        for (const Tile::Layer Layer : Enum::GetValues<Tile::Layer>())
         {
             Array<UInt32, Region::kTilesPerX> Resolution { };
 

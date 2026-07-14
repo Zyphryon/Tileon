@@ -40,7 +40,7 @@ namespace Tileon
         ///
         /// \param Bias An optional bias value to slightly adjust the depth, allowing for fine-tuning of rendering order.
         /// \return The calculated depth value for the foreground layer.
-        ZYPHRYON_INLINE static constexpr Real32 Foreground(UInt8 Bias = 0)
+        ZY_INLINE static constexpr Real32 Foreground(UInt8 Bias = 0)
         {
             return kForeground + Bias * 0.01f;
         }
@@ -49,7 +49,7 @@ namespace Tileon
         ///
         /// \param Bias An optional bias value to slightly adjust the depth, allowing for fine-tuning of rendering order.
         /// \return The calculated depth value for the background layer.
-        ZYPHRYON_INLINE static constexpr Real32 Background(UInt8 Bias = 0)
+        ZY_INLINE static constexpr Real32 Background(UInt8 Bias = 0)
         {
             return 1.0f - Bias * 0.01f;
         }
@@ -61,7 +61,7 @@ namespace Tileon
         /// \param LocalY  The local y-coordinate within the frustum.
         /// \param Bias    An optional bias value to slightly adjust the depth, allowing for fine tuning of rendering order.
         /// \return The calculated depth value for the midground layer.
-        ZYPHRYON_INLINE static constexpr Real32 Midground(IntRect Frustum, Real32 LocalX, Real32 LocalY, UInt8 Bias = 0)
+        ZY_INLINE static constexpr Real32 Midground(IntRect Frustum, Real32 LocalX, Real32 LocalY, UInt8 Bias = 0)
         {
             constexpr Real32 kRange = kBackground - kMidground;
 
@@ -80,7 +80,7 @@ namespace Tileon
         /// \param Worldspace The worldspace transformation matrix, used to calculate the offset for the position within the frustum.
         /// \param Bias       An optional bias value to slightly adjust the depth, allowing for fine tuning of rendering order.
         /// \return The calculated depth value for the midground layer.
-        ZYPHRYON_INLINE static constexpr Real32 Midground(
+        ZY_INLINE static constexpr Real32 Midground(
             IntRect Frustum, IntVector2 Shift, ConstRef<Matrix3x2> Worldspace, UInt8 Bias = 0)
         {
             const Vector2 Offset = Worldspace.GetTranslation();

@@ -21,7 +21,7 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Composite::Composite(Ref<Service::Host> Host)
+    Composite::Composite(Ref<Engine::Subsystem::Host> Host)
     {
         OnLoad(* Host.GetService<Content::Service>());
     }
@@ -29,12 +29,15 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Composite::Run(Ref<Graphic::Encoder> Encoder, Graphic::Object Albedo, Graphic::Object Radiance)
+    void Composite::Run(Ref<Graphic::Service> Graphics, Graphic::Object Albedo, Graphic::Object Radiance)
     {
-        Encoder.SetPipeline(mPipelines[Enum::Cast(Technique::Composite)]->GetID());
-        Encoder.SetTexture(0, Albedo,   Graphic::Sampler());
-        Encoder.SetTexture(1, Radiance, Graphic::Sampler());
-        Encoder.Draw(3, 0, 0);
+        Ref<Graphic::Command> Command = Graphics.AllocateTransientCommands(1).GetFront();
+        Command.Pipeline = mTechniques[Enum::Cast(Kind::Composite)]->GetHandle();
+        Command.Textures.Append(Albedo);
+        Command.Textures.Append(Radiance);
+        Command.Samplers.Append();  // TODO: Use Automatic Binding
+        Command.Samplers.Append();  // TODO: Use Automatic Binding
+        Command.Parameters = { .Count = 3, .Base = 0, .Offset = 0, .Instances = 1 };
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -42,11 +45,11 @@ namespace Tileon::Stage
 
     void Composite::OnLoad(Ref<Content::Service> Content)
     {
-        for (const Technique Type : Enum::Values<Technique>())
+        for (const Kind Type : Enum::GetValues<Kind>())
         {
-            const ConstStr8 Path = Format("Resources://Pipeline/Composite/{}.effect", Enum::Name(Type));
+            Str Path = Str::Print<"Resources://Technique/Composite/{0}.vfx">(Enum::GetName(Type));
 
-            mPipelines[Enum::Cast(Type)] = Content.Load<Graphic::Pipeline>(Path);
+            mTechniques[Enum::Cast(Type)] = Content.Load<Graphic::Technique>(Move(Path));
         }
     }
 }

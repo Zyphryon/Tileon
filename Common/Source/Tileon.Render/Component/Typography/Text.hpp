@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include <Zyphryon.Math/Pivot.hpp>
+#include <Zyphryon.Math/Pivot2D.hpp>
 #include <Zyphryon.Math/Vector2.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -27,26 +27,24 @@ namespace Tileon
     public:
 
         /// \brief Default constructor.
-        ZYPHRYON_INLINE Text() = default;
+        ZY_INLINE Text() = default;
 
         /// \brief Constructs a text component with the specific properties.
         ///
         /// \param Content The string content of the text.
         /// \param Spacing The spacing between characters in the text, in pixels.
         /// \param Pivot   The pivot point for text alignment.
-        /// \param Effect  The rendering effect to apply to the text.
-        ZYPHRYON_INLINE Text(ConstStr8 Content, Vector2 Spacing, Pivot Pivot, UInt8 Effect)
+        ZY_INLINE Text(Base::Text Content, Vector2 Spacing, Pivot2D Pivot)
             : mContent { Content },
               mSpacing { Spacing },
-              mPivot   { Pivot },
-              mEffect  { Effect }
+              mPivot   { Pivot }
         {
         }
 
         /// \brief Sets the string content of the text.
         ///
         /// \param Content The string content to set for the text.
-        ZYPHRYON_INLINE void SetContent(ConstStr8 Content)
+        ZY_INLINE void SetContent(Base::Text Content)
         {
             mContent = Content;
         }
@@ -54,7 +52,7 @@ namespace Tileon
         /// \brief Gets the string content of the text.
         ///
         /// \return The string content of the text.
-        ZYPHRYON_INLINE ConstStr8 GetContent() const
+        ZY_INLINE Base::Text GetContent() const
         {
             return mContent;
         }
@@ -62,7 +60,7 @@ namespace Tileon
         /// \brief Sets the spacing between characters in the text.
         ///
         /// \param Spacing The spacing to set between characters, in pixels.
-        ZYPHRYON_INLINE void SetSpacing(Vector2 Spacing)
+        ZY_INLINE void SetSpacing(Vector2 Spacing)
         {
             mSpacing = Spacing;
         }
@@ -70,7 +68,7 @@ namespace Tileon
         /// \brief Gets the spacing between characters in the text.
         ///
         /// \return The spacing between characters in the text, in pixels.
-        ZYPHRYON_INLINE Vector2 GetSpacing() const
+        ZY_INLINE Vector2 GetSpacing() const
         {
             return mSpacing;
         }
@@ -78,7 +76,7 @@ namespace Tileon
         /// \brief Sets the pivot point for text alignment.
         ///
         /// \param Pivot The pivot point to set for text alignment.
-        ZYPHRYON_INLINE void SetPivot(Pivot Pivot)
+        ZY_INLINE void SetPivot(Pivot2D Pivot)
         {
             mPivot = Pivot;
         }
@@ -86,37 +84,20 @@ namespace Tileon
         /// \brief Gets the pivot point for text alignment.
         ///
         /// \return The pivot point for text alignment.
-        ZYPHRYON_INLINE Pivot GetPivot() const
+        ZY_INLINE Pivot2D GetPivot() const
         {
             return mPivot;
-        }
-
-        /// \brief Sets the rendering effect to apply to the text.
-        ///
-        /// \param Effect The effect to set.
-        ZYPHRYON_INLINE void SetEffect(UInt8 Effect)
-        {
-            mEffect = Effect;
-        }
-
-        /// \brief Gets the rendering effect applied to the text.
-        ///
-        /// \return The effect applied to the text.
-        ZYPHRYON_INLINE UInt8 GetEffect() const
-        {
-            return mEffect;
         }
 
         /// \brief Serializes the state of the object to or from the specified archive.
         ///
         /// \param Archive The archive to serialize the object with.
         template<typename Serializer>
-        ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
+        ZY_INLINE void Serialize(Serializer Archive)
         {
-            Archive.SerializeText(mContent);
-            Archive.SerializeObject(mSpacing);
-            Archive.SerializeObject(mPivot);
-            Archive.SerializeUInt8(mEffect);
+            Archive.Serialize(mContent);
+            Archive.Serialize(mSpacing);
+            Archive.Serialize(mPivot);
         }
 
     private:
@@ -124,9 +105,8 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Str8    mContent;
+        Str     mContent;
         Vector2 mSpacing;
-        Pivot   mPivot;
-        UInt8   mEffect;
+        Pivot2D mPivot;
     };
 }

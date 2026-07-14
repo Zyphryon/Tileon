@@ -28,14 +28,14 @@ namespace Tileon
     public:
 
         /// \brief Default constructor.
-        ZYPHRYON_INLINE Motif() = default;
+        ZY_INLINE Motif() = default;
 
         /// \brief Constructs a motif with the specified unique identifier, span, and tint color.
         ///
         /// \param ID   The unique identifier for the motif.
         /// \param Span The span of the motif, representing how many tiles it covers (default is 1x1).
         /// \param Tint The tint color to apply to the motif when rendering (default is white).
-        ZYPHRYON_INLINE Motif(UInt16 ID, IntVector2 Span = IntVector2::One(), IntColor8 Tint = IntColor8::White())
+        ZY_INLINE Motif(UInt16 ID, IntVector2 Span = IntVector2::One(), IntColor8 Tint = IntColor8::White())
             : mID     { ID   },
               mSpan   { Span },
               mTint   { Tint },
@@ -46,7 +46,7 @@ namespace Tileon
         /// \brief Gets the unique identifier for the motif.
         ///
         /// \return The unique identifier for the motif.
-        ZYPHRYON_INLINE UInt16 GetID() const
+        ZY_INLINE UInt16 GetID() const
         {
             return mID;
         }
@@ -54,7 +54,7 @@ namespace Tileon
         /// \brief Sets the URI of the material resource used to render this motif.
         ///
         /// \param Material The URI of the material resource.
-        ZYPHRYON_INLINE void SetMaterial(AnyRef<Content::Uri> Material)
+        ZY_INLINE void SetMaterial(AnyRef<Content::Uri> Material)
         {
             mMaterial = Move(Material);
         }
@@ -62,7 +62,7 @@ namespace Tileon
         /// \brief Gets the URI of the material resource used to render this motif.
         ///
         /// \return The URI of the material resource.
-        ZYPHRYON_INLINE ConstRef<Content::Uri> GetMaterial() const
+        ZY_INLINE ConstRef<Content::Uri> GetMaterial() const
         {
             return mMaterial;
         }
@@ -70,7 +70,7 @@ namespace Tileon
         /// \brief Sets the span of the motif.
         ///
         /// \param Span The new span to set for the motif.
-        ZYPHRYON_INLINE void SetSpan(IntVector2 Span)
+        ZY_INLINE void SetSpan(IntVector2 Span)
         {
             mSpan = Span;
         }
@@ -78,7 +78,7 @@ namespace Tileon
         /// \brief Gets the span of the motif.
         ///
         /// \return The span of the motif.
-        ZYPHRYON_INLINE IntVector2 GetSpan() const
+        ZY_INLINE IntVector2 GetSpan() const
         {
             return mSpan;
         }
@@ -86,7 +86,7 @@ namespace Tileon
         /// \brief Sets the tint color of the motif.
         ///
         /// \param Tint The new tint color to set for the motif.
-        ZYPHRYON_INLINE void SetTint(IntColor8 Tint)
+        ZY_INLINE void SetTint(IntColor8 Tint)
         {
             mTint = Tint;
         }
@@ -94,7 +94,7 @@ namespace Tileon
         /// \brief Gets the tint color of the motif.
         ///
         /// \return The tint color of the motif.
-        ZYPHRYON_INLINE IntColor8 GetTint() const
+        ZY_INLINE IntColor8 GetTint() const
         {
             return mTint;
         }
@@ -102,7 +102,7 @@ namespace Tileon
         /// \brief Sets the easing function for the motif's animation.
         ///
         /// \param Easing The new easing function to set for the motif's animation.
-        ZYPHRYON_INLINE void SetEasing(Easing Easing)
+        ZY_INLINE void SetEasing(Easing Easing)
         {
             mEasing = Easing;
         }
@@ -110,7 +110,7 @@ namespace Tileon
         /// \brief Gets the easing function for the motif's animation.
         ///
         /// \return The easing function for the motif's animation.
-        ZYPHRYON_INLINE Easing GetEasing() const
+        ZY_INLINE Easing GetEasing() const
         {
             return mEasing;
         }
@@ -118,7 +118,7 @@ namespace Tileon
         /// \brief Sets the animation data for the motif.
         ///
         /// \param Animation The new animation data to set for the motif.
-        ZYPHRYON_INLINE void SetAnimation(AnyRef<Animation> Animation)
+        ZY_INLINE void SetAnimation(AnyRef<Animation> Animation)
         {
             mAnimation = Move(Animation);
         }
@@ -126,7 +126,7 @@ namespace Tileon
         /// \brief Gets the animation data for the motif.
         ///
         /// \return The animation data for the motif.
-        ZYPHRYON_INLINE ConstRef<Animation> GetAnimation() const
+        ZY_INLINE ConstRef<Animation> GetAnimation() const
         {
             return mAnimation;
         }
@@ -135,14 +135,14 @@ namespace Tileon
         ///
         /// \param Archive The archive to serialize the object with.
         template<typename Serializer>
-        ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
+        ZY_INLINE void Serialize(Serializer Archive)
         {
-            Archive.SerializeUInt16(mID);
-            Archive.SerializeObject(mMaterial);
-            Archive.SerializeObject(mSpan);
-            Archive.SerializeObject(mTint);
-            Archive.SerializeEnum(mEasing);
-            Archive.SerializeObject(mAnimation);
+            Archive.Serialize(mID);
+            Archive.Serialize(mMaterial);
+            Archive.Serialize(mSpan);
+            Archive.Serialize(mTint);
+            Archive.Serialize(mEasing);
+            Archive.Serialize(mAnimation);
         }
 
     private:

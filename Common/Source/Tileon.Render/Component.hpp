@@ -16,7 +16,7 @@
 #include "Component/Light/Skylight.hpp"
 #include "Component/Light/Spotlight.hpp"
 #include "Component/Sprite/Animator.hpp"
-#include "Component/Sprite/Appaerance.hpp"
+#include "Component/Sprite/Appearance.hpp"
 #include "Component/Sprite/Sprite.hpp"
 #include "Component/Typography/Text.hpp"
 #include "Component/Typography/Typeface.hpp"

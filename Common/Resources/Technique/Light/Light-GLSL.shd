@@ -1,0 +1,179 @@
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Copyright (C) 2025-2026 by Tileon contributors (see AUTHORS.md)
+//
+// This work is licensed under the terms of the MIT license.
+//
+// For a copy, see <https://opensource.org/licenses/MIT>.
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Uniforms
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+layout(std140, binding = 0) uniform cb_Global
+{
+    mat4 u_Camera;
+};
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Vertex Shader
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef VERTEX_SHADER
+
+in vec4 a_Params0;
+
+#if defined(LIGHT_SPOT)
+in vec4 a_Params1;
+#endif
+
+in vec4 a_Color;
+
+out vec4 v_World;     // world.xy, screen.xy
+out vec4 v_Light;
+out vec4 v_Color;
+
+#if defined(LIGHT_SPOT)
+out vec4 v_Spot;
+#endif
+
+vec2 TessellateRect(int VertexID)
+{
+    const vec2 kUnitRectCorners[4] = vec2[4](
+        vec2(0.0, 0.0),
+        vec2(1.0, 0.0),
+        vec2(0.0, 1.0),
+        vec2(1.0, 1.0)
+    );
+
+    return kUnitRectCorners[VertexID];
+}
+
+vec2 TessellateTriangle(int VertexID)
+{
+    const vec2 kTriangleCorners[3] = vec2[3](
+        vec2(0.0,  0.0),
+        vec2(1.0,  1.0),
+        vec2(1.0, -1.0)
+    );
+
+    return kTriangleCorners[VertexID];
+}
+
+void main()
+{
+#if defined(LIGHT_SPOT)
+    vec2 Corner = TessellateTriangle(gl_VertexID);
+#else
+    vec2 Corner = TessellateRect(gl_VertexID);
+#endif
+
+    vec2 World;
+
+#if defined(LIGHT_SPOT)
+
+    float Spread = a_Params0.z * sqrt(1.0 - a_Params1.w * a_Params1.w) / a_Params1.w;
+
+    vec2 Axis = a_Params1.xy * (Corner.x * a_Params0.z);
+    vec2 Side = vec2(-a_Params1.y, a_Params1.x) *
+                (Corner.y * 2.0 - 1.0) *
+                (Spread * Corner.x);
+
+    World = a_Params0.xy + Axis + Side;
+
+#else
+
+    World = a_Params0.xy + (Corner * 2.0 - 1.0) * a_Params0.z;
+
+#endif
+
+    gl_Position = u_Camera * vec4(World, 0.0, 1.0);
+
+    v_World = vec4(
+        World,
+        gl_Position.xy * vec2(0.5, -0.5) + 0.5
+    );
+
+    v_Light = a_Params0;
+    v_Color = a_Color;
+
+#if defined(LIGHT_SPOT)
+    v_Spot = a_Params1;
+#endif
+}
+
+#endif // VERTEX_SHADER
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Fragment Shader
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef FRAGMENT_SHADER
+
+uniform sampler2D s_Normal;
+
+in vec4 v_World;
+in vec4 v_Light;
+in vec4 v_Color;
+
+#if defined(LIGHT_SPOT)
+in vec4 v_Spot;
+#endif
+
+layout(location = 0) out vec4 out_Color;
+
+void main()
+{
+    vec2 Relative = v_Light.xy - v_World.xy;
+
+    float Distance = length(Relative);
+
+    vec2 Distance2D =
+        (Distance > 0.0001)
+            ? Relative / Distance
+            : vec2(0.0);
+
+    float Attenuation =
+        clamp(
+            1.0 - pow(clamp(Distance / v_Light.z, 0.0, 1.0), v_Light.w),
+            0.0,
+            1.0
+        );
+
+#if defined(LIGHT_SPOT)
+
+    float CosAngle =
+        (Distance > 0.0001)
+            ? dot(-Distance2D, v_Spot.xy)
+            : 1.0;
+
+    Attenuation *= smoothstep(v_Spot.w, v_Spot.z, CosAngle);
+
+#endif
+
+    if (Attenuation < 0.001)
+    {
+        discard;
+    }
+
+#ifdef ENABLE_NORMAL_MAPPING
+
+    vec3 Normal =
+        texture(s_Normal, v_World.zw).rgb * 2.0 - 1.0;
+
+    float NormalDotL =
+        max(dot(Normal, normalize(vec3(Distance2D, -0.5))), 0.0);
+
+#else
+
+    float NormalDotL = 1.0;
+
+#endif
+
+    out_Color = vec4(
+        v_Color.rgb * (Attenuation * NormalDotL),
+        Attenuation
+    );
+}
+
+#endif // FRAGMENT_SHADER

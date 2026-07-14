@@ -30,9 +30,10 @@ namespace Tileon::Editor::View
         /// \brief Constructs the activity with the specified context.
         ///
         /// \param Context The context associated with this activity.
-        Foundry(Ref<Context> Context);
+        /// \param Content The content service associated with this activity.
+        Foundry(Ref<Context> Context, Ref<Content::Service> Content);
 
-        /// \copydoc Activity::OnDraw(Ref<UI::Composer>)
+        /// \see Activity::OnDraw(Ref<UI::Composer>)
         void OnDraw(Ref<UI::Composer> Composer) override;
 
     private:
@@ -71,7 +72,7 @@ namespace Tileon::Editor::View
         ///
         /// \param Composer The UI composer used to render the placeholder.
         /// \param Message  The message to display in the placeholder panel.
-        void DrawEmptyPanel(Ref<UI::Composer> Composer, ConstStr8 Message);
+        void DrawEmptyPanel(Ref<UI::Composer> Composer, Text Message);
 
     private:
 

@@ -23,8 +23,7 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Light::Light(Ref<Service::Host> Host)
-        : Locator { Host }
+    Light::Light(Ref<Engine::Subsystem::Host> Host)
     {
         OnRegister(* Host.GetService<Scene::Service>());
         OnLoad(* Host.GetService<Content::Service>());
@@ -33,35 +32,35 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Light::Run(Ref<Graphic::Encoder> Encoder, ConstRef<Director> Director, Graphic::Object Normal)
+    void Light::Run(Ref<Graphic::Service> Graphics, ConstRef<Director> Director, Graphic::Object Normal)
     {
-        Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
-
         // Calculate the origin of the light stage based on the director's position.
         const IntVector2 Origin(
             Director.GetPosition().GetBaseX(),
             Director.GetPosition().GetBaseY());
 
         // Reset the light data for the current frame.
-        mGlowlightData.clear();
-        mSpotlightData.clear();
+        mGlowlightData.Clear();
+        mSpotlightData.Clear();
 
         // Apply the environment settings for the current frame.
         mQrDrawSkylight.Run<const Skylight>([&](ConstRef<Skylight> Environment)
         {
-            auto [Data, Effect] =  Graphics.AllocateTransientBuffer<GpuSkylightLayout>(Graphic::Usage::Uniform, 1);
-            Data->SunColor    = Math::Color::FromColor8(Environment.GetSunTint())
+            Ref<Graphic::Command> Command = Graphics.AllocateTransientCommands(1).GetFront();
+
+            Graphic::Transient<GpuSkylightLayout> Data =  Graphics.AllocateTransientUniforms<GpuSkylightLayout>(1);
+            Data[0].SunColor    = Math::Color::FromColor8(Environment.GetSunTint())
                 .WithIntensity(Environment.GetBrightness(), Environment.GetSunDirection().GetX());
-            Data->SkyColor    = Math::Color::FromColor8(Environment.GetSkyTint())
+            Data[0].SkyColor    = Math::Color::FromColor8(Environment.GetSkyTint())
                 .WithIntensity(Environment.GetBrightness(), Environment.GetSunDirection().GetY());
-            Data->GroundColor = Math::Color::FromColor8(Environment.GetGroundTint())
+            Data[0].GroundColor = Math::Color::FromColor8(Environment.GetGroundTint())
                 .WithIntensity(Environment.GetBrightness(), 0.0f);
 
-            Encoder.SetPipeline(mPipelines[Enum::Cast(Technique::Skylight)]->GetID());
-            Encoder.SetTexture(0, Normal, Graphic::Sampler());
-            Encoder.SetUniform(1, Effect);
-            Encoder.Draw(3, 0, 0);
-            Encoder.ResetBindings();
+            Command.Pipeline = mTechniques[Enum::Cast(Kind::Skylight)]->GetHandle();
+            Command.Textures.Append(Normal);
+            Command.Samplers.Append();  // TODO: Use Automatic Binding
+            Command.Uniforms[Enum::Cast(Graphic::UniformScope::Pass)] = Data.GetStream();
+            Command.Parameters = { .Count = 3, .Base = 0, .Offset = 0, .Instances = 1 };
         });
 
         // Accumulate the glowlights in the scene and render them in a single batch.
@@ -76,7 +75,7 @@ namespace Tileon::Stage
             const Vector2 Scale  = Transform.GetWorldspace().GetScale();
 
             const Real32 Radius = Light.GetRadius() * Max(Scale.GetX(), Scale.GetY());
-            mGlowlightData.emplace_back(Center, Radius, Light.GetFalloff(), Color);
+            mGlowlightData.Append(Center, Radius, Light.GetFalloff(), Color);
         });
 
         // Accumulate the spotlights in the scene and render them in a single batch.
@@ -94,32 +93,43 @@ namespace Tileon::Stage
             const Vector2 Angles    = Vector2(Angle::Cosine(Light.GetInnerAngle()), Angle::Cosine(Light.GetOuterAngle()));
 
             const Real32 Range = Light.GetRange() * BasisX.GetLength();
-            mSpotlightData.emplace_back(Center, Range, Light.GetFalloff(), Direction, Angles, Color);
+            mSpotlightData.Append(Center, Range, Light.GetFalloff(), Direction, Angles, Color);
         });
 
         // Set the projection matrix for the light stage based on the director's position and viewport size.
-        const Graphic::Stream Projection = Graphics.AllocateTransientBuffer(
-            Graphic::Usage::Uniform, Spanify(Director.GetViewProjection()));
-        Encoder.SetUniform(0, Projection);
+        Graphic::Transient<Matrix4x4> Scene = Graphics.AllocateTransientUniforms<Matrix4x4>(1);
+        Scene[0] = Director.GetViewProjection();
 
         // Render the accumulated glowlights in batches to minimize draw calls and state changes.
-        if (const ConstSpan<GpuGlowlightLayout> Data = mGlowlightData; !Data.empty())
+        if (const ConstSpan<GpuGlowlightLayout> Data = mGlowlightData; !Data.IsEmpty())
         {
-            Encoder.SetPipeline(mPipelines[Enum::Cast(Technique::Glowlight)]->GetID());
-            Encoder.SetTexture(0, Normal, Graphic::Sampler());
-            Encoder.SetVertices(0, Graphics.AllocateTransientBuffer(Graphic::Usage::Vertex, Data));
-            Encoder.Draw(4, 0, 0, Data.size());
-            Encoder.ResetBindings();
+            Ref<Graphic::Command> Command = Graphics.AllocateTransientCommands(1).GetFront();
+
+            Graphic::Transient<GpuGlowlightLayout> Instances = Graphics.AllocateTransientVertices<GpuGlowlightLayout>(Data.GetSize());
+            Instances.Copy(Data);
+
+            Command.Pipeline = mTechniques[Enum::Cast(Kind::Glowlight)]->GetHandle();
+            Command.Textures.Append(Normal);
+            Command.Samplers.Append();  // TODO: Use Automatic Binding
+            Command.Vertices.Append(Instances.GetStream());
+            Command.Uniforms[Enum::Cast(Graphic::UniformScope::Global)] = Scene.GetStream();
+            Command.Parameters = { .Count = 4, .Base = 0, .Offset = 0, .Instances = static_cast<UInt32>(Data.GetSize()) };
         }
 
         // Render the accumulated spotlights in batches to minimize draw calls and state changes.
-        if (const ConstSpan<GpuSpotlightLayout> Data = mSpotlightData; !Data.empty())
+        if (const ConstSpan<GpuSpotlightLayout> Data = mSpotlightData; !Data.IsEmpty())
         {
-            Encoder.SetPipeline(mPipelines[Enum::Cast(Technique::Spotlight)]->GetID());
-            Encoder.SetTexture(0, Normal, Graphic::Sampler());
-            Encoder.SetVertices(0, Graphics.AllocateTransientBuffer(Graphic::Usage::Vertex, Data));
-            Encoder.Draw(3, 0, 0, Data.size());
-            Encoder.ResetBindings();
+            Ref<Graphic::Command> Command = Graphics.AllocateTransientCommands(1).GetFront();
+
+            Graphic::Transient<GpuSpotlightLayout> Instances = Graphics.AllocateTransientVertices<GpuSpotlightLayout>(Data.GetSize());
+            Instances.Copy(Data);
+
+            Command.Pipeline = mTechniques[Enum::Cast(Kind::Spotlight)]->GetHandle();
+            Command.Textures.Append(Normal);
+            Command.Samplers.Append();  // TODO: Use Automatic Binding
+            Command.Vertices.Append(Instances.GetStream());
+            Command.Uniforms[Enum::Cast(Graphic::UniformScope::Global)] = Scene.GetStream();
+            Command.Parameters = { .Count = 3, .Base = 0, .Offset = 0, .Instances = static_cast<UInt32>(Data.GetSize()) };
         }
     }
 
@@ -158,15 +168,15 @@ namespace Tileon::Stage
                 const Vector2 P1(Range * Angle::Cosine(A1), Range * Angle::Sine(A1));
                 const Vector2 P2(Range * Angle::Cosine(A2), Range * Angle::Sine(A2));
 
-                Real32 MinX = Math::Min(0.0f, Math::Min(P1.GetX(), P2.GetX()));
-                Real32 MaxX = Math::Max(0.0f, Math::Max(P1.GetX(), P2.GetX()));
-                Real32 MinY = Math::Min(0.0f, Math::Min(P1.GetY(), P2.GetY()));
-                Real32 MaxY = Math::Max(0.0f, Math::Max(P1.GetY(), P2.GetY()));
+                Real32 MinX = Min(0.0f, P1.GetX(), P2.GetX());
+                Real32 MaxX = Max(0.0f, P1.GetX(), P2.GetX());
+                Real32 MinY = Min(0.0f, P1.GetY(), P2.GetY());
+                Real32 MaxY = Max(0.0f, P1.GetY(), P2.GetY());
 
-                constexpr Real32 kHalfPi = Math::kPI<Real32> * 0.5f;
+                constexpr Real32 kHalfPi = kPI<Real32> * 0.5f;
 
-                const SInt32 Start = static_cast<SInt32>(Math::Floor(A1.GetRadians() / kHalfPi));
-                const SInt32 End   = static_cast<SInt32>(Math::Floor(A2.GetRadians() / kHalfPi));
+                const SInt32 Start = static_cast<SInt32>(Floor(A1.GetRadians() / kHalfPi));
+                const SInt32 End   = static_cast<SInt32>(Floor(A2.GetRadians() / kHalfPi));
 
                 for (SInt32 Side = Start; Side <= End; ++Side)
                 {
@@ -176,10 +186,10 @@ namespace Tileon::Stage
                     {
                         const Real32 Cx = Range * Angle::Cosine(Cardinal);
                         const Real32 Cy = Range * Angle::Sine(Cardinal);
-                        MinX = Math::Min(MinX, Cx);
-                        MaxX = Math::Max(MaxX, Cx);
-                        MinY = Math::Min(MinY, Cy);
-                        MaxY = Math::Max(MaxY, Cy);
+                        MinX = Min(MinX, Cx);
+                        MaxX = Max(MaxX, Cx);
+                        MinY = Min(MinY, Cy);
+                        MaxY = Max(MaxY, Cy);
                     }
                 }
 
@@ -206,11 +216,11 @@ namespace Tileon::Stage
 
     void Light::OnLoad(Ref<Content::Service> Content)
     {
-        for (const Technique Type : Enum::Values<Technique>())
+        for (const Kind Type : Enum::GetValues<Kind>())
         {
-            const ConstStr8 Path = Format("Resources://Pipeline/Light/{}.effect", Enum::Name(Type));
+            Str Path = Str::Print<"Resources://Technique/Light/{0}.vfx">(Enum::GetName(Type));
 
-            mPipelines[Enum::Cast(Type)] = Content.Load<Graphic::Pipeline>(Path);
+            mTechniques[Enum::Cast(Type)] = Content.Load<Graphic::Technique>(Move(Path));
         }
     }
 }

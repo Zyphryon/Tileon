@@ -47,7 +47,7 @@ namespace Tileon::Editor::UI
         const Real32 FilterW = Composer.GetContentRegionAvail().x - ListBtnW - GridBtnW - SliderGap - Spacing * 2.0f;
 
         Composer.SetNextItemWidth(FilterW > 0.0f ? FilterW : 1.0f);
-        Composer.InputText("##gallery_filter", mFilter, [this](ConstStr8 Value)
+        Composer.InputText("##gallery_filter", mFilter, [this](Text Value)
         {
             mFilter = Value;
         });
@@ -123,7 +123,7 @@ namespace Tileon::Editor::UI
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Gallery::DrawItem(Ref<Composer> Composer, UInt32 ID, ConstStr8 Name, Graphic::Object Thumbnail, Rect Crop, IntColor8 Tint)
+    Bool Gallery::DrawItem(Ref<Composer> Composer, UInt32 ID, Text Name, Graphic::Object Thumbnail, Rect Crop, IntColor8 Tint)
     {
         // Filter the item based on the provided name and the current filter string.
         if (!Filter(Name))
@@ -136,7 +136,7 @@ namespace Tileon::Editor::UI
         // In list mode, render a selectable item with the name as the label.
         if (mMode == Mode::List)
         {
-            const ConstStr8 Label = Base::Format("{}##{}", Name, ID);
+            const Text Label = String<128>::Print<"{0}##{1}">(Name, ID);
 
             if (Composer.Selectable(Label, WasSelected))
             {
@@ -157,7 +157,7 @@ namespace Tileon::Editor::UI
         const ImVec2 Origin    = Composer.GetCursorScreenPos();
         const ImVec2 BR(Origin.x + mSize, Origin.y + mSize);
 
-        const Bool IsClicked = Composer.InvisibleButton(Base::Format("##gallery_cell_{}", ID), ImVec2(mSize, mSize));
+        const Bool IsClicked = Composer.InvisibleButton(String<128>::Print<"##gallery_cell_{0}">(ID), ImVec2(mSize, mSize));
         const Bool IsHovered = Composer.IsItemHovered();
 
         if (IsClicked)
@@ -186,12 +186,12 @@ namespace Tileon::Editor::UI
         }
         else
         {
-            constexpr ConstStr8 kPlaceholder = "?";
+            constexpr Text kPlaceholder = "?";
             const ImVec2        TextSize     = Composer.CalcTextSize(kPlaceholder);
             const ImVec2        TextPos(
                 Origin.x + (mSize - TextSize.x) * 0.5f,
                 Origin.y + (mSize - TextSize.y) * 0.5f);
-            DrawList->AddText(TextPos, Composer.GetColorU32(ImGuiCol_TextDisabled), kPlaceholder.data());
+            DrawList->AddText(TextPos, Composer.GetColorU32(ImGuiCol_TextDisabled), kPlaceholder.GetData());
         }
 
         // Cell border; changes colour for selected / hovered states.
@@ -227,22 +227,21 @@ namespace Tileon::Editor::UI
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Gallery::Filter(ConstStr8 Name) const
+    Bool Gallery::Filter(Text Name) const
     {
-        if (!mFilter.empty())
+        if (!mFilter.IsEmpty())
         {
-            if (mFilter.size() > Name.size())
+            if (mFilter.GetSize() > Name.GetSize())
             {
                 return false;
             }
-            for (UInt32 I = 0; I <= Name.size() - mFilter.size(); ++I)
+            for (UInt32 I = 0; I <= Name.GetSize() - mFilter.GetSize(); ++I)
             {
                 Bool Match = true;
 
-                for (UInt32 J = 0; J < mFilter.size(); ++J)
+                for (UInt32 J = 0; J < mFilter.GetSize(); ++J)
                 {
-                    if (SDL_tolower(static_cast<unsigned char>(Name[I + J])) !=
-                        SDL_tolower(static_cast<unsigned char>(mFilter[J])))
+                    if (StrLowercase(Name[I + J]) != StrLowercase(mFilter[J]))
                     {
                         Match = false;
                         break;

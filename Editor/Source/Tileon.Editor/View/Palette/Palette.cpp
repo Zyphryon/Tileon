@@ -66,9 +66,9 @@ namespace Tileon::Editor::View
             Bool WasSelected;
 
             // Draw the terrain item in the gallery, using its material thumbnail if available.
-            if (Glyph.Material && Glyph.Material->GetTexture(Graphic::TextureSemantic::Albedo))
+            if (Glyph.Material && Glyph.Material->GetImage(Graphic::TextureSlot::Albedo))
             {
-                const Graphic::Object Thumbnail = Glyph.Material->GetTexture(Graphic::TextureSemantic::Albedo)->GetID();
+                const Graphic::Object Thumbnail = Glyph.Material->GetImage(Graphic::TextureSlot::Albedo)->GetHandle();
 
                 WasSelected = mGallery.DrawItem(Composer,
                     Terrain.GetID(),
@@ -109,11 +109,11 @@ namespace Tileon::Editor::View
             ConstRef<Terrain> Terrain = mRepository.GetTerrain(Selection);
 
             Composer.SetCursorPosX(Composer.GetStyle().ItemSpacing.x);
-            Composer.Label("{:04}  {}", Selection, Terrain.GetName().empty() ? "(Unnamed)" : Terrain.GetName());
+            Composer.Label("{0:04}  {1}", Selection, Terrain.GetName().IsEmpty() ? "(Unnamed)" : Terrain.GetName());
         }
         else
         {
-            constexpr ConstStr8 kHint = "No terrain selected";
+            constexpr Text kHint = "No terrain selected";
 
             Composer.SetCursorPosX((Composer.GetWindowWidth() - Composer.CalcTextSize(kHint).x) * 0.5f);
             Composer.TextDisabled(kHint);

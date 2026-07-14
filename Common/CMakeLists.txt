@@ -18,24 +18,23 @@ PROJECT(Tileon_Common VERSION 1.0.0 LANGUAGES CXX)
 ## Code
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-FILE(GLOB_RECURSE PROJECT_SOURCE "Source/*.cpp")
-
-## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-## Includes
-## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-LIST(APPEND PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
+FILE(GLOB_RECURSE PROJECT_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cpp")
+LIST(APPEND       PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
 
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 ## Dependency (Zyphryon Engine)
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-FetchContent_Declare(External_Zyphryon
-        GIT_REPOSITORY https://github.com/Zyphryon/Engine
-        GIT_TAG main)
-FetchContent_MakeAvailable(External_Zyphryon)
+SET(ZY_GRAPHIC_LOADER_STB   ON CACHE BOOL "Enable STB image loader" FORCE)
+SET(ZY_RENDER_LOADER_ARTERY ON CACHE BOOL "Enable MSDF font loader" FORCE)
 
-LIST(APPEND PROJECT_DEPENDENCIES "Zyphryon_Engine")
+FetchContent_Declare(External_ZyEngine
+        GIT_REPOSITORY https://github.com/Zyphryon/Engine
+        GIT_TAG        main
+        GIT_SHALLOW    TRUE)
+FetchContent_MakeAvailable(External_ZyEngine)
+
+LIST(APPEND PROJECT_DEPENDENCIES "ZyEngine")
 
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 ## Library
@@ -54,3 +53,9 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME} PUBLIC ${PROJECT_DEPENDENCIES})
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PUBLIC ${PROJECT_INCLUDE})
+
+## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+## Properties
+## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+ZyApplyCompileOptions(${PROJECT_NAME})

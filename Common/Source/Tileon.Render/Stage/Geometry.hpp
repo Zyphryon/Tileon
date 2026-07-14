@@ -24,14 +24,14 @@
 namespace Tileon::Stage
 {
     /// \brief Represents the geometry stage of the rendering pipeline, responsible for rendering objects.
-    class Geometry final : public Locator<Content::Service>
+    class Geometry final : public Engine::Locator<Content::Service>
     {
     public:
 
         /// \brief Constructs the stage instance with the specified service host.
         ///
         /// \param Host The service host to associate with the stage.
-        Geometry(Ref<Service::Host> Host);
+        Geometry(Ref<Engine::Subsystem::Host> Host);
 
         /// \brief Executes the stage's main logic.
         ///
@@ -42,7 +42,7 @@ namespace Tileon::Stage
     private:
 
         /// \brief Enumerates the different rendering techniques available in the geometry stage.
-        enum class Technique
+        enum class Kind
         {
             SpriteOpaque,               ///< Technique for rendering opaque sprites without normal mapping.
             SpriteOpaqueWithNormal,     ///< Technique for rendering opaque sprites with normal mapping.
@@ -50,8 +50,8 @@ namespace Tileon::Stage
             SpriteNonOpaqueWithNormal,  ///< Technique for rendering non-opaque sprites with normal mapping.
         };
 
-        /// \brief Defines a type alias for a collection of pipeline trackers, one for each rendering technique.
-        using Pipelines = Array<Tracker<Graphic::Pipeline>, Enum::Count<Technique>()>;
+        /// \brief Defines a type alias for a collection of rendering techniques.
+        using Techniques = Array<Retainer<Graphic::Technique>, Enum::Count<Kind>()>;
 
         /// \brief Registers the stage with the specified scene service.
         ///
@@ -85,11 +85,12 @@ namespace Tileon::Stage
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         Render::Canvas mCanvas;         // TODO: Strip out from Zyphryon?
-        Pipelines      mPipelines;
+        Techniques     mTechniques;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+        Scene::Query   mQrDrawModels;
         Scene::Query   mQrDrawSprites;
         Scene::Query   mQrDrawTexts;
         Scene::Query   mQrDrawRegions;

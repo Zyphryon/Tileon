@@ -29,7 +29,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bootstrap::Result Bootstrap::Draw(Ref<UI::Composer> Composer, ConstRef<Engine::Device> Device)
+    Bootstrap::Result Bootstrap::Draw(Ref<UI::Composer> Composer)
     {
         if (mState == State::Done)
         {
@@ -72,10 +72,10 @@ namespace Tileon::Editor::View
             switch (mState)
             {
             case State::Menu:
-                Result = DrawInMenu(Composer, Device);
+                Result = DrawInMenu(Composer);
                 break;
             case State::Wizard:
-                Result = DrawInWizard(Composer, Device);
+                Result = DrawInWizard(Composer);
                 break;
             default:
                 break;
@@ -84,13 +84,15 @@ namespace Tileon::Editor::View
             Composer.End();
         }
 
+        mPicker.Draw(Composer);
+
         return Result;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bootstrap::Result Bootstrap::DrawInMenu(Ref<UI::Composer> Composer, ConstRef<Engine::Device> Device)
+    Bootstrap::Result Bootstrap::DrawInMenu(Ref<UI::Composer> Composer)
     {
         constexpr Real32 kButtonW = 160.0f;
         constexpr Real32 kButtonH = 32.0f;
@@ -99,7 +101,7 @@ namespace Tileon::Editor::View
         Composer.SetCursorPosX(kOffsetX);
         if (Composer.Button("Open", kButtonW, kButtonH))
         {
-            OpenFileDialog(Device);
+            OpenFileDialog();
         }
 
         Composer.Spacing();
@@ -125,7 +127,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bootstrap::Result Bootstrap::DrawInWizard(Ref<UI::Composer> Composer, ConstRef<Engine::Device> Device)
+    Bootstrap::Result Bootstrap::DrawInWizard(Ref<UI::Composer> Composer)
     {
         constexpr Real32 kLabelW  = 90.0f;
         constexpr Real32 kButtonW = 80.0f;
@@ -133,7 +135,7 @@ namespace Tileon::Editor::View
         Composer.Label("Name");
         Composer.SameLine(kLabelW);
         Composer.SetNextItemWidth(-1.0f);
-        Composer.InputText("##name", mProject.GetName(), [this](ConstStr8 Value)
+        Composer.InputText("##name", mProject.GetName(), [this](Text Value)
         {
             mProject.SetName(Value);
         });
@@ -143,13 +145,13 @@ namespace Tileon::Editor::View
         Composer.Label("Density");
         Composer.SameLine(kLabelW);
         Composer.SetNextItemWidth(-1.0f);
-        if (Composer.BeginCombo("##density", Format("{}", mProject.GetDensity())))
+        if (Composer.BeginCombo("##density", String<32>::Print<"{0}">(mProject.GetDensity())))
         {
             for (const UInt16 Option : kDensityOptions)
             {
                 const Bool Selected = (mProject.GetDensity() == Option);
 
-                if (Composer.Selectable(Format("{}", Option), Selected))
+                if (Composer.Selectable(String<32>::Print<"{0}">(Option), Selected))
                 {
                     mProject.SetDensity(Option);
                 }
@@ -160,7 +162,7 @@ namespace Tileon::Editor::View
         Composer.Label("Description");
         Composer.SameLine(kLabelW);
         Composer.SetNextItemWidth(-1.0f);
-        Composer.InputText("##description", mProject.GetDescription(), [this](ConstStr8 Value)
+        Composer.InputText("##description", mProject.GetDescription(), [this](Text Value)
         {
             mProject.SetDescription(Value);
         });
@@ -176,7 +178,7 @@ namespace Tileon::Editor::View
 
         if (Composer.Button("Create", kButtonW))
         {
-            OpenSaveDialog(Device);
+            OpenSaveDialog();
         }
 
         return Result::None;
@@ -185,52 +187,40 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Bootstrap::OpenFileDialog(ConstRef<Engine::Device> Device)
+    void Bootstrap::OpenFileDialog()
     {
-        constexpr SDL_DialogFileFilter   kFilter[] = {
-            { Project::kFileDescription, Project::kFileExtension }
-        };
-        constexpr SDL_DialogFileCallback kCallback = [](Ptr<void> Context, ConstPtr<ConstPtr<Char>> Files, SInt32)
-        {
-            if (Files && Files[0])
+        mPicker.Open(UI::Picker::Mode::Open, Filesystem::GetRootFolder(), Project::kFileExtension,
+            [this](Text Path)
             {
-                static_cast<Ptr<Bootstrap>>(Context)->OnDialogResult(Files[0]);
-            }
-        };
-        SDL_ShowOpenFileDialog(kCallback, this, Device.GetHandle(), kFilter, 1, nullptr, false);
+                OnDialogResult(Path);
+            });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Bootstrap::OpenSaveDialog(ConstRef<Engine::Device> Device)
+    void Bootstrap::OpenSaveDialog()
     {
-        constexpr SDL_DialogFileFilter   kFilter[] = {
-            { Project::kFileDescription, Project::kFileExtension }
-        };
-        constexpr SDL_DialogFileCallback kCallback = [](Ptr<void> Context, ConstPtr<ConstPtr<Char>> Files, SInt32)
-        {
-            if (Files && Files[0])
+        mPicker.Open(UI::Picker::Mode::Save, Filesystem::GetRootFolder(), Project::kFileExtension,
+            [this](Text Path)
             {
-                static_cast<Ptr<Bootstrap>>(Context)->OnDialogResult(Files[0]);
-            }
-        };
-        SDL_ShowSaveFileDialog(kCallback, this, Device.GetHandle(), kFilter, 1, nullptr);
+                OnDialogResult(Path);
+            });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Bootstrap::OnDialogResult(ConstStr8 Path)
+    void Bootstrap::OnDialogResult(Text Path)
     {
         // Convert the file path to use backslashes, ensuring compatibility with windows file system conventions.
-        Str8 Result(Path);
-        std::ranges::replace(Result, '\\', '/');
+        Str Result(Path);
 
         // Ensure the selected file has the correct project file extension, appending it if necessary.
-        if (!Result.ends_with(Project::kFileExtension))
+        if (!StrEndsWith(Result, Project::kFileExtension))
         {
-            Result.append(".").append(Project::kFileExtension);
+            Result.Append('.');
+            Result.Append(Project::kFileExtension);
         }
         mProject.SetPath(Move(Result));
 
@@ -238,9 +228,11 @@ namespace Tileon::Editor::View
         {
         case State::Menu:
         {
-            if (const Blob File = Filesystem::Load(mProject.GetPath()); File)
+            Blob File;
+
+            if (Filesystem::Read(mProject.GetPath(), File) == Filesystem::Result::Success)
             {
-                TOMLParser Parser(File.GetText());
+                JsonValue Parser = JsonDocument::Parse(Text(File.GetData<Char>(), File.GetSize()));
 
                 if (mProject.Load(Parser))
                 {
@@ -251,18 +243,21 @@ namespace Tileon::Editor::View
         }
         case State::Wizard:
         {
-            TOMLParser Parser;
+            JsonValue Parser;
+            Parser.SetObject();
             mProject.Save(Parser);
 
-            if (Scaffold(mProject.GetPath()))
+            if (Scaffold(StrBeforeLast(mProject.GetPath(), '/')))
             {
-                Filesystem::Save(mProject.GetPath(), Parser.Dump());
+                const Str Data = JsonDocument::Dump(Parser);
+                Filesystem::Write(mProject.GetPath(),
+                    ConstSpan(reinterpret_cast<ConstPtr<Byte>>(Data.GetData()), Data.GetSize()));
 
                 mState = State::Done;
             }
             else
             {
-                LOG_WARNING("Bootstrap: Failed to prepare project directory at '{}'", mProject.GetPath());
+                LOG_W("Bootstrap: Failed to prepare project directory at '{}'", mProject.GetPath());
 
                 Filesystem::Delete(mProject.GetPath());
             }
@@ -276,15 +271,19 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Bootstrap::Scaffold(ConstStr8 Path)
+    Bool Bootstrap::Scaffold(Text Path)
     {
-        const Str8 Folder(mProject.GetPath().substr(0, mProject.GetPath().find_last_of("\\/") + 1));
+        Filesystem::Path Source = Filesystem::GetRootFolder();
+        Source.Append("Bootstrap/");
 
-        Bool Result = Filesystem::CopyAll(Filesystem::GetBase() + "\\Bootstrap\\", Folder);
-        Result      = Result && Filesystem::Make(Folder + "Data");
-        Result      = Result && Filesystem::Make(Folder + "Material");
-        Result      = Result && Filesystem::Make(Folder + "World");
-        return Result;
+        if (Filesystem::CopyAll(Source, Path) == Filesystem::Result::Success)
+        {
+            Filesystem::Make(Path + Filesystem::Path("Data"));
+            Filesystem::Make(Path + Filesystem::Path("Material"));
+            Filesystem::Make(Path + Filesystem::Path("World"));
+            return true;
+        }
+        return false;
     }
 }
 

@@ -1,0 +1,37 @@
+{
+  "Properties": {
+    "Depth": {
+      "Mask": false,
+      "Condition": "Always"
+    },
+    "Rasterizer": {
+      "Cull": "None"
+    },
+    "Layout": {
+      "Attributes": [],
+      "Primitive": "TriangleList"
+    }
+  },
+  "Signature": {
+    "Textures": [
+      "Albedo",
+      "Radiance"
+    ],
+    "Samplers": [
+      { "Slot": 0, "AddressModeU": "Clamp", "AddressModeV": "Clamp", "Filter": "LinearMipLinear" },
+      { "Slot": 1, "AddressModeU": "Clamp", "AddressModeV": "Clamp", "Filter": "LinearMipLinear" }
+    ]
+  },
+  "Program": {
+    "Shaders": {
+      "HLSL": [
+        { "Path": "Composite-HLSL.shd", "Stage": "Vertex"   },
+        { "Path": "Composite-HLSL.shd", "Stage": "Fragment" }
+      ],
+      "GLSL": [
+        { "Path": "Composite-GLSL.shd", "Stage": "Vertex"   },
+        { "Path": "Composite-GLSL.shd", "Stage": "Fragment" }
+      ]
+    }
+  }
+}

@@ -33,6 +33,29 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    void Workshop::Tick()
+    {
+        mOperations.RemoveFastSomeIf([&](ConstRef<OpTile> Operation) -> Bool
+        {
+            if (Operation.Actor.IsValid())
+            {
+                if (const Ptr<Region> Component = Operation.Actor.TryGet<Region>())
+                {
+                    ApplyTiles(Component, Operation);
+                    return true;
+                }
+            }
+            else
+            {
+                return true;
+            }
+            return false;
+        });
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void Workshop::Execute(Command Command, Placement Placement, UInt32 Object)
     {
         switch (mMode)
@@ -117,39 +140,56 @@ namespace Tileon::Editor
 
                 if (Actor.IsValid())
                 {
-                    // Compute this region's global tile origin.
-                    const SInt32 OriginX = RegionX * Region::kTilesPerX;
-                    const SInt32 OriginY = RegionY * Region::kTilesPerY;
+                    const OpTile Operation(Actor, Command, Layer, Handle, Span, Area);
 
-                    // Clip the global area to this region's tile range and convert to region-local coordinates.
-                    const SInt32 GlobalClipMinX = Max(Area.GetMinimumX(), OriginX);
-                    const SInt32 GlobalClipMinY = Max(Area.GetMinimumY(), OriginY);
-                    const SInt32 GlobalClipMaxX = Min(Area.GetMaximumX(), OriginX + Region::kTilesPerX);
-                    const SInt32 GlobalClipMaxY = Min(Area.GetMaximumY(), OriginY + Region::kTilesPerY);
-
-                    const IntRect LocalArea(
-                        GlobalClipMinX - OriginX,
-                        GlobalClipMinY - OriginY,
-                        GlobalClipMaxX - OriginX,
-                        GlobalClipMaxY - OriginY);
-
-                    if (Command == Command::Add)
+                    if (const Ptr<Region> Component = Actor.TryGet<Region>())
                     {
-                        const IntVector2 Offset(
-                            (GlobalClipMinX - Area.GetMinimumX()) % Span.GetX(),
-                            (GlobalClipMinY - Area.GetMinimumY()) % Span.GetY());
-
-                        Actor.Get<Region>().Fill(LocalArea, Layer, Handle, Span, Offset);
+                        ApplyTiles(Component, Operation);
                     }
                     else
                     {
-                        Actor.Get<Region>().Erase(LocalArea, Layer);
+                        mOperations.Append(Operation);
                     }
-
-                    // Mark the region as dirty so it gets saved and reloaded with the updated tile data.
-                    Actor.Add<Persist>();
                 }
             }
         }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::ApplyTiles(Ptr<Region> Region, ConstRef<OpTile> Operation)
+    {
+        // Compute this region's global tile origin.
+        const SInt32 OriginX = Region->GetX() * Region::kTilesPerX;
+        const SInt32 OriginY = Region->GetY() * Region::kTilesPerY;
+
+        // Clip the global area to this region's tile range and convert to region-local coordinates.
+        const SInt32 GlobalClipMinX = Max(Operation.Area.GetMinimumX(), OriginX);
+        const SInt32 GlobalClipMinY = Max(Operation.Area.GetMinimumY(), OriginY);
+        const SInt32 GlobalClipMaxX = Min(Operation.Area.GetMaximumX(), OriginX + Region::kTilesPerX);
+        const SInt32 GlobalClipMaxY = Min(Operation.Area.GetMaximumY(), OriginY + Region::kTilesPerY);
+
+        const IntRect LocalArea(
+            GlobalClipMinX - OriginX,
+            GlobalClipMinY - OriginY,
+            GlobalClipMaxX - OriginX,
+            GlobalClipMaxY - OriginY);
+
+        if (Operation.Command == Command::Add)
+        {
+            const IntVector2 Offset(
+                (GlobalClipMinX - Operation.Area.GetMinimumX()) % Operation.Span.GetX(),
+                (GlobalClipMinY - Operation.Area.GetMinimumY()) % Operation.Span.GetY());
+
+            Region->Fill(LocalArea, Operation.Layer, Operation.Terrain, Operation.Span, Offset);
+        }
+        else
+        {
+            Region->Erase(LocalArea, Operation.Layer);
+        }
+
+        // Mark the region as dirty so it gets saved and reloaded with the updated tile data.
+        Operation.Actor.Add<Persist>();
     }
 }

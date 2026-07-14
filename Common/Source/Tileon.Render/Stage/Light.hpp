@@ -14,8 +14,7 @@
 
 #include "Tileon.Render/Director.hpp"
 #include <Zyphryon.Content/Service.hpp>
-#include <Zyphryon.Graphic/Encoder.hpp>
-#include <Zyphryon.Graphic/Service.hpp>
+#include <Zyphryon.Graphic/Technique.hpp>
 #include <Zyphryon.Scene/Service.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -25,34 +24,34 @@
 namespace Tileon::Stage
 {
     /// \brief Represents the light stage of the rendering pipeline, responsible for applying lighting effects to the scene.
-    class Light final : public Locator<Graphic::Service>
+    class Light final
     {
     public:
 
         /// \brief Constructs the stage instance with the specified service host.
         ///
         /// \param Host The service host to associate with the stage.
-        Light(Ref<Service::Host> Host);
+        Light(Ref<Engine::Subsystem::Host> Host);
 
         /// \brief Executes the stage's main logic.
         ///
-        /// \param Encoder  The graphic encoder used to submit draw calls for this stage.
+        /// \param Graphics The graphic service used to submit draw calls for this stage.
         /// \param Director The director instance providing camera and view management for rendering.
         /// \param Normal   The normal map object used for lighting calculations in the stage.
-        void Run(Ref<Graphic::Encoder> Encoder, ConstRef<Director> Director, Graphic::Object Normal);
+        void Run(Ref<Graphic::Service> Graphics, ConstRef<Director> Director, Graphic::Object Normal);
 
     private:
 
         /// \brief Enumerates the different rendering techniques available in the light stage.
-        enum class Technique
+        enum class Kind
         {
             Spotlight, ///< Technique for rendering cone-shaped light sources.
             Glowlight, ///< Technique for rendering radial light sources.
             Skylight,  ///< Technique for rendering ambient lighting effects that affect the entire scene.
         };
 
-        /// \brief Defines a type alias for a collection of pipeline trackers, one for each rendering technique.
-        using Pipelines = Array<Tracker<Graphic::Pipeline>, Enum::Count<Technique>()>;
+        /// \brief Defines a type alias for a collection of rendering techniques.
+        using Techniques = Array<Retainer<Graphic::Technique>, Enum::Count<Kind>()>;
 
         /// \brief Registers the stage with the specified scene service.
         ///
@@ -120,15 +119,15 @@ namespace Tileon::Stage
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Pipelines                  mPipelines;
-        Vector<GpuGlowlightLayout> mGlowlightData;
-        Vector<GpuSpotlightLayout> mSpotlightData;
+        Techniques                   mTechniques;
+        Sequence<GpuGlowlightLayout> mGlowlightData;
+        Sequence<GpuSpotlightLayout> mSpotlightData;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Scene::Query               mQrDrawGlowlights;
-        Scene::Query               mQrDrawSpotlights;
-        Scene::Query               mQrDrawSkylight;
+        Scene::Query                 mQrDrawGlowlights;
+        Scene::Query                 mQrDrawSpotlights;
+        Scene::Query                 mQrDrawSkylight;
     };
 }

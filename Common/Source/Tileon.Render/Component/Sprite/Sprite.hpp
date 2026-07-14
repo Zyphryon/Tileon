@@ -27,13 +27,13 @@ namespace Tileon
     public:
 
         /// \brief Default constructor.
-        ZYPHRYON_INLINE Sprite() = default;
+        ZY_INLINE Sprite() = default;
 
         /// \brief Constructs a sprite with the specified path and source rectangle.
         ///
         /// \param Path   The path to the sprite's texture resource.
         /// \param Source The source rectangle for the sprite.
-        ZYPHRYON_INLINE Sprite(AnyRef<Content::Uri> Path, Rect Source = Rect::One())
+        ZY_INLINE Sprite(AnyRef<Content::Uri> Path, Rect Source = Rect::One())
             : mPath   { Move(Path) },
               mSource { Source }
         {
@@ -42,7 +42,7 @@ namespace Tileon
         /// \brief Sets the path to the sprite's texture resource.
         ///
         /// \param Path The new path to set for the sprite's texture resource.
-        ZYPHRYON_INLINE void SetPath(AnyRef<Content::Uri> Path)
+        ZY_INLINE void SetPath(AnyRef<Content::Uri> Path)
         {
             mPath = Move(Path);
         }
@@ -50,7 +50,7 @@ namespace Tileon
         /// \brief Gets the path to the sprite's texture resource.
         ///
         /// \return The path to the sprite's texture resource.
-        ZYPHRYON_INLINE ConstRef<Content::Uri> GetPath() const
+        ZY_INLINE ConstRef<Content::Uri> GetPath() const
         {
             return mPath;
         }
@@ -58,7 +58,7 @@ namespace Tileon
         /// \brief Sets the source rectangle for the sprite.
         ///
         /// \param Source The new source rectangle to set for the sprite.
-        ZYPHRYON_INLINE void SetSource(Rect Source)
+        ZY_INLINE void SetSource(Rect Source)
         {
             mSource = Source;
         }
@@ -66,7 +66,7 @@ namespace Tileon
         /// \brief Gets the source rectangle for the sprite.
         ///
         /// \return The source rectangle for the sprite.
-        ZYPHRYON_INLINE Rect GetSource() const
+        ZY_INLINE Rect GetSource() const
         {
             return mSource;
         }
@@ -75,10 +75,10 @@ namespace Tileon
         ///
         /// \param Archive The archive to serialize the object with.
         template<typename Serializer>
-        ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
+        ZY_INLINE void Serialize(Serializer Archive)
         {
-            Archive.SerializeObject(mPath);
-            Archive.SerializeObject(mSource);
+            Archive.Serialize(mPath);
+            Archive.Serialize(mSource);
         }
 
     private:

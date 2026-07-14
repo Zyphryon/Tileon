@@ -47,7 +47,7 @@ namespace Tileon::Editor::UI
         /// \brief Opens the browser, setting its state to open and allowing it to be drawn in the UI.
         ///
         /// \param Filter An optional filter to limit the displayed items based on their types.
-        void Open(ConstStr8 Filter = "");
+        void Open(Text Filter = "");
 
         /// \brief Draws the browser widget, which consists of a sidebar tree view and a main gallery view.
         ///
@@ -61,7 +61,7 @@ namespace Tileon::Editor::UI
         /// \brief Gets the currently selected content URI in the browser.
         ///
         /// \return The content URI of the currently selected item in the browser.
-        ZYPHRYON_INLINE ConstStr8 GetSelection() const
+        ZY_INLINE Text GetSelection() const
         {
             return  mSelection;
         }
@@ -91,7 +91,7 @@ namespace Tileon::Editor::UI
         void DrawContent(Ref<UI::Composer> Composer);
 
         /// \brief Defines the type for a list of content entries.
-        using Entries = Vector<Content::Mount::Item>;
+        using Entries = Sequence<Filesystem::Record>;
 
         /// \brief Returns the cached entry list for the given URI, populating the cache on first access.
         ///
@@ -114,7 +114,7 @@ namespace Tileon::Editor::UI
         Mode                   mMode;
         Bool                   mOpen;
         Real64                 mTime;
-        Str8                   mSelection;
-        Str8                   mFilter;
+        Str                    mSelection;
+        Str                    mFilter;
     };
 }

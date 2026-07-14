@@ -33,23 +33,23 @@ namespace Tileon
         /// \brief Checks if the animation sequence has reached its maximum capacity of frames.
         ///
         /// \return `true` if the animation sequence is full, `false` otherwise.
-        ZYPHRYON_INLINE Bool IsFull() const
+        ZY_INLINE Bool IsFull() const
         {
-            return mFrames.size() >= kMaxFrames;
+            return mFrames.IsFull();
         }
 
         /// \brief Checks if the animation sequence is empty, meaning it contains no frames.
         ///
         /// \return `true` if the animation sequence is empty, `false` otherwise.
-        ZYPHRYON_INLINE Bool IsEmpty() const
+        ZY_INLINE Bool IsEmpty() const
         {
-            return  mFrames.empty();
+            return  mFrames.IsEmpty();
         }
 
         /// \brief Gets the total duration of the sequence by summing the durations of all frames.
         ///
         /// \return The total duration of the sequence in seconds.
-        ZYPHRYON_INLINE Real32 GetDuration() const
+        ZY_INLINE Real32 GetDuration() const
         {
             Real32 Total = 0.0f;
 
@@ -63,20 +63,20 @@ namespace Tileon
         /// \brief Gets the total number of frames currently stored in the sequence.
         ///
         /// \return The number of frames in the sequence.
-        ZYPHRYON_INLINE UInt8 GetCount() const
+        ZY_INLINE UInt8 GetCount() const
         {
-            return mFrames.size();
+            return mFrames.GetSize();
         }
 
         /// \brief Retrieves the keyframe index corresponding to a given time in the animation sequence.
         ///
         /// \param Time The time in seconds for which to retrieve the keyframe index.
         /// \return The index of the keyframe that corresponds to the specified time in the animation sequence.
-        ZYPHRYON_INLINE UInt8 GetKeyframe(Real64 Time) const
+        ZY_INLINE UInt8 GetKeyframe(Real64 Time) const
         {
             Real64 Elapsed = 0.0;
 
-            for (UInt32 Keyframe = 0; Keyframe < mFrames.size(); ++Keyframe)
+            for (UInt32 Keyframe = 0; Keyframe < mFrames.GetSize(); ++Keyframe)
             {
                 Elapsed += mFrames[Keyframe].Duration;
 
@@ -85,37 +85,37 @@ namespace Tileon
                     return Keyframe;
                 }
             }
-            return mFrames.size() - 1;
+            return mFrames.GetSize() - 1;
         }
 
         /// \brief Inserts a new frame into the sequence.
         ///
         /// \param Value    The value of the frame.
         /// \param Duration The duration of the frame in seconds.
-        ZYPHRYON_INLINE void Insert(Rect Value, Real32 Duration)
+        ZY_INLINE void Insert(Rect Value, Real32 Duration)
         {
-            mFrames.emplace_back(Value, Duration);
+            mFrames.Append(Value, Duration);
         }
 
         /// \brief Removes a frame from the sequence at the specified keyframe index.
         ///
         /// \param Keyframe The index of the keyframe to remove from the sequence.
-        ZYPHRYON_INLINE void Remove(UInt8 Keyframe)
+        ZY_INLINE void Remove(UInt8 Keyframe)
         {
-            mFrames.erase(mFrames.begin() + Keyframe);
+            mFrames.Remove(Keyframe);
         }
 
         /// \brief Clears all frames from the sequence, resetting it to an empty state.
-        ZYPHRYON_INLINE void Clear()
+        ZY_INLINE void Clear()
         {
-            mFrames.clear();
+            mFrames.Clear();
         }
 
         /// \brief Updates the coordinates of an existing frame in the sequence at the specified keyframe index.
         ///
         /// \param Keyframe The index of the keyframe to update.
         /// \param Data     The new coordinates to assign to the frame at the specified keyframe index.
-        ZYPHRYON_INLINE void SetFrameData(UInt8 Keyframe, Rect Data)
+        ZY_INLINE void SetFrameData(UInt8 Keyframe, Rect Data)
         {
             mFrames[Keyframe].Data = Data;
         }
@@ -124,7 +124,7 @@ namespace Tileon
         ///
         /// \param Keyframe The index of the keyframe to retrieve the coordinates from.
         /// \return The coordinates of the frame at the specified keyframe index.
-        ZYPHRYON_INLINE Rect GetFrameData(UInt8 Keyframe) const
+        ZY_INLINE Rect GetFrameData(UInt8 Keyframe) const
         {
             return mFrames[Keyframe].Data;
         }
@@ -133,7 +133,7 @@ namespace Tileon
         ///
         /// \param Keyframe The index of the keyframe to update.
         /// \param Duration The new duration to assign to the frame at the specified keyframe index
-        ZYPHRYON_INLINE void SetFrameDuration(UInt8 Keyframe, Real32 Duration)
+        ZY_INLINE void SetFrameDuration(UInt8 Keyframe, Real32 Duration)
         {
             mFrames[Keyframe].Duration = Duration;
         }
@@ -142,7 +142,7 @@ namespace Tileon
         ///
         /// \param Keyframe The index of the keyframe to retrieve the duration from.
         /// \return The duration of the frame at the specified keyframe index.
-        ZYPHRYON_INLINE Real32 GetFrameDuration(UInt8 Keyframe) const
+        ZY_INLINE Real32 GetFrameDuration(UInt8 Keyframe) const
         {
             return mFrames[Keyframe].Duration;
         }
@@ -151,9 +151,9 @@ namespace Tileon
         ///
         /// \param Archive The archive to serialize the object with.
         template<typename Serializer>
-        ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
+        ZY_INLINE void Serialize(Serializer Archive)
         {
-            Archive.SerializeVector(mFrames);
+            Archive.Serialize(mFrames);
         }
 
     private:
@@ -168,7 +168,7 @@ namespace Tileon
             Real32 Duration;
 
             /// \brief Constructs an empty frame with default values.
-            ZYPHRYON_INLINE Frame()
+            ZY_INLINE Frame()
                 : Duration { 0.0f }
             {
             }
@@ -177,20 +177,10 @@ namespace Tileon
             ///
             /// \param Data     The coordinates of the frame, representing the area of the sprite sheet.
             /// \param Duration The duration of the frame in seconds.
-            ZYPHRYON_INLINE Frame(Rect Data, Real32 Duration)
+            ZY_INLINE Frame(Rect Data, Real32 Duration)
                 : Data     { Data },
                   Duration { Duration }
             {
-            }
-
-            /// \brief Serializes the state of the object to or from the specified archive.
-            ///
-            /// \param Archive The archive to serialize the object with.
-            template<typename Serializer>
-            ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
-            {
-                Archive.SerializeObject(Data);
-                Archive.SerializeReal32(Duration);
             }
         };
 
@@ -199,6 +189,6 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Vector<Frame, kMaxFrames> mFrames;
+        Sequence<Frame, kMaxFrames> mFrames;
     };
 }

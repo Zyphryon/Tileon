@@ -23,31 +23,31 @@
 namespace Tileon
 {
     /// \brief Manages the repository of terrains and archetypes in the world.
-    class Repository final : public Locator<Scene::Service, Content::Service>
+    class Repository final : public Engine::Locator<Scene::Service, Content::Service>
     {
     public:
 
         /// \brief Default filename for storing the world state.
-        static constexpr ConstStr8 kManifestUri    = "Resources://Data/World.bin";
+        static constexpr Text   kManifestUri    = "Resources://Data/World.bin";
 
         /// \brief Maximum number of terrains that can be stored in the repository.
-        static constexpr UInt32    kTerrainLimit   = 1'024;
+        static constexpr UInt32 kTerrainLimit   = 1'024;
 
         /// \brief Default filename for storing terrains.
-        static constexpr ConstStr8 kTerrainUri     = "Resources://Data/Terrains.bin";
+        static constexpr Text   kTerrainUri     = "Resources://Data/Terrains.bin";
 
         /// \brief Maximum number of entity archetypes that can be stored in the repository.
-        static constexpr UInt32    kArchetypeLimit = Scene::kMaxCountArchetypes;
+        static constexpr UInt32 kArchetypeLimit = Scene::kMaxCountArchetypes;
 
         /// \brief Default filename for storing entity archetypes.
-        static constexpr ConstStr8 kArchetypeUri   = "Resources://Data/Archetypes.bin";
+        static constexpr Text   kArchetypeUri   = "Resources://Data/Archetypes.bin";
 
     public:
 
         /// \brief Constructs a repository with the specified service host.
         ///
         /// \param Host The service host to associate with the repository.
-        explicit Repository(Ref<Service::Host> Host);
+        explicit Repository(Ref<Engine::Subsystem::Host> Host);
 
         /// \brief Loads the repository data.
         void Load();
@@ -69,7 +69,7 @@ namespace Tileon
         ///
         /// \param ID The unique identifier of the archetype.
         /// \return The entity archetype corresponding to the given ID.
-        ZYPHRYON_INLINE Scene::Entity GetArchetype(UInt64 ID) const
+        ZY_INLINE Scene::Entity GetArchetype(UInt64 ID) const
         {
             return GetService<Scene::Service>().GetEntity(ID);
         }
@@ -78,7 +78,7 @@ namespace Tileon
         ///
         /// \param Name The name of the archetype.
         /// \return The entity archetype corresponding to the given name.
-        ZYPHRYON_INLINE Scene::Entity GetArchetype(ConstStr8 Name) const
+        ZY_INLINE Scene::Entity GetArchetype(Text Name) const
         {
             return GetService<Scene::Service>().GetEntity(Name);
         }
@@ -97,7 +97,7 @@ namespace Tileon
         ///
         /// \param ID The unique identifier of the terrain to check for existence.
         /// \return `true` if a terrain with the given ID exists, `false`
-        ZYPHRYON_INLINE Bool HasTerrain(UInt16 ID) const
+        ZY_INLINE Bool HasTerrain(UInt16 ID) const
         {
             return mTerrains.IsAllocated(ID);
         }
@@ -106,7 +106,7 @@ namespace Tileon
         ///
         /// \param ID The unique identifier of the terrain.
         /// \return A reference to the terrain corresponding to the given ID.
-        ZYPHRYON_INLINE Ref<Terrain> GetTerrain(UInt16 ID)
+        ZY_INLINE Ref<Terrain> GetTerrain(UInt16 ID)
         {
             return mTerrains[ID];
         }
@@ -115,7 +115,7 @@ namespace Tileon
         ///
         /// \param ID The unique identifier of the terrain.
         /// \return A read-only reference to the terrain corresponding to the given ID.
-        ZYPHRYON_INLINE ConstRef<Terrain> GetTerrain(UInt16 ID) const
+        ZY_INLINE ConstRef<Terrain> GetTerrain(UInt16 ID) const
         {
             return mTerrains[ID];
         }
@@ -124,7 +124,7 @@ namespace Tileon
         ///
         /// \param Callback The callback function to apply to each archetype entity.
         template<typename Function>
-        ZYPHRYON_INLINE void ForEachArchetype(AnyRef<Function> Callback) const
+        ZY_INLINE void ForEachArchetype(AnyRef<Function> Callback) const
         {
             GetService<Scene::Service>().QueryArchetypes(Callback);
         }
@@ -133,7 +133,7 @@ namespace Tileon
         ///
         /// \param Callback The callback function to apply to each terrain.
         template<typename Function>
-        ZYPHRYON_INLINE void ForEachTerrain(AnyRef<Function> Callback) const
+        ZY_INLINE void ForEachTerrain(AnyRef<Function> Callback) const
         {
             mTerrains.ForEach(Callback);
         }
@@ -141,25 +141,19 @@ namespace Tileon
     private:
 
         /// \brief Loads the world manifest from file.
-        ///
-        /// \return `true` if the manifest was loaded successfully, `false` otherwise.
-        Bool LoadManifest();
+        void LoadManifest(Filesystem::Result Result, Blob Data);
 
         /// \brief Saves the world manifest to file.
         void SaveManifest();
 
         /// \brief Loads the entity archetype database from file.
-        ///
-        /// \return `true` if the database was loaded successfully, `false` otherwise.
-        Bool LoadArchetypeDatabase();
+        void LoadArchetypeDatabase(Filesystem::Result Result, Blob Data);
 
         /// \brief Saves the entity archetype database to file.
         void SaveArchetypeDatabase();
 
         /// \brief Loads the terrain database from file.
-        ///
-        /// \return `true` if the database was loaded successfully, `false` otherwise.
-        Bool LoadTerrainDatabase();
+        void LoadTerrainDatabase(Filesystem::Result Result, Blob Data);
 
         /// \brief Saves the terrain database to file.
         void SaveTerrainDatabase();

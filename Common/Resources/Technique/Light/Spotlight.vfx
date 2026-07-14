@@ -1,0 +1,50 @@
+{
+  "Properties": {
+    "Blend": {
+      "SrcColor": "One",
+      "DstColor": "One",
+      "SrcAlpha": "Zero",
+      "DstAlpha": "One"
+    },
+    "Depth": {
+      "Mask": false,
+      "Condition": "Always"
+    },
+    "Rasterizer": {
+      "Cull": "None"
+    },
+    "Layout": {
+      "Attributes": [
+        [0, "Float32x4",   0,  0, 1],
+        [1, "Float32x4",   0, 16, 1],
+        [2, "UIntNorm8x4", 0, 32, 1]
+      ],
+      "Primitive": "TriangleStrip"
+    }
+  },
+  "Signature": {
+    "Uniforms": [
+      { "Slot": "Global",   "Name": "Camera", "Type": "Float4", "Count": 4 },
+      { "Slot": "Instance", "Name": "Light",  "Type": "Float4", "Count": 4 }
+    ],
+    "Textures": [
+      { "Slot": 0, "Name": "Normal" }
+    ],
+    "Samplers": [
+      { "Slot": 0, "AddressModeU": "Clamp", "AddressModeV": "Clamp", "Filter": "LinearMipLinear" }
+    ]
+  },
+  "Program": {
+    "Defines": ["LIGHT_SPOT", "ENABLE_NORMAL_MAPPING"],
+    "Shaders": {
+      "GLSL": [
+        { "Path": "Light-GLSL.shd", "Stage": "Vertex" },
+        { "Path": "Light-GLSL.shd", "Stage": "Fragment" }
+      ],
+      "HLSL": [
+        { "Path": "Light-HLSL.shd", "Stage": "Vertex" },
+        { "Path": "Light-HLSL.shd", "Stage": "Fragment" }
+      ]
+    }
+  }
+}

@@ -21,12 +21,10 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Renderer::Renderer(Ref<Service::Host> Host)
-        : Locator   { Host },
-          mPhases   { },
-          mFrames   { },
-          mPipeline { Host },
-          mTileset  { Host }
+    Renderer::Renderer(Ref<Engine::Subsystem::Host> Host)
+        : Locator  { Host },
+          mPasses  { Host },
+          mTileset { Host }
     {
         OnRegister(* Host.GetService<Scene::Service>());
     }
@@ -76,26 +74,26 @@ namespace Tileon
         // Recreate render targets and passes with the new dimensions.
         mViewport = Graphic::Viewport(0.0f, 0.0f, Width, Height);
 
-        mFrames[Enum::Cast(Frame::Albedo)]   = Graphics.CreateTexture(Graphic::TextureFormat::RGBA8UIntNorm, true, Width, Height);
-        mFrames[Enum::Cast(Frame::Normal)]   = Graphics.CreateTexture(Graphic::TextureFormat::RGBA8UIntNorm, true, Width, Height);
-        mFrames[Enum::Cast(Frame::Depth)]    = Graphics.CreateTexture(Graphic::TextureFormat::D24S8UIntNorm, true, Width, Height);
-        mFrames[Enum::Cast(Frame::Radiance)] = Graphics.CreateTexture(Graphic::TextureFormat::RGBA16Float,   true, Width, Height);
-        mFrames[Enum::Cast(Frame::Final)]    = Graphics.CreateTexture(Graphic::TextureFormat::RGBA8UIntNorm, true, Width, Height);
+        mFrames[Enum::Cast(Frame::Albedo)]   = Graphics.CreateTexture(Graphic::TextureFormat::RGBA8UIntNorm, Width, Height);
+        mFrames[Enum::Cast(Frame::Normal)]   = Graphics.CreateTexture(Graphic::TextureFormat::RGBA8UIntNorm, Width, Height);
+        mFrames[Enum::Cast(Frame::Depth)]    = Graphics.CreateTexture(Graphic::TextureFormat::D24S8UIntNorm, Width, Height);
+        mFrames[Enum::Cast(Frame::Radiance)] = Graphics.CreateTexture(Graphic::TextureFormat::RGBA16Float,   Width, Height);
+        mFrames[Enum::Cast(Frame::Final)]    = Graphics.CreateTexture(Graphic::TextureFormat::RGBA8UIntNorm, Width, Height);
 
         const Graphic::ColorAttachment        GeometryColorAttachments[] = {
-            { mFrames[Enum::Cast(Frame::Albedo)], 0, 0, 0, Graphic::Operation::Clear, Graphic::Operation::Store },
-            { mFrames[Enum::Cast(Frame::Normal)], 0, 0, 0, Graphic::Operation::Clear, Graphic::Operation::Store }
+            { mFrames[Enum::Cast(Frame::Albedo)], 0, 0, 0, Graphic::Action::Clear, Graphic::Action::Store },
+            { mFrames[Enum::Cast(Frame::Normal)], 0, 0, 0, Graphic::Action::Clear, Graphic::Action::Store }
         };
-        const Graphic::DepthStencilAttachment GeometryDepthAttachment(mFrames[Enum::Cast(Frame::Depth)]);
+        const Graphic::DepthAttachment GeometryDepthAttachment(mFrames[Enum::Cast(Frame::Depth)]);
         mPhases[Enum::Cast(Phase::Geometry)] = Graphics.CreatePass(GeometryColorAttachments, GeometryDepthAttachment);
 
         const Graphic::ColorAttachment LightColorAttachments[] = {
-            { mFrames[Enum::Cast(Frame::Radiance)], 0, 0, 0, Graphic::Operation::Clear, Graphic::Operation::Store },
+            { mFrames[Enum::Cast(Frame::Radiance)], 0, 0, 0, Graphic::Action::Clear, Graphic::Action::Store },
         };
         mPhases[Enum::Cast(Phase::Light)] = Graphics.CreatePass(LightColorAttachments, {});
 
         const Graphic::ColorAttachment CompositeColorAttachments[] = {
-            { mFrames[Enum::Cast(Frame::Final)], 0, 0, 0, Graphic::Operation::Discard, Graphic::Operation::Store },
+            { mFrames[Enum::Cast(Frame::Final)], 0, 0, 0, Graphic::Action::Discard, Graphic::Action::Store },
         };
         mPhases[Enum::Cast(Phase::Composite)] = Graphics.CreatePass(CompositeColorAttachments, {});
     }
@@ -107,28 +105,24 @@ namespace Tileon
     {
         Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
 
-        constexpr Array<Color, 2> kClearAlbedoNormal = { Color::Black(), Color(0.5f, 0.5f, 1.0f, 1.0f) };
+        constexpr Array kClearAlbedoNormal = { Color::Black(), Color(0.5f, 0.5f, 1.0f, 1.0f) };
 
         Graphics.Prepare(mPhases[Enum::Cast(Phase::Geometry)], mViewport, kClearAlbedoNormal, 1.0f, 0);
         {
-            mPipeline.Geometry.Run(Director, mTileset);
+            mPasses.Geometry.Run(Director, mTileset);
         }
         Graphics.Commit();
 
         Graphics.Prepare(mPhases[Enum::Cast(Phase::Light)], mViewport, Color::Black(), 1.0f, 0);
         {
-            mPipeline.Light.Run(mEncoder, Director, GetFrame(Frame::Normal));
-
-            Graphics.Submit(mEncoder);
+            mPasses.Light.Run(Graphics, Director, GetFrame(Frame::Normal));
         }
         Graphics.Commit();
 
         const Graphic::Object Final = Immediate ? Graphic::kDisplay : mPhases[Enum::Cast(Phase::Composite)];
         Graphics.Prepare(Final, mViewport, Color::Transparent(), 1.0f, 0);
         {
-            mPipeline.Composite.Run(mEncoder, GetFrame(Frame::Albedo), GetFrame(Frame::Radiance));
-
-            Graphics.Submit(mEncoder);
+            mPasses.Composite.Run(Graphics, GetFrame(Frame::Albedo), GetFrame(Frame::Radiance));
         }
         Graphics.Commit();
     }
@@ -139,13 +133,13 @@ namespace Tileon
     void Renderer::OnRegister(Ref<Scene::Service> Scene)
     {
         // System for ticking the tileset animations based on the absolute time of the scene.
-        Scene.CreateSystem<Scene::DSL::In<const Time>>(
+        Scene.CreateSystem<Scene::DSL::In<const Scene::Clock>>(
             "Visual::ComputeTilesetAnimation",
             EcsOnUpdate,
             Scene::Execution::Immediate,
-            [this](Time Time)
+            [this](ConstRef<Scene::Clock> Clock)
             {
-                mTileset.Tick(Time.GetAbsolute());
+                mTileset.Tick(Clock.GetAbsolute());
             });
     }
 }

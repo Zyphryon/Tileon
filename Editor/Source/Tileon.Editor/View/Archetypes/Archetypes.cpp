@@ -12,8 +12,6 @@
 
 #include "Archetypes.hpp"
 
-#include "Zyphryon.Base/Primitive.hpp"
-
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -76,7 +74,7 @@ namespace Tileon::Editor::View
         {
             if (const Scene::Entity Archetype = mRepository.CreateArchetype(); Archetype.IsValid())
             {
-                Archetype.SetAlias(Format("Archetype.{}", Archetype.GetID() - Scene::kMinRangeArchetypes));
+                Archetype.SetAlias(Str32::Print<"Archetype.{0}">(Archetype.GetID() - Scene::kMinRangeArchetypes));
 
                 mSelection = Archetype;
             }
@@ -85,19 +83,7 @@ namespace Tileon::Editor::View
         Composer.Separator();
         Composer.BeginChild("##list_scroll");
 
-        // Build a temporary collection of archetypes and sort them by their ID.
-        Vector<Scene::Entity> Collection;
-        mRepository.ForEachArchetype([&](ConstRef<Scene::Entity> Archetype)
-        {
-            Collection.push_back(Archetype);
-        });
-
-        std::ranges::sort(Collection, [](Scene::Entity A, Scene::Entity B)
-        {
-            return A.GetID() < B.GetID();
-        });
-
-        for (Scene::Entity Archetype : Collection)
+        mRepository.ForEachArchetype([&](Scene::Entity Archetype)
         {
             const Bool Selected = (mSelection == Archetype);
 
@@ -121,7 +107,7 @@ namespace Tileon::Editor::View
                 }
                 Composer.EndPopup();
             }
-        }
+        });
 
         Composer.EndChild();
     }
@@ -134,12 +120,12 @@ namespace Tileon::Editor::View
         Composer.Section("Identity");
 
         Composer.Field("ID");
-        Composer.Label("{:016X}", mSelection.GetID());
+        Composer.Label("{0:016X}", mSelection.GetID());
         Composer.Spacing();
 
         Composer.Field("Name");
         Composer.SetNextItemWidth(-1.0f);
-        Composer.InputText("##archetype_name", mSelection.GetName(), [&](ConstStr8 Value)
+        Composer.InputText("##archetype_name", mSelection.GetName(), [&](Text Value)
         {
             mSelection.SetName(Value);
         });
@@ -147,7 +133,7 @@ namespace Tileon::Editor::View
 
         Composer.Field("Alias");
         Composer.SetNextItemWidth(-1.0f);
-        Composer.InputText("##archetype_display", mSelection.GetAlias(), [&](ConstStr8 Value)
+        Composer.InputText("##archetype_display", mSelection.GetAlias(), [&](Text Value)
         {
             mSelection.SetAlias(Value);
         });
@@ -175,14 +161,14 @@ namespace Tileon::Editor::View
 
         if (mSelection.IsValid())
         {
-            const ConstStr8 Label = mSelection.GetAlias();
+            const Text Label = mSelection.GetAlias();
 
             Composer.SetCursorPosX((Composer.GetWindowWidth() - Composer.CalcTextSize(Label).x) * 0.5f);
             Composer.TextDisabled(Label);
         }
         else
         {
-            constexpr ConstStr8 Hint = "No archetype selected";
+            constexpr Text Hint = "No archetype selected";
 
             Composer.SetCursorPosX((Composer.GetWindowWidth() - Composer.CalcTextSize(Hint).x) * 0.5f);
             Composer.TextDisabled(Hint);
@@ -194,9 +180,9 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Archetypes::DrawEmptyPanel(Ref<UI::Composer> Composer, ConstStr8 Message)
+    void Archetypes::DrawEmptyPanel(Ref<UI::Composer> Composer, Text Message)
     {
-        constexpr ConstStr8 kIcon = "?";
+        constexpr Text kIcon = "?";
 
         const ImVec2 Available = Composer.GetContentRegionAvail();
         const ImVec2 IconSize  = Composer.CalcTextSize(kIcon);

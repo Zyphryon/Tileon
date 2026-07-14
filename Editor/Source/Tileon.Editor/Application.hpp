@@ -28,17 +28,19 @@ namespace Tileon::Editor
     {
     public:
 
-        /// \brief
+        /// \brief Constructs a new instance of the application.
         Application();
 
-        /// \copydoc Kernel::OnInitialize
+    protected:
+
+        /// \see Kernel::OnInitialize()
         Bool OnInitialize() override;
 
-        /// \copydoc Kernel::OnTeardown
-        void OnTeardown() override;
+        /// \see Kernel::OnTerminate()
+        void OnTerminate() override;
 
-        /// \copydoc Kernel::OnTick
-        void OnTick(Time Time) override;
+        /// \see Kernel::OnTick(Real64)
+        void OnTick(Real64 Delta) override;
 
     private:
 
@@ -58,8 +60,8 @@ namespace Tileon::Editor
         /// \brief Draws the editor view, which contains the main user interface for editing and manipulating the game world.
         ///
         /// \param Composer The UI composer used to render the editor interface elements.
-        /// \param Time     The time elapsed since the last tick.
-        void DrawEditor(Ref<UI::Composer> Composer, Time Time);
+        /// \param Delta    The time elapsed since the last tick.
+        void DrawEditor(Ref<UI::Composer> Composer, Real64 Delta);
 
         /// \brief Draws the game view, rendering the current state of the game world.
         void DrawGame();
@@ -74,11 +76,11 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        State                     mState;
-        View::Bootstrap           mBootstrap;
-        Unique<Context>           mContext;
-        Plugin::ImGuiSystem       mFrontend;
-        Vector<Tracker<Activity>> mActivities;
-        IntVector2                mViewport;
+        State                        mState;
+        View::Bootstrap              mBootstrap;
+        Unique<Context>              mContext;
+        Plugin::ImGuiSystem          mFrontend;
+        Sequence<Retainer<Activity>> mActivities;
+        IntVector2                   mViewport;
     };
 }

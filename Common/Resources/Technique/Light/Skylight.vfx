@@ -1,0 +1,45 @@
+{
+  "Properties": {
+    "Blend": {
+      "SrcColor": "One",
+      "DstColor": "One",
+      "SrcAlpha": "Zero",
+      "DstAlpha": "One"
+    },
+    "Depth": {
+      "Mask": false,
+      "Condition": "Always"
+    },
+    "Rasterizer": {
+      "Cull": "None"
+    },
+    "Layout": {
+      "Primitive": "TriangleStrip"
+    }
+  },
+  "Signature": {
+    "Uniforms": [
+      { "Slot": "Pass", "Name": "SunColor",    "Type": "Float4" },
+	  { "Slot": "Pass", "Name": "SkyColor",    "Type": "Float4" },
+	  { "Slot": "Pass", "Name": "GroundColor", "Type": "Float4" }
+    ],
+    "Textures": [
+      { "Slot": 0, "Name": "Normal" }
+    ],
+    "Samplers": [
+      { "Slot": 0, "AddressModeU": "Clamp", "AddressModeV": "Clamp", "Filter": "LinearMipLinear" }
+    ]
+  },
+  "Program": {
+    "Shaders": {
+      "GLSL": [
+        { "Path": "Skylight-GLSL.shd", "Stage": "Vertex" },
+        { "Path": "Skylight-GLSL.shd", "Stage": "Fragment" }
+      ],
+      "HLSL": [
+        { "Path": "Skylight-HLSL.shd", "Stage": "Vertex" },
+        { "Path": "Skylight-HLSL.shd", "Stage": "Fragment" }
+      ]
+    }
+  }
+}

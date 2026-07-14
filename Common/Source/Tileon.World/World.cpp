@@ -21,7 +21,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    World::World(Ref<Service::Host> Host)
+    World::World(Ref<Engine::Subsystem::Host> Host)
         : Locator     { Host },
           mRepository { Host },
           mSupervisor { Host }
@@ -59,7 +59,6 @@ namespace Tileon
 
     void World::OnRegister(Ref<Scene::Service> Scene)
     {
-        // TODO: Clear separation between components and systems registered by the world.
         Scene.GetComponent<Persist>("Persist");
         Scene.GetComponent<Dispose>("Dispose");
         Scene.GetComponent<Stale>("Stale");
@@ -91,14 +90,14 @@ namespace Tileon
             });
 
         // System that computes motion integration.
-        Scene.CreateSystem<Scene::DSL::In<const Time, const Velocity, Pose>>(
+        Scene.CreateSystem<Scene::DSL::In<const Scene::Clock, const Velocity, Pose>>(
             "World::ComputeMotion",
             EcsPreUpdate,
             Scene::Execution::Concurrent,
-            [](Scene::Entity Actor, Time Time, ConstRef<Velocity> Velocity, Ref<Pose> Pose)
+            [](Scene::Entity Actor, ConstRef<Scene::Clock> Clock, ConstRef<Velocity> Velocity, Ref<Pose> Pose)
             {
-                Pose.Translate(Velocity.GetLinear() * Time.GetDelta());
-                Pose.Rotate(Velocity.GetAngular() * Time.GetDelta());
+                Pose.Translate(Velocity.GetLinear() * Clock.GetDelta());
+                Pose.Rotate(Velocity.GetAngular() * Clock.GetDelta());
             });
 
         // System that migrates entities to a neighbouring region when they cross a region boundary.
@@ -120,8 +119,8 @@ namespace Tileon
                 {
                     const Vector2 Position = Pose.GetTranslation();
                     const Vector2 Distance = Vector2(
-                        Math::Floor(Position.GetX() / static_cast<Real32>(Tileon::Region::kTilesPerX)),
-                        Math::Floor(Position.GetY() / static_cast<Real32>(Tileon::Region::kTilesPerY)));
+                        Floor(Position.GetX() / static_cast<Real32>(Tileon::Region::kTilesPerX)),
+                        Floor(Position.GetY() / static_cast<Real32>(Tileon::Region::kTilesPerY)));
 
                     if (Distance.IsAlmostZero())
                     {

@@ -18,13 +18,8 @@ PROJECT(Tileon_Editor VERSION 1.0.0 LANGUAGES CXX)
 ## Code
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-FILE(GLOB_RECURSE PROJECT_SOURCE "Source/*.cpp")
-
-## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-## Includes
-## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-LIST(APPEND PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
+FILE(GLOB_RECURSE PROJECT_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cpp")
+LIST(APPEND       PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
 
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 ## Dependency (Common)
@@ -36,12 +31,12 @@ LIST(APPEND PROJECT_DEPENDENCIES "Tileon_Common")
 ## Dependency (Zyphryon ImGui)
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-FetchContent_Declare(External_Zyphryon_ImGui
+FetchContent_Declare(External_ZyPlugin_ImGUI
         GIT_REPOSITORY https://github.com/Zyphryon/Plugin-ImGui
         GIT_TAG main)
-FetchContent_MakeAvailable(External_Zyphryon_ImGui)
+FetchContent_MakeAvailable(External_ZyPlugin_ImGUI)
 
-LIST(APPEND PROJECT_DEPENDENCIES "Zyphryon_ImGui")
+LIST(APPEND PROJECT_DEPENDENCIES "ZyPlugin_ImGui")
 
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 ## Library
@@ -60,3 +55,10 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${PROJECT_DEPENDENCIES})
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE ${PROJECT_INCLUDE})
+
+## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+## Properties
+## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+ZyApplyCompileOptions(${PROJECT_NAME})
+ZyApplyModules(${PROJECT_NAME})

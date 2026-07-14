@@ -28,18 +28,12 @@ namespace Tileon
 
     public:
 
-        /// \brief Constructs an empty tile with no layers set.
-        ZYPHRYON_INLINE Tile()
-            : mLayers { }
-        {
-        }
-
         /// \brief Sets the properties of a specific layer in the tile.
         ///
         /// \param Type   The type of layer to set.
         /// \param Handle The unique identifier for the terrain type of the layer.
         /// \param Weight The weight of the layer, used for multi-span terrains.
-        ZYPHRYON_INLINE void SetLayer(Layer Type, UInt16 Handle, UInt16 Weight)
+        ZY_INLINE void SetLayer(Layer Type, UInt16 Handle, UInt16 Weight)
         {
             mLayers[Enum::Cast(Type)] = Unit(Handle, Weight);
         }
@@ -48,7 +42,7 @@ namespace Tileon
         ///
         /// \param Type The type of layer to retrieve the handle for.
         /// \return The unique identifier for the terrain type of the specified layer.
-        ZYPHRYON_INLINE UInt16 GetHandle(Layer Type) const
+        ZY_INLINE UInt16 GetHandle(Layer Type) const
         {
             return mLayers[Enum::Cast(Type)].Handle;
         }
@@ -57,18 +51,9 @@ namespace Tileon
         ///
         /// \param Type The type of layer to retrieve the weight for.
         /// \return The weight of the specified layer.
-        ZYPHRYON_INLINE UInt16 GetWeight(Layer Type) const
+        ZY_INLINE UInt16 GetWeight(Layer Type) const
         {
             return mLayers[Enum::Cast(Type)].Weight;
-        }
-
-        /// \brief Serializes the state of the object to or from the specified archive.
-        ///
-        /// \param Archive The archive to serialize the object with.
-        template<typename Serializer>
-        ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
-        {
-            Archive.SerializeArray(mLayers);
         }
 
     private:
@@ -81,16 +66,6 @@ namespace Tileon
 
             /// \brief The weight of the layer unit, used for multi-span terrains.
             UInt16 Weight;
-
-            /// \brief Serializes the state of the object to or from the specified archive.
-            ///
-            /// \param Archive The archive to serialize the object with.
-            template<typename Serializer>
-            ZYPHRYON_INLINE void OnSerialize(Serializer Archive)
-            {
-                Archive.SerializeUInt(Handle);
-                Archive.SerializeUInt(Weight);
-            }
         };
 
     private:
