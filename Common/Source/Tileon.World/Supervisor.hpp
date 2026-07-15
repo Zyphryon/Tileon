@@ -166,7 +166,10 @@ namespace Tileon
             Bag<UInt64> Entities;
 
             /// \brief Default constructor.
-            ZY_INLINE HierarchyLooseCell() = default;
+            ZY_INLINE HierarchyLooseCell()
+                : Dirty { false }
+            {
+            }
 
             /// \brief Move constructor.
             ZY_INLINE HierarchyLooseCell(AnyRef<HierarchyLooseCell> Other) noexcept
@@ -281,6 +284,7 @@ namespace Tileon
             /// \brief Move assignment operator.
             ZY_INLINE Ref<HierarchyLooseCell> operator=(AnyRef<HierarchyLooseCell> Other) noexcept
             {
+                Dirty      = Exchange(Other.Dirty, false);
                 Boundaries = Move(Other.Boundaries);
                 Entities   = Move(Other.Entities);
                 return (* this);
@@ -296,6 +300,7 @@ namespace Tileon
             /// \brief Default constructor.
             ZY_INLINE HierarchyTightCell() = default;
 
+            /// \brief Move constructor.
             ZY_INLINE HierarchyTightCell(AnyRef<HierarchyTightCell> Other) noexcept
                 : Indices { Move(Other.Indices) }
             {

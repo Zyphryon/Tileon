@@ -16,7 +16,7 @@
     "Layout": {
       "Attributes": [
         [0, "Float32x4",   0,  0, 1],
-        [1, "UIntNorm8x4", 0, 16, 1]
+        [2, "UIntNorm8x4", 0, 16, 1]
       ],
       "Primitive": "TriangleStrip"
     }

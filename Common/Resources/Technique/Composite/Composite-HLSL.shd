@@ -26,9 +26,9 @@ fs_Input main(uint VertexID : SV_VertexID)
 {
     fs_Input Result;
 
-    Result.Position = float4(Result.Texture * 2.0 - 1.0, 0.0, 1.0);
-
     Result.Texture   = float2((VertexID << 1) & 2, VertexID & 2);
+
+    Result.Position  = float4(Result.Texture * 2.0 - 1.0, 0.0, 1.0);
     Result.Texture.y = 1.0 - Result.Texture.y;
 
     return Result;

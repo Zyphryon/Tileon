@@ -177,8 +177,6 @@ namespace Tileon
             Actor.SetName(Name);
             Actor.Emplace<Transform>(Matrix3x2::Identity(), IntVector2(RegionX * Region::kTilesPerX, RegionY * Region::kTilesPerY));
 
-            Str Filename = Str::Print<kRegionFilename>(RegionX, RegionY);
-
             const auto OnResult = [this, Handle = Actor.GetID(), RegionX, RegionY, CreateIfMissing](Filesystem::Result Result, Blob File)
             {
                 OnAsyncLoad(Result, Move(File), Handle, RegionX, RegionY, CreateIfMissing);

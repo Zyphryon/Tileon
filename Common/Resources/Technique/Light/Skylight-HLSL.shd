@@ -33,7 +33,7 @@ struct fs_Input
 
 #ifdef VERTEX_SHADER
 
-fs_Input vertex(uint ID : SV_VertexID)
+fs_Input main(uint ID : SV_VertexID)
 {
     fs_Input Result;
 
@@ -54,7 +54,7 @@ fs_Input vertex(uint ID : SV_VertexID)
 Texture2D    s_Normal 		 : register(t0);
 SamplerState s_NormalSampler : register(s0);
 
-float4 fragment(fs_Input Input) : SV_Target0
+float4 main(fs_Input Input) : SV_Target0
 {
     const float2 NormalXY = s_Normal.Sample(s_NormalSampler, Input.Texture).rg * 2.0 - 1.0;
     const float  NormalZ  = sqrt(saturate(1.0 - dot(NormalXY, NormalXY)));
