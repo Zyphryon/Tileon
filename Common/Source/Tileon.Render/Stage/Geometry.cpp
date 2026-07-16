@@ -65,17 +65,17 @@ namespace Tileon::Stage
 
             // Draw text entities.
             // TODO: Frustum Culling
-            mQrDrawTexts.Run<const Transform, const Typeface, const Text, ConstPtr<IntColor8>>([&](
+            mQrDrawTexts.Run<const Transform, const Typeface, const Label, ConstPtr<IntColor8>>([&](
                 ConstRef<Transform> Transform,
                 ConstRef<Typeface>  Typeface,
-                ConstRef<Text>      Text,
+                ConstRef<Label>     Label,
                 ConstPtr<IntColor8> Tint)
             {
                 const IntColor8 Color = Tint ? (* Tint) : IntColor8::White();
                 const Real32    Depth = Depth::Midground(Frustum, Transform.GetOrigin(), Transform.GetWorldspace());
 
-                const Render::TextStyle Stype(Typeface.GetFont(), Typeface.GetSize(), Color, Text.GetSpacing());
-                mCanvas.DrawText(Stype, Text.GetContent(), Transform.Rebase(Origin), Depth, {});
+                const Render::TextStyle Stype(Typeface.GetFont(), Typeface.GetSize(), Color, Label.GetSpacing());
+                mCanvas.DrawText(Stype, Label.GetContent(), Transform.Rebase(Origin), Depth, {});
             });
 
             // Draw tile regions, culling against the view frustum to minimize overdraw.
@@ -112,7 +112,7 @@ namespace Tileon::Stage
         Scene.GetComponent<Appearance>("Appearance");
         Scene.GetComponent<Animation>("Animation").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Sprite>("Sprite").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Text>("Text").Grant(Scene::Trait::Serializable);
+        Scene.GetComponent<Label>("Label").Grant(Scene::Trait::Serializable);
         Scene.GetComponent<Typeface>("Typeface").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
 
         // Observe changes to the sprite component to resolve material resources and trigger updates when necessary.
@@ -144,7 +144,7 @@ namespace Tileon::Stage
                 Ref<Content::Service> Content = GetService<Content::Service>();
                 Component.OnResolve(Content);
 
-                if (ConstRetainer<::Render::Font> Font = Component.GetFont(); !Font->HasFinished())
+                if (ConstRetainer<::Render::Font> Font = Component.GetFont(); Font && !Font->HasFinished())
                 {
                     Content::Service::Callback Callback = [&Content, Actor](Ref<Content::Resource> Resource)
                     {
@@ -156,16 +156,16 @@ namespace Tileon::Stage
                 }
             }, Scene::DSL::In(EcsPrefab));
 
-        // Observe changes to the typeface or text components to update the dimension and origin of text entities when necessary.
-        Scene.CreateObserver<Scene::DSL::In<const Typeface, const Text>>(
+        // Observe changes to the typeface or label components to update the dimension and origin of text entities when necessary.
+        Scene.CreateObserver<Scene::DSL::In<const Typeface, const Label>>(
             "Render::Geometry::ObsUpdateTextBoundaries",
             EcsOnSet,
-            [](Scene::Entity Actor, ConstRef<Typeface> Typeface, ConstRef<Text> Text)
+            [](Scene::Entity Actor, ConstRef<Typeface> Typeface, ConstRef<Label> Label)
             {
                 if (ConstRetainer<::Render::Font> Font = Typeface.GetFont(); Font && Font->HasFinished())
                 {
-                    const Pivot2D Pivot   = Text.GetPivot();
-                    const Rect    AABB    = Font->Enclose(Text.GetContent(), Typeface.GetSize()); // TODO: Spacing
+                    const Pivot2D Pivot   = Label.GetPivot();
+                    const Rect    AABB    = Font->Enclose(Label.GetContent(), Typeface.GetSize());
                     const Vector2 Measure = AABB.GetSize();
                     const Vector2 Value(Measure.GetX() * Pivot.GetX(), Measure.GetY() * Pivot.GetY());
 
@@ -194,7 +194,7 @@ namespace Tileon::Stage
         >("Render::Geometry::DrawSprites", Scene::Cache::Auto);
 
         mQrDrawTexts = Scene.CreateQuery<
-            Scene::DSL::In<const Transform, const Typeface, const Text, ConstPtr<IntColor8>>
+            Scene::DSL::In<const Transform, const Typeface, const Label, ConstPtr<IntColor8>>
         >("Render::Geometry::DrawTexts", Scene::Cache::Auto);
 
         mQrDrawRegions = Scene.CreateQuery<

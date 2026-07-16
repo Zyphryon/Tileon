@@ -14,8 +14,7 @@
 
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Graphic/Technique.hpp>
-
-#include "Zyphryon.Render/Pass.hpp"
+#include <Zyphryon.Render/Pass.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]

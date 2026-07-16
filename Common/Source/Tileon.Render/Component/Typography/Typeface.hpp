@@ -27,7 +27,10 @@ namespace Tileon
     public:
 
         /// \brief Constructs a default typeface with no associated font resource.
-        ZY_INLINE Typeface() = default;
+        ZY_INLINE Typeface()
+            : mSize { 0.0f }
+        {
+        }
 
         /// \brief Constructs a typeface with the specified font resource and size.
         ///

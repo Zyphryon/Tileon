@@ -22,19 +22,19 @@
 namespace Tileon
 {
     /// \brief Represents a text component that contains runtime data for a text entity.
-    class Text final
+    class Label final
     {
     public:
 
         /// \brief Default constructor.
-        ZY_INLINE Text() = default;
+        ZY_INLINE Label() = default;
 
         /// \brief Constructs a text component with the specific properties.
         ///
         /// \param Content The string content of the text.
         /// \param Spacing The spacing between characters in the text, in pixels.
         /// \param Pivot   The pivot point for text alignment.
-        ZY_INLINE Text(Base::Text Content, Vector2 Spacing, Pivot2D Pivot)
+        ZY_INLINE Label(Text Content, Vector2 Spacing, Pivot2D Pivot)
             : mContent { Content },
               mSpacing { Spacing },
               mPivot   { Pivot }
@@ -44,7 +44,7 @@ namespace Tileon
         /// \brief Sets the string content of the text.
         ///
         /// \param Content The string content to set for the text.
-        ZY_INLINE void SetContent(Base::Text Content)
+        ZY_INLINE void SetContent(Text Content)
         {
             mContent = Content;
         }
@@ -52,7 +52,7 @@ namespace Tileon
         /// \brief Gets the string content of the text.
         ///
         /// \return The string content of the text.
-        ZY_INLINE Base::Text GetContent() const
+        ZY_INLINE Text GetContent() const
         {
             return mContent;
         }
