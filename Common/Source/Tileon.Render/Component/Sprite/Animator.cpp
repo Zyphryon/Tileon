@@ -69,7 +69,7 @@ namespace Tileon
             }
             case Status::Repeat:
             {
-                const Real64 Absolute = Remainder(Delta, Duration);
+                const Real64 Absolute = Mod(Delta, Duration);
                 const Real64 Frame    = ApplyEasing(Absolute, Duration);
 
                 mKeyframe = Sequence.GetKeyframe(static_cast<Real32>(Frame));
@@ -83,7 +83,7 @@ namespace Tileon
             case Status::Mirror:
             {
                 const Real64 Cycle    = Duration * 2.0;
-                const Real64 Absolute = Remainder(Delta, Cycle);
+                const Real64 Absolute = Mod(Delta, Cycle);
 
                 const Real64 Frame = ApplyEasing(Absolute > Duration ? Cycle - Absolute : Absolute, Duration);
                 mKeyframe = Sequence.GetKeyframe(static_cast<Real32>(Frame));

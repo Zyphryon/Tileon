@@ -12,9 +12,12 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Stage/Geometry.hpp"
-#include "Stage/Light.hpp"
-#include "Stage/Composite.hpp"
+#include "Director.hpp"
+#include "Tileset.hpp"
+#include <Zyphryon.Content/Service.hpp>
+#include <Zyphryon.Engine/Locator.hpp>
+#include <Zyphryon.Render/Renderer.hpp>
+#include <Zyphryon.Scene/Service.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -27,8 +30,8 @@ namespace Tileon
     {
     public:
 
-        /// \brief Represents the different types of frames used in the rendering pipeline.
-        enum class Frame : UInt8
+        /// \brief Represents the different types of targets used in the rendering pipeline.
+        enum class Target : UInt8
         {
             Albedo,         ///< Contains the base color information of the scene.
             Normal,         ///< Contains the surface normal information of the scene for lighting calculations.
@@ -37,20 +40,13 @@ namespace Tileon
             Final,          ///< Contains the final composed image of the scene after all rendering phases are complete.
         };
 
-        /// \brief Represents the different phases of the rendering pipeline.
-        enum class Phase : UInt8
-        {
-            Geometry,       ///< The geometry phase, where the scene's geometry is rendered to the G-buffer.
-            Light,          ///< The lighting phase, where lighting calculations are performed using the G-buffer data.
-            Composite,      ///< The composition phase, where the final image is composed by combining previous phases.
-        };
-
     public:
 
         /// \brief Constructs a renderer with the specified service host.
         ///
-        /// \param Host The service host to associate with the renderer.
-        Renderer(Ref<Engine::Subsystem::Host> Host);
+        /// \param Host      The service host to associate with the renderer.
+        /// \param Immediate `true` composes into the display otherwise composes into \ref Target::Final.
+        Renderer(Ref<Engine::Subsystem::Host> Host, Bool Immediate);
 
         /// \brief Gets the tileset associated with the renderer.
         ///
@@ -74,43 +70,25 @@ namespace Tileon
 
         /// \brief Executes the rendering pipeline to compose the scene.
         ///
-        /// \param Director  The director that holds projection and view information for rendering.
-        /// \param Immediate If `true`, renders directly to the display; if `false`, renders to an off-screen texture.
-        void Present(ConstRef<Director> Director, Bool Immediate);
+        /// \param Director The director that holds projection and view information for rendering.
+        void Present(ConstRef<Director> Director);
 
         /// \brief Gets the GPU texture for the specified frame slot.
         ///
-        /// \param Type The type of frame to retrieve (e.g., Albedo, Normal, Depth).
-        /// \return The GPU texture handle for the requested frame, valid until the next resize call.
-        ZY_INLINE Graphic::Object GetFrame(Frame Type) const
+        /// \param Type The type of target to retrieve (e.g., Albedo, Normal, Depth).
+        /// \return The GPU texture handle for the requested target, valid until the next resize call.
+        ZY_INLINE Graphic::Object GetTarget(Target Type) const
         {
-            return mFrames[Enum::Cast(Type)];
+            return mRenderer.GetTarget(Enum::Cast(Type)).GetTexture();
         }
 
     private:
 
-        /// \brief Represents the rendering passes, which manages the sequence of rendering stages.
-        struct Passes
-        {
-            /// \brief The geometry stage of the pipeline, responsible for rendering scene geometry.
-            Stage::Geometry  Geometry;
-
-            /// \brief The lighting stage of the pipeline, responsible for applying lighting effects to the scene.
-            Stage::Light     Light;
-
-            /// \brief The composition stage of the pipeline, responsible for composing the final image.
-            Stage::Composite Composite;
-
-            /// \brief Constructs the passes with the specified service host.
-            ///
-            /// \param Host The service host to associate with the passes and its stages.
-            ZY_INLINE Passes(Ref<Engine::Subsystem::Host> Host)
-                : Geometry  { Host },
-                  Light     { Host },
-                  Composite { Host }
-            {
-            }
-        };
+        /// \brief Declares the pipeline's managed targets and its stages, in execution order.
+        ///
+        /// \param Host      The service host to associate with each stage.
+        /// \param Immediate If `true`, the composite stage targets the display instead of \ref Target::Final.
+        void OnCreate(Ref<Engine::Subsystem::Host> Host, Bool Immediate);
 
         /// \brief Registers the renderer with the specified scene service.
         ///
@@ -122,10 +100,7 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Graphic::Viewport                            mViewport;
-        Array<Graphic::Object, Enum::Count<Phase>()> mPhases;
-        Array<Graphic::Object, Enum::Count<Frame>()> mFrames;
-        Passes                                       mPasses;
-        Tileset                                      mTileset;
+        Render::Renderer mRenderer;
+        Tileset          mTileset;
     };
 }

@@ -21,7 +21,9 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Composite::Composite(Ref<Engine::Subsystem::Host> Host)
+    Composite::Composite(Ref<Engine::Subsystem::Host> Host, ConstRef<Render::Target> Albedo, ConstRef<Render::Target> Radiance)
+        : mAlbedo   { AddressOf(Albedo) },
+          mRadiance { AddressOf(Radiance) }
     {
         OnLoad(* Host.GetService<Content::Service>());
     }
@@ -29,15 +31,16 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Composite::Run(Ref<Graphic::Service> Graphics, Graphic::Object Albedo, Graphic::Object Radiance)
+    void Composite::Run(Ref<Render::Encoder> Encoder)
     {
-        Ref<Graphic::Command> Command = Graphics.AllocateTransientCommands(1).GetFront();
-        Command.Pipeline = mTechniques[Enum::Cast(Kind::Composite)]->GetHandle();
-        Command.Textures.Append(Albedo);
-        Command.Textures.Append(Radiance);
-        Command.Samplers.Append();  // TODO: Use Automatic Binding
-        Command.Samplers.Append();  // TODO: Use Automatic Binding
-        Command.Parameters = { .Count = 3, .Base = 0, .Offset = 0, .Instances = 1 };
+        const Array                   Textures   = { mAlbedo->GetTexture(), mRadiance->GetTexture() };
+        constexpr Graphic::Invocation Invocation = {
+            .Count     = 3,
+            .Base      = 0,
+            .Offset    = 0,
+            .Instances = 1
+        };
+        Encoder.Draw(* mTechniques[Enum::Cast(Kind::Composite)], Textures, Invocation);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

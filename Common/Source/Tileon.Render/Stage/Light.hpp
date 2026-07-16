@@ -14,7 +14,9 @@
 
 #include "Tileon.Render/Director.hpp"
 #include <Zyphryon.Content/Service.hpp>
+#include <Zyphryon.Engine/Locator.hpp>
 #include <Zyphryon.Graphic/Technique.hpp>
+#include <Zyphryon.Render/Pass.hpp>
 #include <Zyphryon.Scene/Service.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -24,21 +26,28 @@
 namespace Tileon::Stage
 {
     /// \brief Represents the light stage of the rendering pipeline, responsible for applying lighting effects to the scene.
-    class Light final
+    class Light final : public Render::Pass, public Engine::Locator<Graphic::Service>
     {
     public:
 
         /// \brief Constructs the stage instance with the specified service host.
         ///
-        /// \param Host The service host to associate with the stage.
-        Light(Ref<Engine::Subsystem::Host> Host);
+        /// \param Host   The service host to associate with the stage.
+        /// \param Normal The target holding the scene's surface normals, sampled by every light technique.
+        Light(Ref<Engine::Subsystem::Host> Host, ConstRef<Render::Target> Normal);
+
+        /// \brief Sets the director the stage resolves its draws against for the current frame.
+        ///
+        /// \param Director The director instance providing camera and view management for rendering.
+        ZY_INLINE void SetDirector(ConstRef<Director> Director)
+        {
+            mDirector = AddressOf(Director);
+        }
 
         /// \brief Executes the stage's main logic.
         ///
-        /// \param Graphics The graphic service used to submit draw calls for this stage.
-        /// \param Director The director instance providing camera and view management for rendering.
-        /// \param Normal   The normal map object used for lighting calculations in the stage.
-        void Run(Ref<Graphic::Service> Graphics, ConstRef<Director> Director, Graphic::Object Normal);
+        /// \param Encoder The render encoder used to submit draw calls for this stage.
+        void Run(Ref<Render::Encoder> Encoder) override;
 
     private:
 
@@ -122,6 +131,12 @@ namespace Tileon::Stage
         Techniques                   mTechniques;
         Sequence<GpuGlowlightLayout> mGlowlightData;
         Sequence<GpuSpotlightLayout> mSpotlightData;
+
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        ConstPtr<Render::Target>     mNormal;
+        ConstPtr<Director>           mDirector = nullptr;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

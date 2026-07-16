@@ -23,7 +23,7 @@ namespace Tileon::Editor
 
     Context::Context(Ref<Engine::Subsystem::Host> Host, AnyRef<Project> Project)
         : Locator     { Host },
-          mController { Host },
+          mController { Host, false },
           mProject    { Move(Project) }
     {
         mController.Init(320, 200, Project.GetDensity());

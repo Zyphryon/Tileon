@@ -31,12 +31,12 @@ LIST(APPEND PROJECT_DEPENDENCIES "Tileon_Common")
 ## Dependency (Zyphryon ImGui)
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-FetchContent_Declare(External_ZyPlugin_ImGUI
-        GIT_REPOSITORY https://github.com/Zyphryon/Plugin-ImGui
+FetchContent_Declare(External_ZyPlugin_UI_ImGui
+        GIT_REPOSITORY https://github.com/Zyphryon/Plugin-UI-ImGui
         GIT_TAG main)
-FetchContent_MakeAvailable(External_ZyPlugin_ImGUI)
+FetchContent_MakeAvailable(External_ZyPlugin_UI_ImGui)
 
-LIST(APPEND PROJECT_DEPENDENCIES "ZyPlugin_ImGui")
+LIST(APPEND PROJECT_DEPENDENCIES "ZyPlugin_UI_ImGui")
 
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 ## Library

@@ -11,6 +11,9 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Renderer.hpp"
+#include "Stage/Geometry.hpp"
+#include "Stage/Light.hpp"
+#include "Stage/Composite.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -21,11 +24,12 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Renderer::Renderer(Ref<Engine::Subsystem::Host> Host)
-        : Locator  { Host },
-          mPasses  { Host },
-          mTileset { Host }
+    Renderer::Renderer(Ref<Engine::Subsystem::Host> Host, Bool Immediate)
+        : Locator   { Host },
+          mRenderer { Host },
+          mTileset  { Host }
     {
+        OnCreate(Host, Immediate);
         OnRegister(* Host.GetService<Scene::Service>());
     }
 
@@ -50,81 +54,52 @@ namespace Tileon
 
     void Renderer::Resize(UInt16 Width, UInt16 Height)
     {
-        Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
-
-        for (SInt32 Index = Enum::Count<Phase>() - 1; Index >= 0; --Index)
-        {
-            if (Ref<Graphic::Object> Pass = mPhases[Index])
-            {
-                Graphics.DeletePass(Pass);
-
-                Pass = 0;
-            }
-        }
-        for (SInt32 Index = Enum::Count<Frame>() - 1; Index >= 0; --Index)
-        {
-            if (Ref<Graphic::Object> Texture = mFrames[Index])
-            {
-                Graphics.DeleteTexture(Texture);
-
-                Texture = 0;
-            }
-        }
-
-        // Recreate render targets and passes with the new dimensions.
-        mViewport = Graphic::Viewport(0.0f, 0.0f, Width, Height);
-
-        mFrames[Enum::Cast(Frame::Albedo)]   = Graphics.CreateTexture(Graphic::TextureFormat::RGBA8UIntNorm, Width, Height);
-        mFrames[Enum::Cast(Frame::Normal)]   = Graphics.CreateTexture(Graphic::TextureFormat::RGBA8UIntNorm, Width, Height);
-        mFrames[Enum::Cast(Frame::Depth)]    = Graphics.CreateTexture(Graphic::TextureFormat::D24S8UIntNorm, Width, Height);
-        mFrames[Enum::Cast(Frame::Radiance)] = Graphics.CreateTexture(Graphic::TextureFormat::RGBA16Float,   Width, Height);
-        mFrames[Enum::Cast(Frame::Final)]    = Graphics.CreateTexture(Graphic::TextureFormat::RGBA8UIntNorm, Width, Height);
-
-        const Graphic::ColorAttachment        GeometryColorAttachments[] = {
-            { mFrames[Enum::Cast(Frame::Albedo)], 0, 0, 0, Graphic::Action::Clear, Graphic::Action::Store },
-            { mFrames[Enum::Cast(Frame::Normal)], 0, 0, 0, Graphic::Action::Clear, Graphic::Action::Store }
-        };
-        const Graphic::DepthAttachment GeometryDepthAttachment(mFrames[Enum::Cast(Frame::Depth)]);
-        mPhases[Enum::Cast(Phase::Geometry)] = Graphics.CreatePass(GeometryColorAttachments, GeometryDepthAttachment);
-
-        const Graphic::ColorAttachment LightColorAttachments[] = {
-            { mFrames[Enum::Cast(Frame::Radiance)], 0, 0, 0, Graphic::Action::Clear, Graphic::Action::Store },
-        };
-        mPhases[Enum::Cast(Phase::Light)] = Graphics.CreatePass(LightColorAttachments, {});
-
-        const Graphic::ColorAttachment CompositeColorAttachments[] = {
-            { mFrames[Enum::Cast(Frame::Final)], 0, 0, 0, Graphic::Action::Discard, Graphic::Action::Store },
-        };
-        mPhases[Enum::Cast(Phase::Composite)] = Graphics.CreatePass(CompositeColorAttachments, {});
+        mRenderer.Resize(Width, Height);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Renderer::Present(ConstRef<Director> Director, Bool Immediate)
+    void Renderer::Present(ConstRef<Director> Director)
     {
         Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
 
-        constexpr Array kClearAlbedoNormal = { Color::Black(), Color(0.5f, 0.5f, 1.0f, 1.0f) };
+        // Build the frame-global uniform (the director's view-projection) the renderer binds for every stage.
+        Graphic::Transient<Matrix4x4> Global = Graphics.AllocateTransientUniforms<Matrix4x4>(1);
+        Global[0] = Director.GetViewProjection();
 
-        Graphics.Prepare(mPhases[Enum::Cast(Phase::Geometry)], mViewport, kClearAlbedoNormal, 1.0f, 0);
-        {
-            mPasses.Geometry.Run(Director, mTileset);
-        }
-        Graphics.Commit();
+        // Hand the frame's director to the stages that resolve their draws from it.
+        mRenderer.GetPass<Stage::Geometry>(0).SetDirector(Director);
+        mRenderer.GetPass<Stage::Light>(1).SetDirector(Director);
 
-        Graphics.Prepare(mPhases[Enum::Cast(Phase::Light)], mViewport, Color::Black(), 1.0f, 0);
-        {
-            mPasses.Light.Run(Graphics, Director, GetFrame(Frame::Normal));
-        }
-        Graphics.Commit();
+        mRenderer.Run(Global.GetStream());
+    }
 
-        const Graphic::Object Final = Immediate ? Graphic::kDisplay : mPhases[Enum::Cast(Phase::Composite)];
-        Graphics.Prepare(Final, mViewport, Color::Transparent(), 1.0f, 0);
-        {
-            mPasses.Composite.Run(Graphics, GetFrame(Frame::Albedo), GetFrame(Frame::Radiance));
-        }
-        Graphics.Commit();
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Renderer::OnCreate(Ref<Engine::Subsystem::Host> Host, Bool Immediate)
+    {
+        // Declare the managed targets in the same order as Target.
+        Ref<Render::Target> Albedo   = mRenderer.AddTarget({ .Format = Graphic::TextureFormat::RGBA8UIntNorm });
+        Ref<Render::Target> Normal   = mRenderer.AddTarget({ .Format = Graphic::TextureFormat::RGBA8UIntNorm });
+        Ref<Render::Target> Depth    = mRenderer.AddTarget({ .Format = Graphic::TextureFormat::D24S8UIntNorm });
+        Ref<Render::Target> Radiance = mRenderer.AddTarget({ .Format = Graphic::TextureFormat::RGBA16Float   });
+        Ref<Render::Target> Final    = mRenderer.AddTarget({ .Format = Graphic::TextureFormat::RGBA8UIntNorm });
+
+        // Geometry: rasterize the scene into the albedo and normal buffers, depth-tested.
+        Ref<Stage::Geometry> Geometry = mRenderer.AddPass<Stage::Geometry>(Host, mTileset);
+        Geometry.AddColor({ .Target = AddressOf(Albedo), .Tint = Color::Black() });
+        Geometry.AddColor({ .Target = AddressOf(Normal), .Tint = Color(0.5f, 0.5f, 1.0f, 1.0f) });
+        Geometry.SetDepth({ .Target = AddressOf(Depth) });
+
+        // Light: accumulates each light's contribution into the radiance buffer, sampling the normal buffer.
+        Ref<Stage::Light> Light = mRenderer.AddPass<Stage::Light>(Host, Normal);
+        Light.AddColor({ .Target = AddressOf(Radiance), .Tint = Color::Black() });
+
+        // Composite: resolves albedo against radiance, into the display when immediate, otherwise into the final buffer.
+        Ref<Stage::Composite> Composite = mRenderer.AddPass<Stage::Composite>(Host, Albedo, Radiance);
+        Composite.AddColor({ .Target = Immediate ? nullptr : AddressOf(Final), .Load = Graphic::Action::Discard });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

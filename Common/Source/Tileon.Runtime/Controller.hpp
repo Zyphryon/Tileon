@@ -31,8 +31,9 @@ namespace Tileon
 
         /// \brief Constructs a Controller instance with the specified service host.
         ///
-        /// \param Host The service host to associate with the controller.
-        explicit Controller(Ref<Engine::Subsystem::Host> Host);
+        /// \param Host      The service host to associate with the controller.
+        /// \param Immediate `true`, renders directly to the display, otherwise renders to an off-screen texture.
+        explicit Controller(Ref<Engine::Subsystem::Host> Host, Bool Immediate);
 
         /// \brief Tears down the controller, releasing any allocated resources.
         void Teardown();
@@ -57,9 +58,7 @@ namespace Tileon
         void Resize(UInt16 Width, UInt16 Height);
 
         /// \brief Presents the rendered scene to the display, executing the rendering pipeline.
-        ///
-        /// \param Immediate If `true`, renders directly to the display; if `false`, renders to an off-screen texture.
-        void Present(Bool Immediate);
+        void Present();
 
         /// \brief Gets the world instance associated with the controller.
         ///

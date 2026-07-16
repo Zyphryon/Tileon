@@ -25,8 +25,7 @@ LIST(APPEND       PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
 ## Dependency (Zyphryon Engine)
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-SET(ZY_GRAPHIC_LOADER_STB   ON CACHE BOOL "Enable STB image loader" FORCE)
-SET(ZY_RENDER_LOADER_ARTERY ON CACHE BOOL "Enable MSDF font loader" FORCE)
+SET(ZY_GRAPHIC_LOADER_STB ON CACHE BOOL "Enable STB image loader" FORCE)
 
 FetchContent_Declare(External_ZyEngine
         GIT_REPOSITORY https://github.com/Zyphryon/Engine
@@ -59,3 +58,4 @@ TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PUBLIC ${PROJECT_INCLUDE})
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 ZyApplyCompileOptions(${PROJECT_NAME})
+ZyApplyModules(${PROJECT_NAME})

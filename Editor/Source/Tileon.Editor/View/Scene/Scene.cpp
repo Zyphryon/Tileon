@@ -24,7 +24,7 @@ namespace Tileon::Editor::View
     Scene::Scene(Ref<Context> Context)
         : Activity  { Context, kTitle, true  },
           mWorkshop { Context.GetController() },
-          mFrame    { Renderer::Frame::Albedo }
+          mTarget   { Renderer::Target::Albedo }
     {
     }
 
@@ -141,15 +141,15 @@ namespace Tileon::Editor::View
         Composer.SameLine();
         Composer.SetNextItemWidth(96.0f);
 
-        if (Composer.BeginCombo("##frame", Enum::GetName(mFrame)))
+        if (Composer.BeginCombo("##target", Enum::GetName(mTarget)))
         {
-            for (const Renderer::Frame Type : Enum::GetValues<Renderer::Frame>())
+            for (const Renderer::Target Type : Enum::GetValues<Renderer::Target>())
             {
-                const Bool Selected = (mFrame == Type);
+                const Bool Selected = (mTarget == Type);
 
                 if (Composer.Selectable(Enum::GetName(Type), Selected))
                 {
-                    mFrame = Type;
+                    mTarget = Type;
                 }
 
                 if (Selected)
@@ -254,7 +254,7 @@ namespace Tileon::Editor::View
         Ref<Director> Director = GetContext().GetDirector();
 
         // Draw the current frame rendered by the renderer to the interface.
-        const Graphic::Object Texture = Renderer.GetFrame(mFrame);
+        const Graphic::Object Texture = Renderer.GetTarget(mTarget);
         Composer.Image(Texture, Composer.GetContentRegionAvail());
 
         // Handle interactions with the viewport, such as hovering and clicking to manipulate the scene.

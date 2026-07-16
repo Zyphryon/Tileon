@@ -81,10 +81,7 @@ namespace Tileon::Editor::UI
     {
         if (!mFilename.IsEmpty())
         {
-            Filesystem::Path Path(mDirectory);
-            Path.Append(mFilename);
-
-            mCallback(Path);
+            mCallback(Filesystem::Path::Join(mDirectory, '/', mFilename));
 
             mOpen = false;
         }

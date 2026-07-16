@@ -24,9 +24,10 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Geometry::Geometry(Ref<Engine::Subsystem::Host> Host)
-        : Locator { Host },
-          mCanvas { Host }
+    Geometry::Geometry(Ref<Engine::Subsystem::Host> Host, ConstRef<Tileset> Tileset)
+        : Locator  { Host },
+          mCanvas  { Host },
+          mTileset { AddressOf(Tileset) }
     {
         OnRegister(* Host.GetService<Scene::Service>());
         OnLoad(* Host.GetService<Content::Service>());
@@ -35,12 +36,16 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Geometry::Run(ConstRef<Director> Director, ConstRef<Tileset> Tileset)
+    void Geometry::Run(Ref<Render::Encoder> Encoder)
     {
+        ConstRef<Director> Director = (* mDirector);
+        ConstRef<Tileset>  Tileset  = (* mTileset);
+
         const IntRect    Frustum = Director.GetFrustum();
         const IntVector2 Origin(Director.GetPosition().GetBaseX(), Director.GetPosition().GetBaseY());
 
-        mCanvas.Begin(Director.GetViewProjection());
+        // The canvas emits into its collector; the director's view-projection is bound as the frame-global uniform.
+        mCanvas.Begin();
         {
             // Draw sprite entities.
             // TODO: Frustum Culling
@@ -94,7 +99,7 @@ namespace Tileon::Stage
                 }
             });
         }
-        mCanvas.End();
+        mCanvas.Flush(Encoder);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

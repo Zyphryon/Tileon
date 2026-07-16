@@ -23,7 +23,9 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Light::Light(Ref<Engine::Subsystem::Host> Host)
+    Light::Light(Ref<Engine::Subsystem::Host> Host, ConstRef<Render::Target> Normal)
+        : Locator { Host },
+          mNormal { AddressOf(Normal) }
     {
         OnRegister(* Host.GetService<Scene::Service>());
         OnLoad(* Host.GetService<Content::Service>());
@@ -32,12 +34,18 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Light::Run(Ref<Graphic::Service> Graphics, ConstRef<Director> Director, Graphic::Object Normal)
+    void Light::Run(Ref<Render::Encoder> Encoder)
     {
+        Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
+        ConstRef<Director>    Director = (* mDirector);
+
         // Calculate the origin of the light stage based on the director's position.
         const IntVector2 Origin(
             Director.GetPosition().GetBaseX(),
             Director.GetPosition().GetBaseY());
+
+        // The normal buffer is the sole input every light technique samples.
+        const Array Textures = { mNormal->GetTexture() };
 
         // Reset the light data for the current frame.
         mGlowlightData.Clear();
@@ -46,21 +54,23 @@ namespace Tileon::Stage
         // Apply the environment settings for the current frame.
         mQrDrawSkylight.Run<const Skylight>([&](ConstRef<Skylight> Environment)
         {
-            Ref<Graphic::Command> Command = Graphics.AllocateTransientCommands(1).GetFront();
+            const Color SunColor    = Math::Color::FromColor8(Environment.GetSunTint());
+            const Color SkyColor    = Math::Color::FromColor8(Environment.GetSkyTint());
+            const Color GroundColor = Math::Color::FromColor8(Environment.GetGroundTint());
 
             Graphic::Transient<GpuSkylightLayout> Data =  Graphics.AllocateTransientUniforms<GpuSkylightLayout>(1);
-            Data[0].SunColor    = Math::Color::FromColor8(Environment.GetSunTint())
-                .WithIntensity(Environment.GetBrightness(), Environment.GetSunDirection().GetX());
-            Data[0].SkyColor    = Math::Color::FromColor8(Environment.GetSkyTint())
-                .WithIntensity(Environment.GetBrightness(), Environment.GetSunDirection().GetY());
-            Data[0].GroundColor = Math::Color::FromColor8(Environment.GetGroundTint())
-                .WithIntensity(Environment.GetBrightness(), 0.0f);
+            Data[0].SunColor    = SunColor.WithIntensity(Environment.GetBrightness(), Environment.GetSunDirection().GetX());
+            Data[0].SkyColor    = SkyColor.WithIntensity(Environment.GetBrightness(), Environment.GetSunDirection().GetY());
+            Data[0].GroundColor = GroundColor.WithIntensity(Environment.GetBrightness(), 0.0f);
+            Encoder.SetPass(Data.GetStream());
 
-            Command.Pipeline = mTechniques[Enum::Cast(Kind::Skylight)]->GetHandle();
-            Command.Textures.Append(Normal);
-            Command.Samplers.Append();  // TODO: Use Automatic Binding
-            Command.Uniforms[Enum::Cast(Graphic::UniformScope::Pass)] = Data.GetStream();
-            Command.Parameters = { .Count = 3, .Base = 0, .Offset = 0, .Instances = 1 };
+            constexpr Graphic::Invocation Invocation = {
+                .Count     = 3,
+                .Base      = 0,
+                .Offset    = 0,
+                .Instances = 1
+            };
+            Encoder.Draw(* mTechniques[Enum::Cast(Kind::Skylight)], Textures, Invocation);
         });
 
         // Accumulate the glowlights in the scene and render them in a single batch.
@@ -96,40 +106,36 @@ namespace Tileon::Stage
             mSpotlightData.Append(Center, Range, Light.GetFalloff(), Direction, Angles, Color);
         });
 
-        // Set the projection matrix for the light stage based on the director's position and viewport size.
-        Graphic::Transient<Matrix4x4> Scene = Graphics.AllocateTransientUniforms<Matrix4x4>(1);
-        Scene[0] = Director.GetViewProjection();
-
         // Render the accumulated glowlights in batches to minimize draw calls and state changes.
         if (const ConstSpan<GpuGlowlightLayout> Data = mGlowlightData; !Data.IsEmpty())
         {
-            Ref<Graphic::Command> Command = Graphics.AllocateTransientCommands(1).GetFront();
-
-            Graphic::Transient<GpuGlowlightLayout> Instances = Graphics.AllocateTransientVertices<GpuGlowlightLayout>(Data.GetSize());
+            Graphic::Transient<GpuGlowlightLayout> Instances
+                = Graphics.AllocateTransientVertices<GpuGlowlightLayout>(Data.GetSize());
             Instances.Copy(Data);
 
-            Command.Pipeline = mTechniques[Enum::Cast(Kind::Glowlight)]->GetHandle();
-            Command.Textures.Append(Normal);
-            Command.Samplers.Append();  // TODO: Use Automatic Binding
-            Command.Vertices.Append(Instances.GetStream());
-            Command.Uniforms[Enum::Cast(Graphic::UniformScope::Global)] = Scene.GetStream();
-            Command.Parameters = { .Count = 4, .Base = 0, .Offset = 0, .Instances = static_cast<UInt32>(Data.GetSize()) };
+            const Graphic::Invocation Invocation = {
+                .Count     = 4,
+                .Base      = 0,
+                .Offset    = 0,
+                .Instances = static_cast<UInt32>(Data.GetSize())
+            };
+            Encoder.Draw(* mTechniques[Enum::Cast(Kind::Glowlight)], Textures, Instances.GetStream(), Invocation);
         }
 
         // Render the accumulated spotlights in batches to minimize draw calls and state changes.
         if (const ConstSpan<GpuSpotlightLayout> Data = mSpotlightData; !Data.IsEmpty())
         {
-            Ref<Graphic::Command> Command = Graphics.AllocateTransientCommands(1).GetFront();
-
-            Graphic::Transient<GpuSpotlightLayout> Instances = Graphics.AllocateTransientVertices<GpuSpotlightLayout>(Data.GetSize());
+            Graphic::Transient<GpuSpotlightLayout> Instances
+                = Graphics.AllocateTransientVertices<GpuSpotlightLayout>(Data.GetSize());
             Instances.Copy(Data);
 
-            Command.Pipeline = mTechniques[Enum::Cast(Kind::Spotlight)]->GetHandle();
-            Command.Textures.Append(Normal);
-            Command.Samplers.Append();  // TODO: Use Automatic Binding
-            Command.Vertices.Append(Instances.GetStream());
-            Command.Uniforms[Enum::Cast(Graphic::UniformScope::Global)] = Scene.GetStream();
-            Command.Parameters = { .Count = 3, .Base = 0, .Offset = 0, .Instances = static_cast<UInt32>(Data.GetSize()) };
+            const Graphic::Invocation Invocation = {
+                .Count     = 3,
+                .Base      = 0,
+                .Offset    = 0,
+                .Instances = static_cast<UInt32>(Data.GetSize())
+            };
+            Encoder.Draw(* mTechniques[Enum::Cast(Kind::Spotlight)], Textures, Instances.GetStream(), Invocation);
         }
     }
 

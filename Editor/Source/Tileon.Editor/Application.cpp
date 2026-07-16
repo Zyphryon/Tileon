@@ -262,7 +262,7 @@ namespace Tileon::Editor
                         mContext->GetController().Resize(Width, Height);
                     }
                 }
-                mContext->GetController().Present(false);
+                mContext->GetController().Present();
             }
         }
     }

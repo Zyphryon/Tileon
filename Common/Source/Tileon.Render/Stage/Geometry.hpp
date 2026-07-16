@@ -14,8 +14,10 @@
 
 #include "Tileon.Render/Director.hpp"
 #include "Tileon.Render/Tileset.hpp"
-#include <Zyphryon.Render/Renderer/Canvas.hpp>
+#include <Canvas/Canvas.hpp>
 #include <Zyphryon.Scene/Service.hpp>
+
+#include "Zyphryon.Render/Pass.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -24,20 +26,28 @@
 namespace Tileon::Stage
 {
     /// \brief Represents the geometry stage of the rendering pipeline, responsible for rendering objects.
-    class Geometry final : public Engine::Locator<Content::Service>
+    class Geometry final : public Render::Pass, public Engine::Locator<Content::Service>
     {
     public:
 
         /// \brief Constructs the stage instance with the specified service host.
         ///
-        /// \param Host The service host to associate with the stage.
-        Geometry(Ref<Engine::Subsystem::Host> Host);
+        /// \param Host    The service host to associate with the stage.
+        /// \param Tileset The tileset containing the tile data to be used for rendering the stage.
+        Geometry(Ref<Engine::Subsystem::Host> Host, ConstRef<Tileset> Tileset);
+
+        /// \brief Sets the director the stage resolves its draws against for the current frame.
+        ///
+        /// \param Director The director instance providing camera and view management for rendering.
+        ZY_INLINE void SetDirector(ConstRef<Director> Director)
+        {
+            mDirector = AddressOf(Director);
+        }
 
         /// \brief Executes the stage's main logic.
         ///
-        /// \param Director The director instance providing camera and view management for rendering.
-        /// \param Tileset  The tileset containing the tile data to be used for rendering the stage.
-        void Run(ConstRef<Director> Director, ConstRef<Tileset> Tileset);
+        /// \param Encoder The render encoder used to submit draw calls for this stage.
+        void Run(Ref<Render::Encoder> Encoder) override;
 
     private:
 
@@ -84,15 +94,21 @@ namespace Tileon::Stage
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Render::Canvas mCanvas;         // TODO: Strip out from Zyphryon?
-        Techniques     mTechniques;
+        Render::Canvas     mCanvas;         // TODO: Strip out from Zyphryon?
+        Techniques         mTechniques;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Scene::Query   mQrDrawModels;
-        Scene::Query   mQrDrawSprites;
-        Scene::Query   mQrDrawTexts;
-        Scene::Query   mQrDrawRegions;
+        ConstPtr<Tileset>  mTileset;
+        ConstPtr<Director> mDirector = nullptr;
+
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        Scene::Query       mQrDrawModels;
+        Scene::Query       mQrDrawSprites;
+        Scene::Query       mQrDrawTexts;
+        Scene::Query       mQrDrawRegions;
     };
 }

@@ -15,6 +15,8 @@
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Graphic/Technique.hpp>
 
+#include "Zyphryon.Render/Pass.hpp"
+
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -22,21 +24,21 @@
 namespace Tileon::Stage
 {
     /// \brief Represents the composite stage of the rendering pipeline, responsible for compositing the final image.
-    class Composite final
+    class Composite final : public Render::Pass
     {
     public:
 
         /// \brief Constructs the stage instance with the specified service host.
         ///
-        /// \param Host The service host to associate with the stage.
-        Composite(Ref<Engine::Subsystem::Host> Host);
+        /// \param Host     The service host to associate with the stage.
+        /// \param Albedo   The target holding the scene's base color, sampled by the stage.
+        /// \param Radiance The target holding the scene's accumulated lighting, sampled by the stage.
+        Composite(Ref<Engine::Subsystem::Host> Host, ConstRef<Render::Target> Albedo, ConstRef<Render::Target> Radiance);
 
         /// \brief Executes the stage's main logic.
         ///
-        /// \param Graphics The graphic service used to submit draw calls for this stage.
-        /// \param Albedo   The albedo map object containing the base color information for the scene.
-        /// \param Radiance The radiance map object containing the lighting information for the scene.
-        void Run(Ref<Graphic::Service> Graphics, Graphic::Object Albedo, Graphic::Object Radiance);
+        /// \param Encoder The render encoder used to submit draw calls for this stage.
+        void Run(Ref<Render::Encoder> Encoder) override;
 
     private:
 
@@ -59,6 +61,8 @@ namespace Tileon::Stage
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Techniques mTechniques;
+        Techniques               mTechniques;
+        ConstPtr<Render::Target> mAlbedo;
+        ConstPtr<Render::Target> mRadiance;
     };
 }
