@@ -120,6 +120,15 @@ namespace Tileon::Editor
         /// \param Object    The unique identifier for the object to be added or removed.
         void Execute(Command Command, Placement Placement, UInt32 Object);
 
+        /// \brief Shows where the specified archetype would land if it were placed at the given placement.
+        ///
+        /// \param Placement The placement in the world the preview should follow.
+        /// \param Object    The index of the archetype to preview.
+        void UpdatePreview(Placement Placement, UInt32 Object);
+
+        /// \brief Discards the preview, if one is currently being shown.
+        void ClearPreview();
+
     private:
 
         /// \brief Represents a tile operation to be applied to a region.
@@ -177,6 +186,18 @@ namespace Tileon::Editor
         /// \param Object    The index of the archetype to instantiate.
         void AddEntity(Placement Placement, UInt32 Object);
 
+        /// \brief Creates the preview instance if needed, then poses it at the specified placement.
+        ///
+        /// The instance is a fully-fledged archetype instance minus the traits that would make the rest of the
+        /// world treat it as placed, which is what \ref AddEntity grants back when it promotes the preview.
+        ///
+        /// \param Actor     The region that owns the placement, which the preview is parented into.
+        /// \param Archetype The archetype the preview mirrors.
+        /// \param Placement The placement in the world the preview should sit at.
+        /// \param Object    The index of the archetype being previewed.
+        /// \return The preview instance.
+        Scene::Entity EnsurePreview(Scene::Entity Actor, Scene::Entity Archetype, Placement Placement, UInt32 Object);
+
         /// \brief Removes the frontmost entity found at the specified placement.
         ///
         /// \param Placement The placement in the world to remove an entity from.
@@ -212,5 +233,6 @@ namespace Tileon::Editor
         Level            mLevel;
         Brush            mBrush;
         Sequence<OpTile> mOperations;
+        Scene::Entity    mPreview;
     };
 }

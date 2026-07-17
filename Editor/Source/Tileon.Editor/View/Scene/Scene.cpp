@@ -49,6 +49,10 @@ namespace Tileon::Editor::View
             DrawViewport(Composer);
             Composer.EndChild();
         }
+        else
+        {
+            mWorkshop.ClearPreview();
+        }
         Composer.End();
     }
 
@@ -335,6 +339,8 @@ namespace Tileon::Editor::View
             // Handle mouse dragging for panning the camera when the hand brush is selected.
             if (mWorkshop.GetBrush() == Workshop::Brush::Hand)
             {
+                mWorkshop.ClearPreview();
+
                 if (Composer.IsMouseDragging(ImGuiMouseButton_Left))
                 {
                     const ImVec2 Delta = Composer.GetMouseDelta();
@@ -365,15 +371,24 @@ namespace Tileon::Editor::View
                 // The select brush picks whatever sits under the cursor, so it carries no object from the palette.
                 const Bool IsPicking = (mWorkshop.GetBrush() == Workshop::Brush::Select);
 
+                const Placement Cursor = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
+
+                // Show the pending entity under the cursor before it is committed by a click.
+                mWorkshop.UpdatePreview(Cursor, Selection);
+
                 // Handle left-click for adding and right-click for removing tiles.
                 if (IsRightButton || (IsLeftButton && (IsPicking || Selection != 0)))
                 {
                     const Workshop::Command Command = IsLeftButton
                         ? Workshop::Command::Add
                         : Workshop::Command::Remove;
-                    mWorkshop.Execute(Command, Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY)), Selection);
+                    mWorkshop.Execute(Command, Cursor, Selection);
                 }
             }
+        }
+        else
+        {
+            mWorkshop.ClearPreview();
         }
     }
 }

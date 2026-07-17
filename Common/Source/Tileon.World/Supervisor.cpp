@@ -85,7 +85,10 @@ namespace Tileon
 
                         Actor.Children([this](Scene::Entity Child)
                         {
-                            RemoveEntityOnCell(Child, Child.Get<Bound>().GetRect().GetCenter());
+                            if (const ConstPtr<Bound> Bound = Child.TryGet<Tileon::Bound>())
+                            {
+                                RemoveEntityOnCell(Child, Bound->GetRect().GetCenter());
+                            }
                         });
                         Actor.Destruct();
                     }

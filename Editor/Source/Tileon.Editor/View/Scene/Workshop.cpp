@@ -72,6 +72,76 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    void Workshop::UpdatePreview(Placement Placement, UInt32 Object)
+    {
+        if (mMode != Mode::Entity || mBrush != Brush::Pencil || Object == 0)
+        {
+            ClearPreview();
+            return;
+        }
+
+        const Scene::Entity Archetype = mContext.GetRepository().GetArchetype(Scene::kMinRangeArchetypes + Object);
+
+        // Unlike placing, merely hovering must never bring a region into existence.
+        const Scene::Entity Actor = mContext.GetSupervisor().GetRegion(Placement.GetRegionX(), Placement.GetRegionY());
+
+        if (!Archetype.IsValid() || !Actor.IsValid())
+        {
+            ClearPreview();
+            return;
+        }
+
+        EnsurePreview(Actor, Archetype, Placement, Object);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::ClearPreview()
+    {
+        if (mPreview.IsAlive())
+        {
+            mPreview.Destruct();
+        }
+        mPreview = Scene::Entity();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    Scene::Entity Workshop::EnsurePreview(Scene::Entity Actor, Scene::Entity Archetype, Placement Placement, UInt32 Object)
+    {
+        if (!mPreview.IsAlive() || mPreview.GetArchetype().GetHandle() != Object)
+        {
+            ClearPreview();
+
+            mPreview = mContext.GetScene().CreateEntity();
+            mPreview.SetArchetype(Archetype);
+
+            // Kinetic on every frame, so the pose written below is turned into a world transform as the cursor moves.
+            mPreview.Add<Dynamic>();
+
+            // Keep out of reach of QueryFrontmost and of the region's cell bookkeeping.
+            mPreview.Remove<Bound>();
+
+            // Fade the archetype's own tint, so the preview reads as not-yet-placed.
+            const ConstPtr<IntColor8> Tint = Archetype.TryGet<const IntColor8>();
+            const IntColor8           Base = Tint ? (* Tint) : IntColor8::White();
+            mPreview.Set(IntColor8(Base.GetRed(), Base.GetGreen(), Base.GetBlue(), 140));
+        }
+
+        if (mPreview.GetParent() != Actor)
+        {
+            mPreview.SetParent(Actor);
+        }
+        mPreview.Set(Pose(Vector2(Placement.GetOffsetX(), Placement.GetOffsetY())));
+
+        return mPreview;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void Workshop::ExecuteOnTiles(Command Command, Placement Placement, UInt32 Object)
     {
         Ref<Tileset> Tileset = mContext.GetTileset();
@@ -163,16 +233,21 @@ namespace Tileon::Editor
             return;
         }
 
-        const Scene::Entity Instance = mContext.GetScene().CreateEntity();
-        Instance.SetArchetype(Archetype);
-        Instance.SetParent(Actor);
-        Instance.Add<Persist>();
+        // Place whatever the preview was showing, so the result is exactly what sat under the cursor.
+        const Scene::Entity Instance = EnsurePreview(Actor, Archetype, Placement, Object);
 
-        // The offset is already region-local, which is the space the entity's pose is parented into.
-        Instance.Emplace<Pose>(Vector2(Placement.GetOffsetX(), Placement.GetOffsetY()));
+        // Promote the preview into a placed entity by granting back everything it was deliberately denied.
+        Instance.Remove<IntColor8>();
+        Instance.Add<Bound>();
+        Instance.Remove<Dynamic>();
+        Instance.Add<Stale>();
+        Instance.Add<Persist>();
 
         // Mark the region as dirty so it gets saved and reloaded with the placed entity.
         Actor.Add<Persist>();
+
+        // Ownership passes to the world, so the next hover builds a fresh preview rather than moving this one.
+        mPreview = Scene::Entity();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
