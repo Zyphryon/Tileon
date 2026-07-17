@@ -22,15 +22,10 @@ cbuffer cb_Global : register(b0)
 struct vs_Input
 {
     uint   VertexID  : SV_VertexID;
-
     float4 Params0   : SLOT0;    // center.xy, radius || range, falloff
-	
 #if defined(LIGHT_SPOT)
-
     float4 Params1   : SLOT1;    // direction.xy, angles.xy
-	
 #endif
-
     float4 Color     : SLOT2;
 };
 
@@ -40,11 +35,8 @@ struct fs_Input
     float4 World     : TEXCOORD0;    // world.xy, screen.xy
     float4 Light     : TEXCOORD1;    // center.xy, radius || range, falloff
     float4 Color     : COLOR0;
-
 #if defined(LIGHT_SPOT)
-
     float4 Spot      : TEXCOORD2;    // direction.xy, angles.xy
-	
 #endif
 };
 
@@ -80,27 +72,19 @@ fs_Input main(vs_Input Input)
     fs_Input Result;
 
 #if defined(LIGHT_SPOT)
-
     const float2 Corner = TessellateTriangle(Input.VertexID);
-	
 #else
-
     const float2 Corner = TessellateRect(Input.VertexID);
-	
 #endif
 
 #if defined(LIGHT_SPOT)
-
     const float Spread = Input.Params0.z * sqrt(1.0 - Input.Params1.w * Input.Params1.w) / Input.Params1.w;
 
     const float2 Axis  = Input.Params1.xy * (Corner.x * Input.Params0.z);
     const float2 Side  = float2(-Input.Params1.y, Input.Params1.x) * Corner.y * (Spread * Corner.x);
     const float2 World = Input.Params0.xy + Axis + Side;
-
 #else
-
     const float2 World = Input.Params0.xy + (Corner * 2.0 - 1.0) * Input.Params0.z;
-
 #endif
 
     Result.Position = mul(u_Camera, float4(World, 0.0, 1.0));
@@ -136,11 +120,9 @@ float4 main(fs_Input Input) : SV_Target0
 
     float Attenuation = saturate(1.0 - pow(saturate(Distance / Input.Light.z), Input.Light.w));
 
-#if   defined(LIGHT_SPOT) 
-
+#if   defined(LIGHT_SPOT)
     const float CosAngle = (Distance > 0.0001) ? dot(-Distance2D, Input.Spot.xy) : 1.0;
     Attenuation	= Attenuation * smoothstep(Input.Spot.w, Input.Spot.z, CosAngle);
-
 #endif
 
     clip(Attenuation - 0.001);

@@ -43,7 +43,6 @@ struct fs_Input
     float4 Position   : SV_POSITION;
     float2 Texture    : TEXCOORD0;
     float4 Color      : COLOR0;
-
 #ifdef ENABLE_NORMAL_MAPPING
     float4 Direction  : TEXCOORD1;
 #endif
@@ -83,19 +82,16 @@ fs_Input main(vs_Input Input)
 
     float2 Position = float2(
         dot(Local, Input.Transform0.xy) + Input.Transform0.z,
-        dot(Local, Input.Transform1.xy) + Input.Transform1.z
-    );
+        dot(Local, Input.Transform1.xy) + Input.Transform1.z);
 
     Result.Position = mul(u_Camera, float4(Position, Input.Transform0.w, 1.0));
     Result.Texture  = lerp(Input.Frame.xy, Input.Frame.zw, float2(Corner.x, 1.0 - Corner.y));
     Result.Color    = Input.Color;
 
 #ifdef ENABLE_NORMAL_MAPPING
-    // The basis vectors are the transform's columns, since Transform0/Transform1 each hold one of its rows.
     Result.Direction = float4(
         normalize(float2(Input.Transform0.x, Input.Transform1.x)),
-        normalize(float2(Input.Transform0.y, Input.Transform1.y))
-    );
+        normalize(float2(Input.Transform0.y, Input.Transform1.y)));
 #endif
 
     return Result;
@@ -122,31 +118,13 @@ fs_Output main(fs_Input Input)
     Result.Albedo = Input.Color * Texel;
 
 #ifdef ENABLE_NORMAL_MAPPING
-
-    float3 NormalTangent = normalize(
-        s_Normal.Sample(s_Linear, Input.Texture).rgb * 2.0 - 1.0
-    );
-
-    float2 NormalWorldXY =
-        NormalTangent.x * Input.Direction.xy +
-        NormalTangent.y * Input.Direction.zw;
+    float3 NormalTangent = normalize(s_Normal.Sample(s_Linear, Input.Texture).rgb * 2.0 - 1.0);
+    float2 NormalWorldXY = NormalTangent.x * Input.Direction.xy + NormalTangent.y * Input.Direction.zw;
 
     // The sprite plane faces +Z, so the tangent-space Z carries over to world space unchanged.
-    Result.Normal = float4(
-        NormalWorldXY   * 0.5 + 0.5,
-        NormalTangent.z * 0.5 + 0.5,
-        Result.Albedo.a
-    );
-
+    Result.Normal = float4(NormalWorldXY * 0.5 + 0.5, NormalTangent.z * 0.5 + 0.5, Result.Albedo.a);
 #else
-
-    Result.Normal = float4(
-        0.5,
-        0.5,
-        1.0,
-        Result.Albedo.a
-    );
-
+    Result.Normal = float4(0.5, 0.5, 1.0, Result.Albedo.a);
 #endif
 
     return Result;

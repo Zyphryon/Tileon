@@ -53,8 +53,7 @@ void main()
 
     vec2 Position = vec2(
         dot(Local, a_Transform0.xy) + a_Transform0.z,
-        dot(Local, a_Transform1.xy) + a_Transform1.z
-    );
+        dot(Local, a_Transform1.xy) + a_Transform1.z);
 
     gl_Position = u_Camera * vec4(Position, a_Transform0.w, 1.0);
 
@@ -62,11 +61,9 @@ void main()
     v_Color   = a_Color;
 
 #ifdef ENABLE_NORMAL_MAPPING
-    // The basis vectors are the transform's columns, since a_Transform0/a_Transform1 each hold one of its rows.
     v_Direction = vec4(
         normalize(vec2(a_Transform0.x, a_Transform1.x)),
-        normalize(vec2(a_Transform0.y, a_Transform1.y))
-    );
+        normalize(vec2(a_Transform0.y, a_Transform1.y)));
 #endif
 }
 
@@ -105,29 +102,13 @@ void main()
     out_Albedo = v_Color * Texel;
 
 #ifdef ENABLE_NORMAL_MAPPING
-
     vec3 NormalTangent = normalize(texture(s_Normal, v_Texture).rgb * 2.0 - 1.0);
-
-    vec2 NormalWorldXY =
-        NormalTangent.x * v_Direction.xy +
-        NormalTangent.y * v_Direction.zw;
+    vec2 NormalWorldXY = NormalTangent.x * v_Direction.xy + NormalTangent.y * v_Direction.zw;
 
     // The sprite plane faces +Z, so the tangent-space Z carries over to world space unchanged.
-    out_Normal = vec4(
-        NormalWorldXY   * 0.5 + 0.5,
-        NormalTangent.z * 0.5 + 0.5,
-        out_Albedo.a
-    );
-
+    out_Normal = vec4(NormalWorldXY * 0.5 + 0.5, NormalTangent.z * 0.5 + 0.5, out_Albedo.a);
 #else
-
-    out_Normal = vec4(
-        0.5,
-        0.5,
-        1.0,
-        out_Albedo.a
-    );
-
+    out_Normal = vec4(0.5, 0.5, 1.0, out_Albedo.a);
 #endif
 }
 

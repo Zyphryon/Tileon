@@ -26,9 +26,6 @@ namespace Tileon
     public:
 
         /// \brief The widest half-angle a spot light may open to.
-        ///
-        /// The cone is rasterized as a single triangle whose half-width is `Range * tan(OuterAngle)`, which
-        /// diverges as the angle approaches 90 degrees. Use a Glowlight for wider coverage.
         static constexpr Angle kMaxOuterAngle = Angle::FromDegrees(85.0f);
 
     public:
