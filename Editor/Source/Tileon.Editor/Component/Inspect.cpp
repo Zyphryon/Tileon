@@ -22,15 +22,21 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    static Bool InspectVector(Ref<UI::Composer> Composer, Text Label, Ref<Vector2> Value)
+    static Bool InspectVector(
+        Ref<UI::Composer> Composer,
+        Text              Label,
+        Ref<Vector2>      Value,
+        Real32            Speed = 1.0f,
+        Real32            Min   = 0.0f,
+        Real32            Max   = 0.0f)
     {
         Real32 X = Value.GetX();
         Real32 Y = Value.GetY();
 
-        Composer.Field(Label);
+        Composer.FieldInline(Label);
         Composer.PushID(Label);
 
-        const Bool Dirty = Composer.InputFloatPair("##value", X, Y, "%.5f");
+        const Bool Dirty = Composer.InputFloatPair("##value", X, Y, "%.3f", Speed, Min, Max);
 
         Composer.PopID();
 
@@ -44,13 +50,12 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    static Bool InspectScalar(Ref<UI::Composer> Composer, Text Label, Ref<Real32> Value)
+    static Bool InspectScalar(Ref<UI::Composer> Composer, Text Label, Ref<Real32> Value, Real32 Speed = 0.1f)
     {
-        Composer.Field(Label);
+        Composer.FieldInline(Label);
         Composer.PushID(Label);
-        Composer.SetNextItemWidth(-1.0f);
 
-        const Bool Dirty = Composer.InputFloat("##value", Value);
+        const Bool Dirty = Composer.DragFloat("##value", Value, Speed);
 
         Composer.PopID();
 
@@ -64,9 +69,8 @@ namespace Tileon::Editor
     {
         Real32 Radians = Value.GetRadians();
 
-        Composer.Field(Label);
+        Composer.FieldInline(Label);
         Composer.PushID(Label);
-        Composer.SetNextItemWidth(-1.0f);
 
         const Bool Dirty = Composer.SliderAngle("##value", Radians, Min, Max);
 
@@ -86,11 +90,10 @@ namespace Tileon::Editor
     {
         Real32 Degrees = Value.GetDegrees();
 
-        Composer.Field(Label);
+        Composer.FieldInline(Label);
         Composer.PushID(Label);
-        Composer.SetNextItemWidth(-1.0f);
 
-        const Bool Dirty = Composer.InputFloat("##value", Degrees, 0.0f, 0.0f, "%.2f°/s");
+        const Bool Dirty = Composer.DragFloat("##value", Degrees, 0.1f, 0.0f, 0.0f, "%.2f°/s");
 
         Composer.PopID();
 
@@ -106,9 +109,8 @@ namespace Tileon::Editor
 
     static Bool InspectTint(Ref<UI::Composer> Composer, Text Label, Ref<IntColor8> Value)
     {
-        Composer.Field(Label);
+        Composer.FieldInline(Label);
         Composer.PushID(Label);
-        Composer.SetNextItemWidth(-1.0f);
 
         const Bool Dirty = Composer.InputTintSmall("##value", Value);
 
@@ -120,26 +122,32 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    static Bool InspectRect(Ref<UI::Composer> Composer, Text Label, Ref<Rect> Value)
+    static Bool InspectRect(
+        Ref<UI::Composer> Composer,
+        Text              Label,
+        Ref<Rect>         Value,
+        Real32            ScaleX = 1.0f,
+        Real32            ScaleY = 1.0f,
+        Real32            Speed  = 1.0f)
     {
-        Real32 MinimumX = Value.GetMinimumX();
-        Real32 MinimumY = Value.GetMinimumY();
-        Real32 MaximumX = Value.GetMaximumX();
-        Real32 MaximumY = Value.GetMaximumY();
+        Real32 MinimumX = Value.GetMinimumX() * ScaleX;
+        Real32 MinimumY = Value.GetMinimumY() * ScaleY;
+        Real32 MaximumX = Value.GetMaximumX() * ScaleX;
+        Real32 MaximumY = Value.GetMaximumY() * ScaleY;
 
         Composer.PushID(Label);
 
-        Composer.Field(String<64>::Print<"{0} (Minimum)">(Label));
-        Bool Dirty = Composer.InputFloatPair("##minimum", MinimumX, MinimumY, "%.5f");
+        Composer.Field(String<64>::Print<"{0} (Min)">(Label));
+        Bool Dirty = Composer.InputFloatPair("##minimum", MinimumX, MinimumY, "%.2f", Speed);
 
-        Composer.Field(String<64>::Print<"{0} (Maximum)">(Label));
-        Dirty |= Composer.InputFloatPair("##maximum", MaximumX, MaximumY, "%.5f");
+        Composer.Field(String<64>::Print<"{0} (Max)">(Label));
+        Dirty |= Composer.InputFloatPair("##maximum", MaximumX, MaximumY, "%.2f", Speed);
 
         Composer.PopID();
 
         if (Dirty)
         {
-            Value.Set(MinimumX, MinimumY, MaximumX, MaximumY);
+            Value.Set(MinimumX / ScaleX, MinimumY / ScaleY, MaximumX / ScaleX, MaximumY / ScaleY);
         }
         return Dirty;
     }
@@ -175,7 +183,7 @@ namespace Tileon::Editor
                 && IsAlmostEqual(Option.Pivot.GetY(), Value.GetY());
         };
 
-        Composer.Field(Label);
+        Composer.FieldInline(Label);
         Composer.PushID(Label);
 
         ConstPtr<Preset> Match = nullptr;
@@ -191,8 +199,6 @@ namespace Tileon::Editor
 
         Bool Custom = !Match || Composer.GetState("custom");
         Bool Dirty  = false;
-
-        Composer.SetNextItemWidth(-1.0f);
 
         if (Composer.BeginCombo("##value", Custom ? kCustom : Match->Name))
         {
@@ -220,7 +226,7 @@ namespace Tileon::Editor
             Real32 X = Value.GetX();
             Real32 Y = Value.GetY();
 
-            if (Composer.InputFloatPair("##custom", X, Y, "%.3f"))
+            if (Composer.InputFloatPair("##custom", X, Y, "%.3f", 0.01f))
             {
                 Value = Pivot2D(X, Y);
                 Dirty = true;
@@ -239,9 +245,8 @@ namespace Tileon::Editor
     static void InspectPath(Ref<UI::Composer> Composer, Text Label, Text Value, AnyRef<Callback> Action)
     {
         // TODO: Swap the raw path field for the asset browser once it can be embedded as a picker.
-        Composer.Field(Label);
+        Composer.FieldInline(Label);
         Composer.PushID(Label);
-        Composer.SetNextItemWidth(-1.0f);
         Composer.InputText("##value", Value, Action, ImGuiInputTextFlags_EnterReturnsTrue);
         Composer.PopID();
     }
@@ -350,7 +355,7 @@ namespace Tileon::Editor
 
         Composer.Spacing();
 
-        if (Vector2 Scale = Component.GetScale(); InspectVector(Composer, "Scale", Scale))
+        if (Vector2 Scale = Component.GetScale(); InspectVector(Composer, "Scale", Scale, 0.01f, 0.0f, FLT_MAX))
         {
             Component.SetScale(Scale);
             Dirty = true;
@@ -536,7 +541,21 @@ namespace Tileon::Editor
 
         Composer.Spacing();
 
-        if (Rect Source = Component.GetSource(); InspectRect(Composer, "Source", Source))
+        Real32 ScaleX = 1.0f;
+        Real32 ScaleY = 1.0f;
+
+        ConstRetainer<Graphic::Material> Material = Context.GetContent().Load<Graphic::Material>(Component.GetPath());
+
+        if (Material && Material->HasCompleted())
+        {
+            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(Graphic::TextureSlot::Albedo))
+            {
+                ScaleX = Albedo->GetWidth();
+                ScaleY = Albedo->GetHeight();
+            }
+        }
+
+        if (Rect Source = Component.GetSource(); InspectRect(Composer, "Source", Source, ScaleX, ScaleY))
         {
             Component.SetSource(Source);
             Dirty = true;

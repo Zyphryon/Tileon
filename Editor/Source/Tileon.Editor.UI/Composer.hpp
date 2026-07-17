@@ -28,8 +28,8 @@ namespace Tileon::Editor::UI
     {
     public:
 
-        static constexpr ImVec4 kAxisTintX = ImVec4(0.72f, 0.28f, 0.30f, 1.0f);
-        static constexpr ImVec4 kAxisTintY = ImVec4(0.38f, 0.64f, 0.32f, 1.0f);
+        static constexpr ImVec4 kAxisTintX  = ImVec4(0.72f, 0.28f, 0.30f, 1.0f);
+        static constexpr ImVec4 kAxisTintY  = ImVec4(0.38f, 0.64f, 0.32f, 1.0f);
 
     public:
 
@@ -153,6 +153,18 @@ namespace Tileon::Editor::UI
         ZY_INLINE void SliderFloat(Text ID, Ref<Real32> Value, Real32 Min, Real32 Max, Text Format = "%.2f")
         {
             ImGui::SliderFloat(ID.GetData(), AddressOf(Value), Min, Max, Format.GetData());
+        }
+
+        ZY_INLINE Bool DragFloat(
+            Text             ID,
+            Ref<Real32>      Value,
+            Real32           Speed  = 0.1f,
+            Real32           Min    = 0.0f,
+            Real32           Max    = 0.0f,
+            Text             Format = "%.2f",
+            ImGuiSliderFlags Flags  = ImGuiSliderFlags_None)
+        {
+            return ImGui::DragFloat(ID.GetData(), AddressOf(Value), Speed, Min, Max, Format.GetData(), Flags);
         }
 
         ZY_INLINE Bool SliderAngle(Text ID, Ref<Real32> Radians, Real32 Min = 0.0f, Real32 Max = 360.0f, Text Format = "%.1f°")
@@ -369,6 +381,24 @@ namespace Tileon::Editor::UI
             PopStyleColor();
         }
 
+        ZY_INLINE void FieldInline(Text Label, Real32 LabelWidth = 110.0f)
+        {
+            const Real32 Origin = ImGui::GetCursorPosX();
+
+            ImGui::AlignTextToFramePadding();
+            PushStyleColor(ImGuiCol_Text, GetStyle().Colors[ImGuiCol_TextDisabled]);
+            ImGui::TextUnformatted(Label.GetData(), Label.GetData() + Label.GetSize());
+            PopStyleColor();
+
+            ImGui::SameLine();
+
+            if (const Real32 Column = Origin + LabelWidth; ImGui::GetCursorPosX() < Column)
+            {
+                ImGui::SetCursorPosX(Column);
+            }
+            ImGui::SetNextItemWidth(-1.0f);
+        }
+
         ZY_INLINE void Indent(Real32 Width = 0.0f)
         {
             ImGui::Indent(Width);
@@ -379,29 +409,52 @@ namespace Tileon::Editor::UI
             ImGui::Unindent(Width);
         }
 
+        ZY_INLINE void Label(Text Formatted)
+        {
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted(Formatted.GetData(), Formatted.GetData() + Formatted.GetSize());
+        }
+
         template<typename... Arguments>
         ZY_INLINE void Label(Text Format, AnyRef<Arguments>... Parameters)
         {
             ImGui::AlignTextToFramePadding();
 
-            const Text Text = String<1024>::Print(Format::Pattern(Format), Parameters...);
+            String<1024> Text;
+            Text.Format(Format::Pattern(Format), Parameters...);
             ImGui::TextUnformatted(Text.GetData(), Text.GetData() + Text.GetSize());
+        }
+
+        ZY_INLINE void TextDisabled(Text Formatted)
+        {
+            PushStyleColor(ImGuiCol_Text, GetStyle().Colors[ImGuiCol_TextDisabled]);
+            ImGui::TextUnformatted(Formatted.GetData(), Formatted.GetData() + Formatted.GetSize());
+            PopStyleColor();
         }
 
         template<typename... Arguments>
         ZY_INLINE void TextDisabled(Text Format, AnyRef<Arguments>... Parameters)
         {
-            const Text Text = String<1024>::Print(Format::Pattern(Format), Parameters...);
+            String<1024> Text;
+            Text.Format(Format::Pattern(Format), Parameters...);
 
             PushStyleColor(ImGuiCol_Text, GetStyle().Colors[ImGuiCol_TextDisabled]);
             ImGui::TextUnformatted(Text.GetData(), Text.GetData() + Text.GetSize());
             PopStyleColor();
         }
 
-        template<typename... Arguments>
-        ZY_INLINE void TextColored(ImVec4 Color, Text Format, AnyRef<Arguments>... Parameters)
+        ZY_INLINE void TextColored(ConstRef<ImVec4> Color, Text Formatted)
         {
-            const Text Text = String<1024>::Print(Format::Pattern(Format), Parameters...);
+            PushStyleColor(ImGuiCol_Text, Color);
+            ImGui::TextUnformatted(Formatted.GetData(), Formatted.GetData() + Formatted.GetSize());
+            PopStyleColor();
+        }
+
+        template<typename... Arguments>
+        ZY_INLINE void TextColored(ConstRef<ImVec4> Color, Text Format, AnyRef<Arguments>... Parameters)
+        {
+            String<1024> Text;
+            Text.Format(Format::Pattern(Format), Parameters...);
 
             PushStyleColor(ImGuiCol_Text, Color);
             ImGui::TextUnformatted(Text.GetData(), Text.GetData() + Text.GetSize());
@@ -640,25 +693,33 @@ namespace Tileon::Editor::UI
             Type                StepFast  = Type(1),
             ImGuiInputTextFlags Flags     = ImGuiInputTextFlags_None)
         {
-            const Real32 Size    = ImGui::CalcTextSize(Separator.GetData()).x;
-            const Real32 Spacing = ImGui::GetStyle().ItemSpacing.x;
-            const Real32 Width   = (ImGui::GetContentRegionAvail().x - Size - Spacing * 2.0f) * 0.5f;
+            ConstRef<ImGuiStyle> Style = ImGui::GetStyle();
+
+            const Bool   HasSeparator = !Separator.IsEmpty();
+            const Real32 Size         = HasSeparator ? ImGui::CalcTextSize(Separator.GetData()).x : 0.0f;
+            const Real32 Spacing      = Style.ItemSpacing.x;
+
+            const Real32 Stepper = Step != Type(0) ? (ImGui::GetFrameHeight() + Style.ItemInnerSpacing.x) * 2.0f : 0.0f;
+            const Real32 Width   = (ImGui::GetContentRegionAvail().x - Size - Spacing * 2.0f - Stepper * 2.0f) * 0.5f;
 
             Bool Dirty = false;
 
             ImGui::SetNextItemWidth(Width);
-            Dirty |= InputInt(String<32>::Print<"{}_x">(ID), X, Step, StepFast, Flags);
+            Dirty |= InputInt(String<32>::Print<"{0}_x">(ID), X, Step, StepFast, Flags);
 
             ImGui::SameLine();
 
-            PushStyleColor(ImGuiCol_Text, GetStyle().Colors[ImGuiCol_TextDisabled]);
-            ImGui::TextUnformatted(Separator.GetData(), Separator.GetData() + Separator.GetSize());
-            PopStyleColor();
+            if (HasSeparator)
+            {
+                PushStyleColor(ImGuiCol_Text, GetStyle().Colors[ImGuiCol_TextDisabled]);
+                ImGui::TextUnformatted(Separator.GetData(), Separator.GetData() + Separator.GetSize());
+                PopStyleColor();
 
-            ImGui::SameLine();
+                ImGui::SameLine();
+            }
 
             ImGui::SetNextItemWidth(Width);
-            Dirty |= InputInt(String<32>::Print<"{}_y">(ID), Y, Step, StepFast, Flags);
+            Dirty |= InputInt(String<32>::Print<"{0}_y">(ID), Y, Step, StepFast, Flags);
 
             return Dirty;
         }
@@ -670,7 +731,9 @@ namespace Tileon::Editor::UI
             Ref<Real32>         Value,
             Real32              Width,
             Text                Format = "%.2f",
-            ImGuiInputTextFlags Flags  = ImGuiInputTextFlags_None)
+            Real32              Speed  = 0.1f,
+            Real32              Min    = 0.0f,
+            Real32              Max    = 0.0f)
         {
             ConstRef<ImGuiStyle> Style = ImGui::GetStyle();
 
@@ -680,9 +743,11 @@ namespace Tileon::Editor::UI
             const Real32 Height   = ImGui::GetFrameHeight();
             const ImVec2 Origin   = ImGui::GetCursorScreenPos();
 
+            const ImGuiSliderFlags DragFlags = (Min < Max) ? ImGuiSliderFlags_AlwaysClamp : ImGuiSliderFlags_None;
+
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(TagWidth + Padding, Style.FramePadding.y));
             ImGui::SetNextItemWidth(Width);
-            const Bool Dirty = InputFloat(ID, Value, 0.0f, 0.0f, Format, Flags);
+            const Bool Dirty = DragFloat(ID, Value, Speed, Min, Max, Format, DragFlags);
             ImGui::PopStyleVar();
 
             const Ptr<ImDrawList> Canvas = ImGui::GetWindowDrawList();
@@ -707,18 +772,20 @@ namespace Tileon::Editor::UI
             Ref<Real32>         X,
             Ref<Real32>         Y,
             Text                Format = "%.2f",
-            ImGuiInputTextFlags Flags  = ImGuiInputTextFlags_None)
+            Real32              Speed  = 0.1f,
+            Real32              Min    = 0.0f,
+            Real32              Max    = 0.0f)
         {
             const Real32 Spacing = ImGui::GetStyle().ItemSpacing.x;
             const Real32 Width   = (ImGui::GetContentRegionAvail().x - Spacing) * 0.5f;
 
             PushID(ID);
 
-            Bool Dirty = InputFloatAxis("##x", "X", kAxisTintX, X, Width, Format, Flags);
+            Bool Dirty = InputFloatAxis("##x", "X", kAxisTintX, X, Width, Format, Speed, Min, Max);
 
             ImGui::SameLine(0.0f, Spacing);
 
-            Dirty |= InputFloatAxis("##y", "Y", kAxisTintY, Y, Width, Format, Flags);
+            Dirty |= InputFloatAxis("##y", "Y", kAxisTintY, Y, Width, Format, Speed, Min, Max);
 
             PopID();
 

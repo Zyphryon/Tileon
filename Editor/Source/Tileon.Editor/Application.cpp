@@ -392,6 +392,10 @@ int main([[maybe_unused]] int Argc, [[maybe_unused]] Ptr<Char> Argv[])
     Config.SetGraphicsDriver("GLES3");
 #endif
 
+#if   defined(ZY_PLATFORM_WEB)
+    Config.SetWindowBorderless(true);
+#endif
+
     // Load the persisted editor configuration before the engine spins up.
     Tileon::Editor::LoadConfig(Config, Filesystem::GetDataFolder("Tileon", "Editor") + "Config.json");
 
