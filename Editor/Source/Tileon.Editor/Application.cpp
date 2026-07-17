@@ -15,7 +15,7 @@
 #include "View/Foundry/Foundry.hpp"
 #include "View/Inspector/Inspector.hpp"
 #include "View/Palette/Palette.hpp"
-#include "View/Realm/Realm.hpp"
+#include "View/Universe/Universe.hpp"
 #include "View/Scene/Scene.hpp"
 #include "Tileon.Editor.UI/Theme.hpp"
 #include "Tileon_Editor.Modules.hpp"
@@ -220,7 +220,7 @@ namespace Tileon::Editor
         mActivities.Append(Retainer<View::Archetypes>::Create(* mContext));
         mActivities.Append(Retainer<View::Inspector>::Create(* mContext));
         mActivities.Append(Retainer<View::Palette>::Create(* mContext));
-        mActivities.Append(Retainer<View::Realm>::Create(* mContext));
+        mActivities.Append(Retainer<View::Universe>::Create(* mContext));
         mActivities.Append(Retainer<View::Scene>::Create(* mContext));
 
         // Signal that we are waiting for the content service to finish loading all queued assets.

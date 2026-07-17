@@ -63,7 +63,7 @@ namespace Tileon::Editor::UI
         /// \return The content URI of the currently selected item in the browser.
         ZY_INLINE Text GetSelection() const
         {
-            return  mSelection;
+            return mSelection;
         }
 
     private:
@@ -93,28 +93,41 @@ namespace Tileon::Editor::UI
         /// \brief Defines the type for a list of content entries.
         using Entries = Sequence<Filesystem::Record>;
 
-        /// \brief Returns the cached entry list for the given URI, populating the cache on first access.
+        /// \brief A cached directory listing together with its asynchronous refresh bookkeeping.
+        struct Directory
+        {
+            /// The most recently enumerated entries for the directory.
+            Entries Records;
+
+            /// Whether an enumeration request for this directory is currently in flight.
+            Bool    Pending = false;
+
+            /// The earliest time, in seconds, at which a new enumeration may be issued.
+            Real64  Refresh = 0.0;
+        };
+
+        /// \brief Returns a snapshot of the cached entries for the given URI.
         ///
         /// \param Uri The content URI of the directory to enumerate.
-        ConstRef<Entries> GetEntries(ConstRef<Content::Uri> Uri);
+        /// \return A copy of the currently cached entries, which may be empty while a request is in flight.
+        Entries GetEntries(ConstRef<Content::Uri> Uri);
 
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Ref<Content::Service>  mService;
-        Table<UInt64, Entries> mEntries;        // TODO: Use LastTimeUpdated to reduce queries.
-        Content::Uri           mPath;
-        UI::Gallery            mGallery;
+        Ref<Content::Service>    mService;
+        Table<UInt64, Directory> mEntries;        // TODO: Use LastTimeUpdated to reduce queries.
+        Content::Uri             mPath;
+        UI::Gallery              mGallery;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Mode                   mMode;
-        Bool                   mOpen;
-        Real64                 mTime;
-        Str                    mSelection;
-        Str                    mFilter;
+        Mode                     mMode;
+        Bool                     mOpen;
+        Str                      mSelection;
+        Str                      mFilter;
     };
 }

@@ -24,8 +24,7 @@ namespace Tileon::Editor::UI
     Browser::Browser(Ref<Content::Service> Service, Mode Mode)
         : mService { Service },
           mMode    { Mode },
-          mOpen    { false },
-          mTime    { 0.0 }
+          mOpen    { false }
     {
     }
 
@@ -47,13 +46,6 @@ namespace Tileon::Editor::UI
 
     Bool Browser::Draw(Ref<Composer> Composer)
     {
-        // Invalidate the directory cache periodically so changes on disk are reflected.
-        if (ImGui::GetTime() >= mTime)
-        {
-            mEntries.Clear();
-            mTime = ImGui::GetTime() + kInterval;
-        }
-
         // Draw the browser as a modal popup if in popup mode, otherwise draw it inline.
         Bool WasFinished = false;
 
@@ -152,7 +144,9 @@ namespace Tileon::Editor::UI
     {
         mPath      = Content::Uri();
         mSelection = "";
-        mTime      = 0.0;
+
+        // Drop the cache so the next time the browser is shown it re-enumerates and reflects on-disk changes.
+        mEntries.Clear();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -238,7 +232,7 @@ namespace Tileon::Editor::UI
 
             if (mGallery.DrawItem(Composer, ID, Entry.Name))
             {
-                mSelection.Format<"{0}{1}/">(mPath.GetUrl(), Entry.Name);
+                mSelection.Format<"{0}{1}">(mPath.GetUrl(), Entry.Name);
             }
         }
 
@@ -248,15 +242,30 @@ namespace Tileon::Editor::UI
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    ConstRef<Browser::Entries> Browser::GetEntries(ConstRef<Content::Uri> Uri)
+    Browser::Entries Browser::GetEntries(ConstRef<Content::Uri> Uri)
     {
-        Ref<Browser::Entries> Entries = mEntries.FindOrInsert(Hash(Uri.GetPath()));
+        const UInt64 Key = Hash(Uri.GetPath());
 
-        if (Entries.IsEmpty())
+        // Decide whether a (re)enumeration is due without holding a reference across the request.
+        Ref<Directory> Slot = mEntries.FindOrInsert(Key);
+
+        if (const Real64 Now = ImGui::GetTime(); !Slot.Pending && Now >= Slot.Refresh)
         {
-            // TODO: ENUMERATE_ASYNC? mService.Enumerate(Uri)
+            Slot.Pending = true;
+            Slot.Refresh = Now + kInterval;
+
+            // The enumeration runs asynchronously and its completion is delivered on the main thread, so the cache can
+            // be updated here without any synchronization.
+            mService.Enumerate(Uri, [this, Key](Filesystem::Result Result, Sequence<Filesystem::Record> Records)
+            {
+                Ref<Directory> Entry = mEntries.FindOrInsert(Key);
+                Entry.Records = Move(Records);
+                Entry.Pending = false;
+            });
         }
-        return Entries;
+
+        // Re-fetch after the request, since a synchronous completion may have already mutated the table.
+        return mEntries.FindOrInsert(Key).Records;
     }
 }
 

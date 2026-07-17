@@ -21,14 +21,14 @@
 namespace Tileon::Editor::View
 {
     /// \brief Presents the world's singleton components as though the world itself were an entity.
-    class Realm final : public Activity
+    class Universe final : public Activity
     {
     public:
 
         /// \brief Constructs the activity with the specified context.
         ///
         /// \param Context The context associated with this activity.
-        Realm(Ref<Context> Context);
+        Universe(Ref<Context> Context);
 
         /// \see Activity::OnDraw(Ref<UI::Composer>)
         void OnDraw(Ref<UI::Composer> Composer) override;

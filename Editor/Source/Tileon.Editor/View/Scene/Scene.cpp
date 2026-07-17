@@ -325,42 +325,53 @@ namespace Tileon::Editor::View
         {
             const ::Scene::Entity Actor = GetContext().GetScene().GetEntity(Selected);
 
-            if (Actor.IsValid() && Actor.Has<Tileon::Bound>())
+            if (Actor.IsValid())
             {
-                const IntRect AABB   = Actor.Get<Tileon::Bound>().GetRect();
-                const Real32  RangeX = Director.GetViewport().GetX() * Director.GetDensity();
-                const Real32  RangeY = Director.GetViewport().GetY() * Director.GetDensity();
-
-                const auto ToScreen = [&](Real32 X, Real32 Y)
+                if (Actor.Has<Tileon::Bound>())
                 {
-                    const Vector2 Pixel = Director.GetScreenCoordinates(Placement(0, 0, X, Y));
-                    return ImVec2(
-                        ViewportOrigin.x + (Pixel.GetX() / RangeX) * ViewportSize.x,
-                        ViewportOrigin.y + (Pixel.GetY() / RangeY) * ViewportSize.y);
-                };
+                    const IntRect AABB   = Actor.Get<Tileon::Bound>().GetRect();
+                    const Real32  RangeX = Director.GetViewport().GetX() * Director.GetDensity();
+                    const Real32  RangeY = Director.GetViewport().GetY() * Director.GetDensity();
 
-                // The world is unrotated, so two opposite corners bound an axis-aligned screen rect.
-                const ImVec2 A = ToScreen(AABB.GetMinimumX(), AABB.GetMinimumY());
-                const ImVec2 B = ToScreen(AABB.GetMaximumX(), AABB.GetMaximumY());
+                    const auto ToScreen = [&](Real32 X, Real32 Y)
+                    {
+                        const Vector2 Pixel = Director.GetScreenCoordinates(Placement(0, 0, X, Y));
+                        return ImVec2(
+                            ViewportOrigin.x + (Pixel.GetX() / RangeX) * ViewportSize.x,
+                            ViewportOrigin.y + (Pixel.GetY() / RangeY) * ViewportSize.y);
+                    };
 
-                const Real32 MinX = Min(A.x, B.x);
-                const Real32 MinY = Min(A.y, B.y);
-                const Real32 MaxX = Max(A.x, B.x);
-                const Real32 MaxY = Max(A.y, B.y);
+                    // The world is unrotated, so two opposite corners bound an axis-aligned screen rect.
+                    const ImVec2 A = ToScreen(AABB.GetMinimumX(), AABB.GetMinimumY());
+                    const ImVec2 B = ToScreen(AABB.GetMaximumX(), AABB.GetMaximumY());
 
-                constexpr UInt32 Color = IM_COL32(255, 170, 40, 235);
-                constexpr Real32 Thick = 2.0f;
-                const Real32     Arm   = Min(24.0f, Min(MaxX - MinX, MaxY - MinY) * 0.35f);
+                    const Real32 MinX = Min(A.x, B.x);
+                    const Real32 MinY = Min(A.y, B.y);
+                    const Real32 MaxX = Max(A.x, B.x);
+                    const Real32 MaxY = Max(A.y, B.y);
 
-                const Ptr<ImDrawList> List = ImGui::GetWindowDrawList();
-                List->AddLine(ImVec2(MinX, MinY), ImVec2(MinX + Arm, MinY), Color, Thick);
-                List->AddLine(ImVec2(MinX, MinY), ImVec2(MinX, MinY + Arm), Color, Thick);
-                List->AddLine(ImVec2(MaxX, MinY), ImVec2(MaxX - Arm, MinY), Color, Thick);
-                List->AddLine(ImVec2(MaxX, MinY), ImVec2(MaxX, MinY + Arm), Color, Thick);
-                List->AddLine(ImVec2(MaxX, MaxY), ImVec2(MaxX - Arm, MaxY), Color, Thick);
-                List->AddLine(ImVec2(MaxX, MaxY), ImVec2(MaxX, MaxY - Arm), Color, Thick);
-                List->AddLine(ImVec2(MinX, MaxY), ImVec2(MinX + Arm, MaxY), Color, Thick);
-                List->AddLine(ImVec2(MinX, MaxY), ImVec2(MinX, MaxY - Arm), Color, Thick);
+                    constexpr UInt32 Color = IM_COL32(255, 170, 40, 235);
+                    constexpr Real32 Thick = 2.0f;
+                    const Real32     Arm   = Min(24.0f, Min(MaxX - MinX, MaxY - MinY) * 0.35f);
+
+                    const Ptr<ImDrawList> List = ImGui::GetWindowDrawList();
+                    List->AddLine(ImVec2(MinX, MinY), ImVec2(MinX + Arm, MinY), Color, Thick);
+                    List->AddLine(ImVec2(MinX, MinY), ImVec2(MinX, MinY + Arm), Color, Thick);
+                    List->AddLine(ImVec2(MaxX, MinY), ImVec2(MaxX - Arm, MinY), Color, Thick);
+                    List->AddLine(ImVec2(MaxX, MinY), ImVec2(MaxX, MinY + Arm), Color, Thick);
+                    List->AddLine(ImVec2(MaxX, MaxY), ImVec2(MaxX - Arm, MaxY), Color, Thick);
+                    List->AddLine(ImVec2(MaxX, MaxY), ImVec2(MaxX, MaxY - Arm), Color, Thick);
+                    List->AddLine(ImVec2(MinX, MaxY), ImVec2(MinX + Arm, MaxY), Color, Thick);
+                    List->AddLine(ImVec2(MinX, MaxY), ImVec2(MinX, MaxY - Arm), Color, Thick);
+                }
+
+                if (ImGui::IsWindowFocused())
+                {
+                    if (Composer.IsKeyPressed(ImGuiKey_Delete))
+                    {
+                        Actor.Add<Dispose>();
+                    }
+                }
             }
         }
 
