@@ -25,16 +25,24 @@
 
 namespace Tileon::Stage
 {
-    /// \brief Represents the light stage of the rendering pipeline, responsible for applying lighting effects to the scene.
-    class Light final : public Render::Pass, public Engine::Locator<Graphic::Service>
+    /// \brief Represents the debug stage of the rendering pipeline, responsible for drawing diagnostic overlays.
+    class Debug final : public Render::Pass, public Engine::Locator<Graphic::Service>
     {
+    public:
+
+        /// \brief Enumerates the diagnostic overlays that can be drawn by the stage.
+        enum class Property : UInt8
+        {
+            Boundaries = 0b00000001,    ///< Draws the world-space bounding box of every visible entity.
+            Grid       = 0b00000010,    ///< Draws the infinite tile grid, accented on region borders.
+        };
+
     public:
 
         /// \brief Constructs the stage instance with the specified service host.
         ///
-        /// \param Host   The service host to associate with the stage.
-        /// \param Normal The target holding the scene's surface normals, sampled by every light technique.
-        Light(Ref<Engine::Subsystem::Host> Host, ConstRef<Render::Target> Normal);
+        /// \param Host The service host to associate with the stage.
+        explicit Debug(Ref<Engine::Subsystem::Host> Host);
 
         /// \brief Sets the director the stage resolves its draws against for the current frame.
         ///
@@ -44,6 +52,24 @@ namespace Tileon::Stage
             mDirector = AddressOf(Director);
         }
 
+        /// \brief Changes the state of a specific property for the stage.
+        ///
+        /// \param Mask   The property to set or clear.
+        /// \param Enable `true` to set the property, `false` to clear it.
+        ZY_INLINE void SetProperty(Property Mask, Bool Enable)
+        {
+            mProperties = SetOrClearBit(mProperties, Enum::Cast(Mask), Enable);
+        }
+
+        /// \brief Checks if the stage has a specific property.
+        ///
+        /// \param Mask The property to check.
+        /// \return `true` if the property is enabled, `false` otherwise.
+        ZY_INLINE Bool HasProperty(Property Mask) const
+        {
+            return HasBit(mProperties, Enum::Cast(Mask));
+        }
+
         /// \brief Executes the stage's main logic.
         ///
         /// \param Encoder The render encoder used to submit draw calls for this stage.
@@ -51,12 +77,11 @@ namespace Tileon::Stage
 
     private:
 
-        /// \brief Enumerates the different rendering techniques available in the light stage.
+        /// \brief Enumerates the different rendering techniques available in the debug stage.
         enum class Kind : UInt8
         {
-            Spotlight, ///< Technique for rendering cone-shaped light sources.
-            Glowlight, ///< Technique for rendering radial light sources.
-            Skylight,  ///< Technique for rendering ambient lighting effects that affect the entire scene.
+            Grid,       ///< Technique for rendering the infinite tile grid.
+            Boundary,   ///< Technique for rendering the bounding box of an entity.
         };
 
         /// \brief Defines a type alias for a collection of rendering techniques.
@@ -72,55 +97,34 @@ namespace Tileon::Stage
         /// \param Content The content service used to load resources for the stage.
         void OnLoad(Ref<Content::Service> Content);
 
-        /// \brief Represents the per-instance data for the ambient lighting effect of the skylight technique.
-        struct GpuSkylightLayout final
+        /// \brief Draws the infinite tile grid that covers the whole viewport.
+        ///
+        /// \param Encoder The render encoder used to submit draw calls.
+        void DrawGrid(Ref<Render::Encoder> Encoder);
+
+        /// \brief Draws the bounding box of every entity that survives frustum culling, as a single batch.
+        ///
+        /// \param Encoder The render encoder used to submit draw calls.
+        void DrawBoundaries(Ref<Render::Encoder> Encoder);
+
+        /// \brief Represents the per-pass data for the grid technique.
+        struct GpuGridLayout final
         {
-            /// The color of the sun, represented as RGB + intensity, A = SunDirection.X.
-            Color SunColor;
+            /// The inverse view-projection, which recovers the world position of every pixel.
+            Matrix4x4 Camera;
 
-            /// The color of the sky, represented as RGB + intensity, A = SunDirection.Y.
-            Color SkyColor;
-
-            /// The color of the ground, represented as RGB + intensity.
-            Color GroundColor;
+            /// The size of a region in tiles, which sets the period of the accented lines.
+            Vector2   Dimension;
         };
 
-        /// \brief Represents the per-instance data for a glow light.
-        struct GpuGlowlightLayout final
+        /// \brief Represents the per-instance data for the bounding box of an entity.
+        struct GpuBoundaryLayout final
         {
-            /// The center position of the radial light in world space.
+            /// The center of the bounding box in world space.
             Vector2 Center;
 
-            // The range of the radial light, representing the maximum distance the light can reach.
-            Real32  Radius;
-
-            // The falloff of the radial light, representing the rate at which the light intensity decreases with distance.
-            Real32  Falloff;
-
-            // The color of the radial light, represented as RGB + intensity.
-            Color   Color;
-        };
-
-        /// \brief Represents the per-instance data for a spot light.
-        struct GpuSpotlightLayout final
-        {
-            /// The center position of the cone light in world space.
-            Vector2   Center;
-
-            // The range of the cone light, representing the maximum distance the light can reach.
-            Real32    Range;
-
-            // The falloff of the cone light, representing the rate at which the light intensity decreases with distance.
-            Real32    Falloff;
-
-            // The direction of the cone light,indicating the forward direction of the light.
-            Vector2   Direction;
-
-            // The cos of the inner and outer angles of the cone light.
-            Vector2   Angles;
-
-            // The color of the cone light, represented as RGB + intensity.
-            Color     Color;
+            /// The half-size of the bounding box in world space.
+            Vector2 Extent;
         };
 
     private:
@@ -128,21 +132,18 @@ namespace Tileon::Stage
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Techniques                   mTechniques;
-        Sequence<GpuGlowlightLayout> mGlowlightData;
-        Sequence<GpuSpotlightLayout> mSpotlightData;
+        Techniques                  mTechniques;
+        Sequence<GpuBoundaryLayout> mBoundaryData;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        ConstPtr<Render::Target>     mNormal;
-        ConstPtr<Director>           mDirector;
+        ConstPtr<Director>          mDirector;
+        UInt8                       mProperties;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Scene::Query                 mQrDrawGlowlights;
-        Scene::Query                 mQrDrawSpotlights;
-        Scene::Query                 mQrDrawSkylight;
+        Scene::Query                mQrDrawBoundaries;
     };
 }

@@ -113,6 +113,16 @@ namespace Tileon::Editor::View
         }
         Composer.SameLine();
 
+        Composer.SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        Composer.SameLine();
+
+        // Draw the diagnostic overlay toggles.
+        DrawDebugButton(Composer, Renderer::Debug::Grid, ICON_FA_BORDER_ALL);
+        Composer.SameLine();
+
+        DrawDebugButton(Composer, Renderer::Debug::Boundaries, ICON_FA_OBJECT_GROUP);
+        Composer.SameLine();
+
         // Draw projection mode and frame selector combos on the far right of the toolbar.
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 4.0f));
 
@@ -181,6 +191,30 @@ namespace Tileon::Editor::View
         if (Composer.Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Brush)), 32.0f))
         {
             mWorkshop.SetBrush(Brush);
+        }
+
+        if (Active)
+        {
+            Composer.PopStyleColor(2);
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Scene::DrawDebugButton(Ref<UI::Composer> Composer, Renderer::Debug Overlay, Text Icon)
+    {
+        const Bool Active = GetContext().GetRenderer().HasProperty(Overlay);
+
+        if (Active)
+        {
+            Composer.PushStyleColor(ImGuiCol_Button,        Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
+            Composer.PushStyleColor(ImGuiCol_ButtonHovered, Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
+        }
+
+        if (Composer.Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Overlay)), 32.0f))
+        {
+            GetContext().GetRenderer().SetProperty(Overlay, !Active);
         }
 
         if (Active)

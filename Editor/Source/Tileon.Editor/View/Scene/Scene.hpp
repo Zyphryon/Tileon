@@ -53,6 +53,13 @@ namespace Tileon::Editor::View
         /// \param Icon     The icon displayed on the button.
         void DrawBrushButton(Ref<UI::Composer> Composer, Workshop::Brush Brush, Text Icon);
 
+        /// \brief Draws a toolbar button that toggles the given overlay, highlighted while that overlay is enabled.
+        ///
+        /// \param Composer The UI composer used to render the button.
+        /// \param Overlay  The diagnostic overlay the button toggles.
+        /// \param Icon     The icon displayed on the button.
+        void DrawDebugButton(Ref<UI::Composer> Composer, Renderer::Debug Overlay, Text Icon);
+
         /// \brief Draws the tile editing toolbar for the scene activity.
         ///
         /// \param Composer The UI composer used to render the tile editing toolbar elements.

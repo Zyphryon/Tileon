@@ -1,0 +1,91 @@
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Copyright (C) 2025-2026 Tileon contributors (see AUTHORS.md)
+//
+// This work is licensed under the terms of the MIT license.
+//
+// For a copy, see <https://opensource.org/licenses/MIT>.
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Uniforms
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+cbuffer cb_Pass : register(b1)
+{
+    float4x4 u_Camera;      // Inverse view-projection.
+    float2   u_Dimension;
+};
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Constants
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+static const float4 kColorTiles   = float4(1.00f, 1.00f, 1.00f, 0.10f);
+static const float4 kColorRegions = float4(0.35f, 0.75f, 1.00f, 0.60f);
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Attributes
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+struct fs_Input
+{
+    float4 Position : SV_POSITION;
+    float2 World    : TEXCOORD0;
+};
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Vertex Shader
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef VERTEX_SHADER
+
+fs_Input main(uint ID : SV_VertexID)
+{
+    fs_Input Result;
+
+    const float2 Corner = float2((ID << 1) & 2, ID & 2);
+    Result.Position = float4(Corner * 2.0 - 1.0, 0.0, 1.0);
+
+    // Un project the corner back into the world. Both camera modes are affine, so interpolating the three
+    // corners reproduces the exact world position of every pixel in between.
+    const float4 World = mul(u_Camera, float4(Result.Position.xy, 0.0, 1.0));
+    Result.World = World.xy / World.w;
+
+    return Result;
+}
+
+#endif // VERTEX_SHADER
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Fragment Shader
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef FRAGMENT_SHADER
+
+// Computes the coverage of an axis-aligned line grid repeating every 'Period' world units.
+float Coverage(float2 World, float2 Period)
+{
+    const float2 Repeat   = World / Period;
+    const float2 Derivate = max(fwidth(Repeat), 1e-8);
+    const float2 Distance = abs(frac(Repeat - 0.5) - 0.5) / Derivate;
+
+    // Once the lines sit closer than a couple of pixels apart they alias into noise, so dissolve them instead.
+    const float Density = saturate(1.0 - max(Derivate.x, Derivate.y) * 2.0);
+    return saturate(1.0 - min(Distance.x, Distance.y)) * Density;
+}
+
+float4 main(fs_Input Input) : SV_Target0
+{
+    const float Tile   = Coverage(Input.World, float2(1.0, 1.0));
+    const float Region = Coverage(Input.World, u_Dimension);
+
+    // A region line always overrides the tile line it sits on.
+    const float4 Result = lerp(
+        float4(kColorTiles.rgb,   kColorTiles.a   * Tile),
+        float4(kColorRegions.rgb, kColorRegions.a * Region), Region);
+
+    clip(Result.a - 0.001);
+    return Result;
+}
+
+#endif // FRAGMENT_SHADER

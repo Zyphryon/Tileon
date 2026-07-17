@@ -88,6 +88,16 @@ namespace Tileon::Editor::UI
             ImGui::PopID();
         }
 
+        ZY_INLINE Bool GetState(Text ID, Bool Fallback = false) const
+        {
+            return ImGui::GetStateStorage()->GetBool(ImGui::GetID(ID.GetData(), ID.GetData() + ID.GetSize()), Fallback);
+        }
+
+        ZY_INLINE void SetState(Text ID, Bool State)
+        {
+            ImGui::GetStateStorage()->SetBool(ImGui::GetID(ID.GetData(), ID.GetData() + ID.GetSize()), State);
+        }
+
         ZY_INLINE Bool BeginMainMenuBar()
         {
             return ImGui::BeginMainMenuBar();

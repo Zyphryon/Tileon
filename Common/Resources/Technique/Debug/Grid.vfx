@@ -1,0 +1,39 @@
+{
+  "Properties": {
+    "Blend": {
+      "SrcColor": "SrcAlpha",
+      "DstColor": "OneMinusSrcAlpha",
+      "SrcAlpha": "One",
+      "DstAlpha": "OneMinusSrcAlpha"
+    },
+    "Depth": {
+      "Mask": false,
+      "Condition": "Always"
+    },
+    "Rasterizer": {
+      "Cull": "None"
+    },
+    "Layout": {
+      "Attributes": [],
+      "Primitive": "TriangleList"
+    }
+  },
+  "Signature": {
+    "Uniforms": [
+      { "Slot": "Pass", "Name": "Camera",    "Type": "Float4", "Count": 4 },
+      { "Slot": "Pass", "Name": "Dimension", "Type": "Float2" }
+    ]
+  },
+  "Program": {
+    "Shaders": {
+      "HLSL": [
+        { "Path": "Grid-HLSL.shd", "Stage": "Vertex"   },
+        { "Path": "Grid-HLSL.shd", "Stage": "Fragment" }
+      ],
+      "GLSL": [
+        { "Path": "Grid-GLSL.shd", "Stage": "Vertex"   },
+        { "Path": "Grid-GLSL.shd", "Stage": "Fragment" }
+      ]
+    }
+  }
+}

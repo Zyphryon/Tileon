@@ -147,6 +147,94 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    static Bool InspectPivot(Ref<UI::Composer> Composer, Text Label, Ref<Pivot2D> Value)
+    {
+        struct Preset final
+        {
+            Text    Name;
+            Pivot2D Pivot;
+        };
+
+        static constexpr Array kPresets = {
+            Preset { .Name = "Left Top",      .Pivot = Pivot2D::LeftTop()      },
+            Preset { .Name = "Left Middle",   .Pivot = Pivot2D::LeftMiddle()   },
+            Preset { .Name = "Left Bottom",   .Pivot = Pivot2D::LeftBottom()   },
+            Preset { .Name = "Center Top",    .Pivot = Pivot2D::CenterTop()    },
+            Preset { .Name = "Center Middle", .Pivot = Pivot2D::CenterMiddle() },
+            Preset { .Name = "Center Bottom", .Pivot = Pivot2D::CenterBottom() },
+            Preset { .Name = "Right Top",     .Pivot = Pivot2D::RightTop()     },
+            Preset { .Name = "Right Middle",  .Pivot = Pivot2D::RightMiddle()  },
+            Preset { .Name = "Right Bottom",  .Pivot = Pivot2D::RightBottom()  },
+        };
+
+        static constexpr Text kCustom = "Custom";
+
+        const auto Matches = [&Value](ConstRef<Preset> Option)
+        {
+            return IsAlmostEqual(Option.Pivot.GetX(), Value.GetX())
+                && IsAlmostEqual(Option.Pivot.GetY(), Value.GetY());
+        };
+
+        Composer.Field(Label);
+        Composer.PushID(Label);
+
+        ConstPtr<Preset> Match = nullptr;
+
+        for (ConstRef<Preset> Option : kPresets)
+        {
+            if (Matches(Option))
+            {
+                Match = AddressOf(Option);
+                break;
+            }
+        }
+
+        Bool Custom = !Match || Composer.GetState("custom");
+        Bool Dirty  = false;
+
+        Composer.SetNextItemWidth(-1.0f);
+
+        if (Composer.BeginCombo("##value", Custom ? kCustom : Match->Name))
+        {
+            for (ConstRef<Preset> Option : kPresets)
+            {
+                if (Composer.Selectable(Option.Name, !Custom && Matches(Option)))
+                {
+                    Value  = Option.Pivot;
+                    Custom = false;
+                    Dirty  = true;
+                }
+            }
+
+            if (Composer.Selectable(kCustom, Custom))
+            {
+                Custom = true;
+            }
+            Composer.EndCombo();
+        }
+
+        Composer.SetState("custom", Custom);
+
+        if (Custom)
+        {
+            Real32 X = Value.GetX();
+            Real32 Y = Value.GetY();
+
+            if (Composer.InputFloatPair("##custom", X, Y, "%.3f"))
+            {
+                Value = Pivot2D(X, Y);
+                Dirty = true;
+            }
+        }
+
+        Composer.PopID();
+
+        return Dirty;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     template<typename Callback>
     static void InspectPath(Ref<UI::Composer> Composer, Text Label, Text Value, AnyRef<Callback> Action)
     {
@@ -572,6 +660,8 @@ namespace Tileon::Editor
 
     Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Typeface> Component)
     {
+        const Real32 Density = Context.GetDirector().GetDensity();
+
         Bool Dirty = false;
 
         ConstRetainer<::Render::Font> Font = Component.GetFont();
@@ -584,9 +674,9 @@ namespace Tileon::Editor
 
         Composer.Spacing();
 
-        if (Real32 Size = Component.GetSize(); InspectScalar(Composer, "Size", Size))
+        if (Real32 Size = Component.GetSize() * Density; InspectScalar(Composer, "Size", Size))
         {
-            Component.SetSize(Size);
+            Component.SetSize(Size / Density);
             Dirty = true;
         }
         return Dirty;
@@ -597,6 +687,8 @@ namespace Tileon::Editor
 
     Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Label> Component)
     {
+        const Real32 Density = Context.GetDirector().GetDensity();
+
         Bool Dirty = false;
 
         Composer.Field("Content");
@@ -611,19 +703,17 @@ namespace Tileon::Editor
 
         Composer.Spacing();
 
-        if (Vector2 Spacing = Component.GetSpacing(); InspectVector(Composer, "Spacing", Spacing))
+        if (Vector2 Spacing = Component.GetSpacing() * Density; InspectVector(Composer, "Spacing", Spacing))
         {
-            Component.SetSpacing(Spacing);
+            Component.SetSpacing(Spacing / Density);
             Dirty = true;
         }
 
         Composer.Spacing();
 
-        const Pivot2D Pivot = Component.GetPivot();
-
-        if (Vector2 Value(Pivot.GetX(), Pivot.GetY()); InspectVector(Composer, "Pivot", Value))
+        if (Pivot2D Pivot = Component.GetPivot(); InspectPivot(Composer, "Pivot", Pivot))
         {
-            Component.SetPivot(Pivot2D(Value.GetX(), Value.GetY()));
+            Component.SetPivot(Pivot);
             Dirty = true;
         }
         return Dirty;

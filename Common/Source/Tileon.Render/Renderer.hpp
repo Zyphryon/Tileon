@@ -13,6 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Director.hpp"
+#include "Stage/Debug.hpp"
 #include "Tileset.hpp"
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Engine/Locator.hpp>
@@ -39,6 +40,18 @@ namespace Tileon
             Radiance,       ///< Contains the accumulated lighting information of the scene after the lighting phase.
             Final,          ///< Contains the final composed image of the scene after all rendering phases are complete.
         };
+
+        /// \brief Represents the different phases of the rendering pipeline.
+        enum class Phase : UInt8
+        {
+            Geometry,       ///< The geometry phase, where the scene's geometry is rendered to the G-buffer.
+            Light,          ///< The lighting phase, where lighting calculations are performed using the G-buffer data.
+            Composite,      ///< The composition phase, where the final image is composed by combining previous phases.
+            Debug,          ///< The debug phase, where diagnostic information is rendered.
+        };
+
+        /// \brief Represents the diagnostic overlays the pipeline can draw over the composed scene.
+        using Debug = Stage::Debug::Property;
 
     public:
 
@@ -80,6 +93,24 @@ namespace Tileon
         ZY_INLINE Graphic::Object GetTarget(Target Type) const
         {
             return mRenderer.GetTarget(Enum::Cast(Type)).GetTexture();
+        }
+
+        /// \brief Changes the state of a specific diagnostic overlay.
+        ///
+        /// \param Mask   The overlay to set or clear.
+        /// \param Enable `true` to set the overlay, `false` to clear it.
+        ZY_INLINE void SetProperty(Debug Mask, Bool Enable)
+        {
+            mRenderer.GetPass<Stage::Debug>(Enum::Cast(Phase::Debug)).SetProperty(Mask, Enable);
+        }
+
+        /// \brief Checks if a specific diagnostic overlay is enabled.
+        ///
+        /// \param Mask The overlay to check.
+        /// \return `true` if the overlay is enabled, `false` otherwise.
+        ZY_INLINE Bool HasProperty(Debug Mask) const
+        {
+            return mRenderer.GetPass<Stage::Debug>(Enum::Cast(Phase::Debug)).HasProperty(Mask);
         }
 
     private:

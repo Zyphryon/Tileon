@@ -14,6 +14,7 @@
 #include "Stage/Geometry.hpp"
 #include "Stage/Light.hpp"
 #include "Stage/Composite.hpp"
+#include "Stage/Debug.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -69,8 +70,9 @@ namespace Tileon
         Global[0] = Director.GetViewProjection();
 
         // Hand the frame's director to the stages that resolve their draws from it.
-        mRenderer.GetPass<Stage::Geometry>(0).SetDirector(Director);
-        mRenderer.GetPass<Stage::Light>(1).SetDirector(Director);
+        mRenderer.GetPass<Stage::Geometry>(Enum::Cast(Phase::Geometry)).SetDirector(Director);
+        mRenderer.GetPass<Stage::Light>(Enum::Cast(Phase::Light)).SetDirector(Director);
+        mRenderer.GetPass<Stage::Debug>(Enum::Cast(Phase::Debug)).SetDirector(Director);
 
         mRenderer.Run(Global.GetStream());
     }
@@ -100,6 +102,10 @@ namespace Tileon
         // Composite: resolves albedo against radiance, into the display when immediate, otherwise into the final buffer.
         Ref<Stage::Composite> Composite = mRenderer.AddPass<Stage::Composite>(Host, Albedo, Radiance);
         Composite.AddColor({ .Target = Immediate ? nullptr : AddressOf(Final), .Load = Graphic::Action::Discard });
+
+        // Debug: overlays diagnostics onto the composed image, preserving whatever the composite stage resolved.
+        Ref<Stage::Debug> Debug = mRenderer.AddPass<Stage::Debug>(Host);
+        Debug.AddColor({ .Target = Immediate ? nullptr : AddressOf(Final), .Load = Graphic::Action::Load });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

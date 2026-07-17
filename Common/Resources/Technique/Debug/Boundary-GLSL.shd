@@ -1,0 +1,90 @@
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Copyright (C) 2025-2026 Tileon contributors (see AUTHORS.md)
+//
+// This work is licensed under the terms of the MIT license.
+//
+// For a copy, see <https://opensource.org/licenses/MIT>.
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Uniforms
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+layout(std140, binding = 0) uniform cb_Global
+{
+    mat4 u_Camera;
+};
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Constants
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+const float kOutline      = 1.5;                          // Width of the outline, in pixels.
+const vec4  kOutlineColor = vec4(0.20, 1.00, 0.45, 0.85); // Color of the outline.
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Vertex Shader
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef VERTEX_SHADER
+
+in vec4 a_Bounds;   // center.xy, extent.xy
+
+out vec4 v_Bounds;
+out vec2 v_World;
+
+vec2 TessellateRect(int VertexID)
+{
+    const vec2 kUnitRectCorners[4] = vec2[4](
+        vec2(0.0, 0.0),
+        vec2(1.0, 0.0),
+        vec2(0.0, 1.0),
+        vec2(1.0, 1.0)
+    );
+
+    return kUnitRectCorners[VertexID];
+}
+
+void main()
+{
+    vec2 Corner = TessellateRect(gl_VertexID) * 2.0 - 1.0;
+    vec2 World  = a_Bounds.xy + Corner * a_Bounds.zw;
+
+    gl_Position = u_Camera * vec4(World, 0.0, 1.0);
+
+    v_Bounds = a_Bounds;
+    v_World  = World;
+}
+
+#endif // VERTEX_SHADER
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Fragment Shader
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef FRAGMENT_SHADER
+
+in vec4 v_Bounds;
+in vec2 v_World;
+
+layout(location = 0) out vec4 out_Color;
+
+void main()
+{
+    // Distance from the pixel to the nearest edge, converted from world units into pixels through the
+    // screen-space derivative so the outline keeps a constant width no matter the zoom.
+    vec2 Edge     = v_Bounds.zw - abs(v_World - v_Bounds.xy);
+    vec2 Derivate = max(fwidth(v_World), vec2(1e-8));
+    vec2 Distance = Edge / Derivate;
+
+    // Everything deeper than the outline is interior, and is dropped before it ever reaches the blender.
+    float Alpha = clamp(kOutline - min(Distance.x, Distance.y), 0.0, 1.0);
+
+    if (Alpha < 0.001)
+    {
+        discard;
+    }
+    out_Color = vec4(kOutlineColor.rgb, kOutlineColor.a * Alpha);
+}
+
+#endif // FRAGMENT_SHADER

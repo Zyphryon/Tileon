@@ -1,0 +1,97 @@
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Copyright (C) 2025-2026 Tileon contributors (see AUTHORS.md)
+//
+// This work is licensed under the terms of the MIT license.
+//
+// For a copy, see <https://opensource.org/licenses/MIT>.
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Uniforms
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+cbuffer cb_Global : register(b0)
+{
+    float4x4 u_Camera;
+};
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Constants
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+static const float  kOutline      = 1.5;                            // Width of the outline, in pixels.
+static const float4 kOutlineColor = float4(0.20, 1.00, 0.45, 0.85); // Color of the outline.
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Attributes
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+struct vs_Input
+{
+    uint   VertexID : SV_VertexID;
+    float4 Bounds   : SLOT0;    // center.xy, extent.xy
+};
+
+struct fs_Input
+{
+    float4 Position : SV_POSITION;
+    float4 Bounds   : TEXCOORD0;    // center.xy, extent.xy
+    float2 World    : TEXCOORD1;
+};
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Vertex Shader
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef VERTEX_SHADER
+
+float2 TessellateRect(uint VertexID)
+{
+    const float2 kUnitRectCorners[4] = {
+        float2(0, 0),
+        float2(1, 0),
+        float2(0, 1),
+        float2(1, 1)
+    };
+    return kUnitRectCorners[VertexID];
+}
+
+fs_Input main(vs_Input Input)
+{
+    fs_Input Result;
+
+    const float2 Corner = TessellateRect(Input.VertexID) * 2.0 - 1.0;
+    const float2 World  = Input.Bounds.xy + Corner * Input.Bounds.zw;
+
+    Result.Position = mul(u_Camera, float4(World, 0.0, 1.0));
+    Result.Bounds   = Input.Bounds;
+    Result.World    = World;
+
+    return Result;
+}
+
+#endif // VERTEX_SHADER
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Fragment Shader
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef FRAGMENT_SHADER
+
+float4 main(fs_Input Input) : SV_Target0
+{
+    // Distance from the pixel to the nearest edge, converted from world units into pixels through the
+    // screen-space derivative so the outline keeps a constant width no matter the zoom.
+    const float2 Edge     = Input.Bounds.zw - abs(Input.World - Input.Bounds.xy);
+    const float2 Derivate = max(fwidth(Input.World), 1e-8);
+    const float2 Distance = Edge / Derivate;
+
+    // Everything deeper than the outline is interior, and is dropped before it ever reaches the blender.
+    const float Alpha = saturate(kOutline - min(Distance.x, Distance.y));
+    clip(Alpha - 0.001);
+
+    return float4(kOutlineColor.rgb, kOutlineColor.a * Alpha);
+}
+
+#endif // FRAGMENT_SHADER

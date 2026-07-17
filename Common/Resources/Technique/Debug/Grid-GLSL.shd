@@ -1,0 +1,86 @@
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Copyright (C) 2025-2026 Tileon contributors (see AUTHORS.md)
+//
+// This work is licensed under the terms of the MIT license.
+//
+// For a copy, see <https://opensource.org/licenses/MIT>.
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Uniforms
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+layout(std140, binding = 1) uniform cb_Pass
+{
+    mat4 u_Camera;      // Inverse view-projection.
+    vec2 u_Dimension;   // Dimension of the region.
+};
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Constants
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+const vec4 kColorTiles   = vec4(1.00f, 1.00f, 1.00f, 0.10f);
+const vec4 kColorRegions = vec4(0.35f, 0.75f, 1.00f, 0.60f);
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Vertex Shader
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef VERTEX_SHADER
+
+out vec2 v_World;
+
+void main()
+{
+    vec2 Corner = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+    gl_Position = vec4(Corner * 2.0 - 1.0, 0.0, 1.0);
+
+    // Un project the corner back into the world. Both camera modes are affine, so interpolating the three
+    // corners reproduces the exact world position of every pixel in between.
+    vec4 World = u_Camera * vec4(gl_Position.xy, 0.0, 1.0);
+    v_World    = World.xy / World.w;
+}
+
+#endif // VERTEX_SHADER
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Fragment Shader
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#ifdef FRAGMENT_SHADER
+
+in vec2 v_World;
+
+layout(location = 0) out vec4 out_Color;
+
+// Computes the coverage of an axis-aligned line grid repeating every 'Period' world units.
+float Coverage(vec2 World, vec2 Period)
+{
+    vec2 Repeat   = World / Period;
+    vec2 Derivate = max(fwidth(Repeat), vec2(1e-8));
+    vec2 Distance = abs(fract(Repeat - 0.5) - 0.5) / Derivate;
+
+    // Once the lines sit closer than a couple of pixels apart they alias into noise, so dissolve them instead.
+    float Density = clamp(1.0 - max(Derivate.x, Derivate.y) * 2.0, 0.0, 1.0);
+    return clamp(1.0 - min(Distance.x, Distance.y), 0.0, 1.0) * Density;
+}
+
+void main()
+{
+    float Tile   = Coverage(v_World, vec2(1.0));
+    float Region = Coverage(v_World, u_Dimension);
+
+    // A region line always overrides the tile line it sits on.
+    vec4 Result  = mix(
+        vec4(kColorTiles.rgb,   kColorTiles.a   * Tile),
+        vec4(kColorRegions.rgb, kColorRegions.a * Region), Region);
+
+    if (Result.a < 0.001)
+    {
+        discard;
+    }
+    out_Color = Result;
+}
+
+#endif // FRAGMENT_SHADER
