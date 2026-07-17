@@ -263,10 +263,11 @@ namespace Tileon
         {
             const Graphic::Viewport Viewport(0, 0, mViewport.GetX(), mViewport.GetY());
 
-            const Placement Local = World - mPosition;
-            const Vector2 Absolute(Local.GetAbsoluteX(), Local.GetAbsoluteY());
+            const Vector2 Local(
+                static_cast<Real32>(World.GetAbsoluteX() - mPosition.GetBaseX()),
+                static_cast<Real32>(World.GetAbsoluteY() - mPosition.GetBaseY()));
 
-            const Vector2 Tile = mCamera.GetScreenCoordinates<Graphic::Camera::Origin::Northwest>(Absolute, Viewport);
+            const Vector2 Tile = mCamera.GetScreenCoordinates<Graphic::Camera::Origin::Northwest>(Local, Viewport);
             return Tile * mDensity;
         }
 
@@ -275,7 +276,7 @@ namespace Tileon
         /// \brief Snaps a value to the nearest pixel grid based on the current density to prevent sub-pixel artifacts.
         ///
         /// \param Input The value to snap in logical units (e.g., world units).
-        /// return The snapped value aligned to the effective pixel grid.
+        /// \return The snapped value aligned to the effective pixel grid.
         template<typename Type>
         ZY_INLINE Type Snap(Type Input) const
         {

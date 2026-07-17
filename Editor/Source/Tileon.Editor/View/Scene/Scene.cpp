@@ -24,6 +24,7 @@ namespace Tileon::Editor::View
     Scene::Scene(Ref<Context> Context)
         : Activity  { Context, kTitle, true  },
           mWorkshop { Context },
+          mGizmo    { Context },
           mTarget   { Renderer::Target::Albedo }
     {
     }
@@ -316,8 +317,39 @@ namespace Tileon::Editor::View
             Composer.Image(Texture, Composer.GetContentRegionAvail(), ImVec4(0, 0, 1, 1));
         }
 
+        const ImVec2 ViewportOrigin = Composer.GetItemRectMin();
+        const ImVec2 ViewportSize   = Composer.GetItemRectSize();
+
+
+        Bool Manipulating = false;
+
+        if (mWorkshop.GetBrush() == Workshop::Brush::Select)
+        {
+            if (ImGui::IsWindowFocused())
+            {
+                if (Composer.IsKeyPressed(ImGuiKey_Q))
+                {
+                    mGizmo.SetMode(Gizmo::Mode::Move);
+                }
+                else if (Composer.IsKeyPressed(ImGuiKey_W))
+                {
+                    mGizmo.SetMode(Gizmo::Mode::Rotate);
+                }
+                else if (Composer.IsKeyPressed(ImGuiKey_E))
+                {
+                    mGizmo.SetMode(Gizmo::Mode::Scale);
+                }
+            }
+
+            const UInt64          Selection = GetContext().GetInteger("Selection.Entity", 0);
+            const ::Scene::Entity Actor     = GetContext().GetScene().GetEntity(Selection);
+
+            Manipulating = mGizmo.Draw(Composer, Actor, ViewportOrigin, ViewportSize);
+        }
+
         // Handle interactions with the viewport, such as hovering and clicking to manipulate the scene.
-        if (ImGui::IsItemHovered())
+        // A drag that belongs to the handles must not also reach the brush, or picking would fight the gizmo.
+        if (!Manipulating && ImGui::IsItemHovered())
         {
             const UInt32 AbsoluteX  = Composer.GetMousePos().x - Composer.GetItemRectMin().x;
             const Real32 NormalizeX = AbsoluteX / Composer.GetItemRectSize().x;

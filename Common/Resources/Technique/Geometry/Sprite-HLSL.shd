@@ -112,7 +112,7 @@ fs_Output main(fs_Input Input)
     float4 Texel = s_Albedo.Sample(s_Linear, Input.Texture);
 
 #ifdef ENABLE_ALPHA_TEST
-    clip(Texel.a - 0.001);
+    clip(Texel.a - 0.5);
 #endif
 
     Result.Albedo = Input.Color * Texel;

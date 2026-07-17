@@ -1,10 +1,10 @@
 {
     "Properties": {
         "Blend": {
-            "SrcColor": "SrcAlpha",
-            "DstColor": "OneMinusSrcAlpha",
-            "SrcAlpha": "SrcAlpha",
-            "DstAlpha": "OneMinusSrcAlpha"
+            "SrcColor": "One",
+            "DstColor": "Zero",
+            "SrcAlpha": "One",
+            "DstAlpha": "Zero"
         },
         "Depth": {
             "Mask": true,

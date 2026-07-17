@@ -93,7 +93,7 @@ void main()
     vec4 Texel = texture(s_Albedo, v_Texture);
 
 #ifdef ENABLE_ALPHA_TEST
-    if (Texel.a < 0.001)
+    if (Texel.a < 0.5)
     {
         discard;
     }
