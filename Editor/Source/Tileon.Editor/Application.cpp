@@ -31,6 +31,70 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    static void LoadConfig(Ref<Engine::Config> Config, ConstRef<Filesystem::Path> Path)
+    {
+        Blob File;
+
+        if (Filesystem::Read(Path, File) != Filesystem::Result::Success)
+        {
+            return;
+        }
+
+        if (JsonValue Document = JsonDocument::Parse(Text(File.GetData<Char>(), File.GetSize())); Document.IsObject())
+        {
+            const JsonObject Root(Document);
+
+            if (const JsonObject Window = Root.GetObject("Window"); Window.IsValid())
+            {
+                Config.SetWindowMonitor(Window.GetString("monitor", Config.GetWindowMonitor()));
+                Config.SetWindowWidth(Window.GetNumber<UInt32>("width", Config.GetWindowWidth()));
+                Config.SetWindowHeight(Window.GetNumber<UInt32>("height", Config.GetWindowHeight()));
+                Config.SetWindowFullscreen(Window.GetBool("fullscreen", Config.IsWindowFullscreen()));
+            }
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    static void SyncConfig(Ref<Engine::Config> Config, Ref<Engine::Subsystem::Host> Host)
+    {
+        ConstRetainer<Platform::Service> Platform = Host.GetService<Platform::Service>();
+
+        ConstRef<Platform::Window> Window = Platform->GetWindow();
+        Config.SetWindowWidth(Window.GetWidth());
+        Config.SetWindowHeight(Window.GetHeight());
+        Config.SetWindowFullscreen(Window.IsFullscreen());
+
+        if (const ConstPtr<Platform::Monitor> Monitor = Platform->GetDisplay().GetMonitor(Window.GetX(), Window.GetY()))
+        {
+            Config.SetWindowMonitor(Monitor->GetName());
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    static void SaveConfig(Ref<Engine::Config> Config, ConstRef<Filesystem::Path> Path)
+    {
+        JsonValue Document;
+        Document.SetObject();
+
+        JsonObject Root(Document);
+
+        JsonObject Window = Root.SetObject("Window");
+        Window.SetString("monitor", Config.GetWindowMonitor());
+        Window.SetNumber("width", Config.GetWindowWidth());
+        Window.SetNumber("height", Config.GetWindowHeight());
+        Window.SetBool("fullscreen", Config.IsWindowFullscreen());
+
+        const Str Data = JsonDocument::Dump(Document);
+        Filesystem::Write(Path, ConstSpan(reinterpret_cast<ConstPtr<Byte>>(Data.GetData()), Data.GetSize()));
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     Application::Application()
         : mState { State::Idle }
     {
@@ -127,6 +191,9 @@ namespace Tileon::Editor
 
     void Application::OnTerminate()
     {
+        SyncConfig(mConfig, * this);
+        SaveConfig(mConfig, Filesystem::GetDataFolder("Tileon", "Editor") + "Config.json");
+
         if (mContext)
         {
             mContext->Teardown();
@@ -316,32 +383,20 @@ namespace Tileon::Editor
 
 int main([[maybe_unused]] int Argc, [[maybe_unused]] Ptr<Char> Argv[])
 {
-    // Load the editor configuration from the user's home directory "Tileon/Editor/Config.toml".
-    //Blob Configuration;
-    //Filesystem::Read(Filesystem::GetDataFolder("Tileon", "Editor") + "Config.toml", Configuration);
-
-    //JsonValue Archive = JsonDocument::Parse(Text(Configuration.GetData<Char>(), Configuration.GetSize()));
-
-    Engine::Config Properties;
-    Properties.SetWindowTitle("Tileon Editor (v0.1)");
+    Engine::Config Config;
+    Config.SetWindowTitle("Tileon Editor (v0.1)");
 
 #if   defined(ZY_PLATFORM_WINDOWS)
-    Properties.SetGraphicsDriver("D3D11");
+    Config.SetGraphicsDriver("D3D11");
 #else
-    Properties.SetGraphicsDriver("GLES3");
+    Config.SetGraphicsDriver("GLES3");
 #endif
 
-   // Properties.Load(Archive);
+    // Load the persisted editor configuration before the engine spins up.
+    Tileon::Editor::LoadConfig(Config, Filesystem::GetDataFolder("Tileon", "Editor") + "Config.json");
 
-    // Initialize 'Zyphryon Engine' and enter main loop.
+    // Run the engine.
     const Unique<Tileon::Editor::Application> Application = Unique<Tileon::Editor::Application>::Create();
-    Application->Run(Move(Properties), ZyRegisterModules());
-   // Application->Sync(Properties);
-    // TODO
-    // Save the editor configuration back to the user's home directory.
-    //Properties.Save(Archive);
-
-    //Filesystem::Write(Filesystem::GetDataFolder("Tileon", "Editor") + "Config.toml", Archive.Dump());
-
+    Application->Run(Move(Config), ZyRegisterModules());
     return 0;
 }

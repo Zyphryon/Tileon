@@ -21,6 +21,19 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    static Bool AccentButton(Ref<UI::Composer> Composer, Text Label, Real32 Width, Real32 Height = 0.0f)
+    {
+        Composer.PushStyleColor(ImGuiCol_Button,        ImVec4(0.18f, 0.40f, 0.62f, 1.00f));
+        Composer.PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.24f, 0.50f, 0.74f, 1.00f));
+        Composer.PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.28f, 0.56f, 0.82f, 1.00f));
+        const Bool Pressed = Composer.Button(Label, Width, Height);
+        Composer.PopStyleColor(3);
+        return Pressed;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     Bootstrap::Bootstrap()
         : mState { State::Menu }
     {
@@ -42,10 +55,10 @@ namespace Tileon::Editor::View
         switch (mState)
         {
         case State::Menu:
-            ImGui::SetNextWindowSize(ImVec2(240, 170));
+            ImGui::SetNextWindowSize(ImVec2(300, 380));
             break;
         case State::Wizard:
-            ImGui::SetNextWindowSize(ImVec2(400, 240));
+            ImGui::SetNextWindowSize(ImVec2(460, 320));
             break;
         default:
             break;
@@ -94,33 +107,42 @@ namespace Tileon::Editor::View
 
     Bootstrap::Result Bootstrap::DrawInMenu(Ref<UI::Composer> Composer)
     {
-        constexpr Real32 kButtonW = 160.0f;
-        constexpr Real32 kButtonH = 32.0f;
-        const Real32     kOffsetX = (Composer.GetWindowWidth() - kButtonW) * 0.5f;
+        const Real32 Width = Composer.GetContentRegionAvail().x;
 
-        Composer.SetCursorPosX(kOffsetX);
-        if (Composer.Button("Open", kButtonW, kButtonH))
+        ImGui::SetWindowFontScale(2.4f);
+        Composer.CenterCursor("Welcome");
+        Composer.TextColored(ImVec4(0.46f, 0.72f, 0.98f, 1.00f), "Welcome");
+        ImGui::SetWindowFontScale(1.0f);
+
+        Composer.Spacing();
+        Composer.Separator();
+        Composer.Spacing();
+
+        constexpr Real32 kHeight = 38.0f;
+
+        if (AccentButton(Composer, ICON_FA_FOLDER_PLUS "   Create New", Width, kHeight))
         {
-            OpenFileDialog();
+            mState = State::Wizard;
         }
 
         Composer.Spacing();
 
-        Composer.SetCursorPosX(kOffsetX);
-        if (Composer.Button("Create", kButtonW, kButtonH))
+        if (Composer.Button(ICON_FA_FOLDER_OPEN "   Open Project", Width, kHeight))
         {
-            mState = State::Wizard;
+            OpenFileDialog();
         }
 
         Composer.SetCursorPosY(Composer.GetWindowBottom(2));
         Composer.Separator();
         Composer.Spacing();
 
-        Composer.SetCursorPosX(kOffsetX);
-        if (Composer.Button("Exit", kButtonW, kButtonH))
+#if !defined(ZY_PLATFORM_WEB)
+        if (Composer.Button(ICON_FA_RIGHT_FROM_BRACKET "   Exit", Width, kHeight))
         {
             return Result::Exit;
         }
+#endif
+
         return Result::None;
     }
 
@@ -129,10 +151,18 @@ namespace Tileon::Editor::View
 
     Bootstrap::Result Bootstrap::DrawInWizard(Ref<UI::Composer> Composer)
     {
-        constexpr Real32 kLabelW  = 90.0f;
-        constexpr Real32 kButtonW = 80.0f;
+        constexpr Real32 kLabelW = 110.0f;
 
-        Composer.Label("Name");
+        // Header.
+        ImGui::SetWindowFontScale(1.5f);
+        Composer.TextColored(ImVec4(0.46f, 0.72f, 0.98f, 1.00f), ICON_FA_CUBES "  New Project");
+        ImGui::SetWindowFontScale(1.0f);
+
+        Composer.Spacing();
+        Composer.Separator();
+        Composer.Spacing();
+
+        Composer.Label(ICON_FA_PEN_TO_SQUARE "  Name");
         Composer.SameLine(kLabelW);
         Composer.SetNextItemWidth(-1.0f);
         Composer.InputText("##name", mProject.GetName(), [this](Text Value)
@@ -140,18 +170,20 @@ namespace Tileon::Editor::View
             mProject.SetName(Value);
         });
 
+        Composer.Spacing();
+
         constexpr Array<UInt16, 6> kDensityOptions = { 8, 16, 32, 64, 128, 256 };
 
-        Composer.Label("Density");
+        Composer.Label(ICON_FA_LAYER_GROUP "  Density");
         Composer.SameLine(kLabelW);
         Composer.SetNextItemWidth(-1.0f);
-        if (Composer.BeginCombo("##density", String<32>::Print<"{0}">(mProject.GetDensity())))
+        if (Composer.BeginCombo("##density", String<32>::Print<"{0} px">(mProject.GetDensity())))
         {
             for (const UInt16 Option : kDensityOptions)
             {
                 const Bool Selected = (mProject.GetDensity() == Option);
 
-                if (Composer.Selectable(String<32>::Print<"{0}">(Option), Selected))
+                if (Composer.Selectable(String<32>::Print<"{0} px">(Option), Selected))
                 {
                     mProject.SetDensity(Option);
                 }
@@ -159,7 +191,9 @@ namespace Tileon::Editor::View
             Composer.EndCombo();
         }
 
-        Composer.Label("Description");
+        Composer.Spacing();
+
+        Composer.Label(ICON_FA_ALIGN_LEFT "  Description");
         Composer.SameLine(kLabelW);
         Composer.SetNextItemWidth(-1.0f);
         Composer.InputText("##description", mProject.GetDescription(), [this](Text Value)
@@ -167,16 +201,21 @@ namespace Tileon::Editor::View
             mProject.SetDescription(Value);
         });
 
-        Composer.SetCursorPosY(Composer.GetWindowBottom());
+        Composer.SetCursorPosY(Composer.GetWindowBottom(2));
+        Composer.Separator();
+        Composer.Spacing();
 
-        if (Composer.Button("Back", kButtonW))
+        constexpr Real32 kButtonH = 34.0f;
+        const Real32     kButtonW = (Composer.GetContentRegionAvail().x - Composer.GetStyle().ItemSpacing.x) * 0.5f;
+
+        if (Composer.Button(ICON_FA_CHEVRON_LEFT "  Back", kButtonW, kButtonH))
         {
             mState = State::Menu;
         }
 
-        Composer.SameLine(Composer.GetWindowWidth() - kButtonW - Composer.GetStyle().WindowPadding.x);
+        Composer.SameLine();
 
-        if (Composer.Button("Create", kButtonW))
+        if (AccentButton(Composer, ICON_FA_CHECK "  Create", kButtonW, kButtonH))
         {
             OpenSaveDialog();
         }
@@ -213,7 +252,6 @@ namespace Tileon::Editor::View
 
     void Bootstrap::OnDialogResult(Text Path)
     {
-        // Convert the file path to use backslashes, ensuring compatibility with windows file system conventions.
         Str Result(Path);
 
         // Ensure the selected file has the correct project file extension, appending it if necessary.

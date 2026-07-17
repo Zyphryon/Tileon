@@ -607,6 +607,11 @@ namespace Tileon::Editor::UI
             return ImGui::TableSetColumnIndex(Column);
         }
 
+        ZY_INLINE void CenterCursor(Text Label)
+        {
+            SetCursorPosX((GetWindowWidth() - CalcTextSize(Label).x) * 0.5f);
+        }
+
         ZY_INLINE Bool InputFloat(Text ID, Ref<Real32> Value, Real32 Step = 0.0f, Real32 StepFast = 0.0f, Text Format = "%.2f", ImGuiInputTextFlags Flags = ImGuiInputTextFlags_None)
         {
             return ImGui::InputFloat(ID.GetData(), AddressOf(Value), Step, StepFast, Format.GetData(), Flags);

@@ -18,6 +18,7 @@
 
 namespace Tileon::Editor::UI
 {
+
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -97,7 +98,7 @@ namespace Tileon::Editor::UI
             return;
         }
 
-        Composer.SetNextWindowSizeConstraints(480.0f, 360.0f);
+        Composer.SetNextWindowSizeConstraints(560.0f, 420.0f);
 
         if (!Composer.IsPopupOpen("##picker"))
         {
@@ -106,14 +107,15 @@ namespace Tileon::Editor::UI
 
         if (Composer.BeginPopupModal("##picker", ImGuiWindowFlags_NoSavedSettings))
         {
-            Composer.Field(mDirectory);
+            // Breadcrumb of the folder currently being browsed.
+            Composer.Field(String<1024>::Print<"{0}  {1}">(ICON_FA_FOLDER_OPEN, mDirectory));
             Composer.Separator();
 
             // Directory / file listing.
             Composer.BeginChild("##picker_list", ImVec2(0, -Composer.GetFrameHeightWithSpacing() * 2.0f));
             {
                 // ".." entry to navigate up, unless already at a presumed root.
-                if (Composer.Selectable("..", false))
+                if (Composer.Selectable(ICON_FA_TURN_UP "  ..", false))
                 {
                     Text Parent = mDirectory;
 
@@ -129,12 +131,25 @@ namespace Tileon::Editor::UI
                     ConstRef<Filesystem::Record> Item = mEntries[Index];
 
                     const Bool IsDirectory = (Item.Type == Filesystem::Type::Directory);
-
-                    Filesystem::Name Label = Filesystem::Name::Print<"{0}{1}">(IsDirectory ? "[D] " : "", Item.Name);
-
                     const Bool WasSelected = (static_cast<SInt32>(Index) == mSelection);
 
-                    if (Composer.Selectable(Label, WasSelected))
+                    Filesystem::Name Label = Filesystem::Name::Print<"{0}  {1}">(
+                        IsDirectory ? ICON_FA_FOLDER : ICON_FA_FILE, Item.Name);
+
+                    // Tint folders so they read apart from files at a glance.
+                    if (IsDirectory)
+                    {
+                        Composer.PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.75f, 0.98f, 1.00f));
+                    }
+
+                    const Bool Clicked = Composer.Selectable(Label, WasSelected);
+
+                    if (IsDirectory)
+                    {
+                        Composer.PopStyleColor();
+                    }
+
+                    if (Clicked)
                     {
                         if (IsDirectory)
                         {
@@ -151,16 +166,25 @@ namespace Tileon::Editor::UI
 
             Composer.Separator();
 
-            // Filename input — editable in Save mode, read-only display in Open mode.
+            // Filename input — editable in Save mode, echoes the selection in Open mode.
             Composer.SetNextItemWidth(-1.0f);
             Composer.InputText("##picker_name", mFilename, [this](Text Value)
             {
                 mFilename = Value;
             });
 
-            const Bool CanConfirm = !mFilename.IsEmpty();
+            const Bool CanConfirm   = !mFilename.IsEmpty();
+            const Text ConfirmLabel = (mMode == Mode::Save)
+                ? Text(ICON_FA_FLOPPY_DISK "  Save")
+                : Text(ICON_FA_FOLDER_OPEN "  Open");
 
-            if (Composer.DisabledButton(mMode == Mode::Save ? "Save" : "Open", !CanConfirm, 100.0f))
+            Composer.PushStyleColor(ImGuiCol_Button,        ImVec4(0.18f, 0.40f, 0.62f, 1.00f));
+            Composer.PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.24f, 0.50f, 0.74f, 1.00f));
+            Composer.PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.28f, 0.56f, 0.82f, 1.00f));
+            const Bool Confirmed = Composer.DisabledButton(ConfirmLabel, !CanConfirm, 120.0f);
+            Composer.PopStyleColor(3);
+
+            if (Confirmed)
             {
                 Confirm();
                 Composer.CloseCurrentPopup();
@@ -168,7 +192,7 @@ namespace Tileon::Editor::UI
 
             Composer.SameLine();
 
-            if (Composer.Button("Cancel", 100.0f))
+            if (Composer.Button(ICON_FA_XMARK "  Cancel", 120.0f))
             {
                 mOpen = false;
                 Composer.CloseCurrentPopup();
