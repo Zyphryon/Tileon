@@ -56,9 +56,7 @@ SamplerState s_NormalSampler : register(s0);
 
 float4 main(fs_Input Input) : SV_Target0
 {
-    const float2 NormalXY = s_Normal.Sample(s_NormalSampler, Input.Texture).rg * 2.0 - 1.0;
-    const float  NormalZ  = sqrt(saturate(1.0 - dot(NormalXY, NormalXY)));
-    const float3 Normal   = normalize(float3(NormalXY, NormalZ));
+    const float3 Normal = normalize(s_Normal.Sample(s_NormalSampler, Input.Texture).rgb * 2.0 - 1.0);
 
     // Hemisphere ambient
     const float  Weight  = Normal.y * 0.5 + 0.5;

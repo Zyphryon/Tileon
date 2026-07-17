@@ -25,6 +25,14 @@ namespace Tileon
     {
     public:
 
+        /// \brief The widest half-angle a spot light may open to.
+        ///
+        /// The cone is rasterized as a single triangle whose half-width is `Range * tan(OuterAngle)`, which
+        /// diverges as the angle approaches 90 degrees. Use a Glowlight for wider coverage.
+        static constexpr Angle kMaxOuterAngle = Angle::FromDegrees(85.0f);
+
+    public:
+
         /// \brief Default constructor initializing the spot light with default values.
         ZY_INLINE Spotlight()
             : mInnerAngle { Angle::FromDegrees(15.0f) },
@@ -52,12 +60,14 @@ namespace Tileon
 
         /// \brief Sets the inner and outer angles of the spot light.
         ///
+        /// The outer angle is capped at \ref kMaxOuterAngle, and the inner angle is kept within it.
+        ///
         /// \param InnerAngle The inner angle of the spot light.
         /// \param OuterAngle The outer angle of the spot light.
         ZY_INLINE void SetAngles(Angle InnerAngle, Angle OuterAngle)
         {
-            mInnerAngle = InnerAngle;
-            mOuterAngle = OuterAngle;
+            mOuterAngle = Clamp(OuterAngle, Angle(), kMaxOuterAngle);
+            mInnerAngle = Clamp(InnerAngle, Angle(), mOuterAngle);
         }
 
         /// \brief Gets the inner angle of the spot light.

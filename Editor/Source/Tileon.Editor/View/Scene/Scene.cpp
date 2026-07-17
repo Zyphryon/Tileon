@@ -82,14 +82,14 @@ namespace Tileon::Editor::View
         if (Composer.Button(ICON_FA_MAGNIFYING_GLASS_PLUS "##zoom_in", 32.0f))
         {
             const Real32 Current = GetContext().GetDirector().GetZoom();
-            GetContext().GetDirector().SetZoom(Current * 1.1f);
+            GetContext().GetDirector().SetZoom(Current * 0.9f);
         }
         Composer.SameLine();
 
         if (Composer.Button(ICON_FA_MAGNIFYING_GLASS_MINUS "##zoom_out", 32.0f))
         {
             const Real32 Current = GetContext().GetDirector().GetZoom();
-            GetContext().GetDirector().SetZoom(Current * 0.9f);
+            GetContext().GetDirector().SetZoom(Current * 1.1f);
         }
         Composer.SameLine();
 

@@ -91,9 +91,10 @@ fs_Input main(vs_Input Input)
     Result.Color    = Input.Color;
 
 #ifdef ENABLE_NORMAL_MAPPING
+    // The basis vectors are the transform's columns, since Transform0/Transform1 each hold one of its rows.
     Result.Direction = float4(
-        normalize(Input.Transform0.xy),
-        normalize(Input.Transform1.xy)
+        normalize(float2(Input.Transform0.x, Input.Transform1.x)),
+        normalize(float2(Input.Transform0.y, Input.Transform1.y))
     );
 #endif
 
@@ -130,9 +131,10 @@ fs_Output main(fs_Input Input)
         NormalTangent.x * Input.Direction.xy +
         NormalTangent.y * Input.Direction.zw;
 
+    // The sprite plane faces +Z, so the tangent-space Z carries over to world space unchanged.
     Result.Normal = float4(
-        NormalWorldXY * 0.5 + 0.5,
-        0.0,
+        NormalWorldXY   * 0.5 + 0.5,
+        NormalTangent.z * 0.5 + 0.5,
         Result.Albedo.a
     );
 
@@ -141,7 +143,7 @@ fs_Output main(fs_Input Input)
     Result.Normal = float4(
         0.5,
         0.5,
-        0.0,
+        1.0,
         Result.Albedo.a
     );
 

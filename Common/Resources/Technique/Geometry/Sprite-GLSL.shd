@@ -62,9 +62,10 @@ void main()
     v_Color   = a_Color;
 
 #ifdef ENABLE_NORMAL_MAPPING
+    // The basis vectors are the transform's columns, since a_Transform0/a_Transform1 each hold one of its rows.
     v_Direction = vec4(
-        normalize(a_Transform0.xy),
-        normalize(a_Transform1.xy)
+        normalize(vec2(a_Transform0.x, a_Transform1.x)),
+        normalize(vec2(a_Transform0.y, a_Transform1.y))
     );
 #endif
 }
@@ -111,9 +112,10 @@ void main()
         NormalTangent.x * v_Direction.xy +
         NormalTangent.y * v_Direction.zw;
 
+    // The sprite plane faces +Z, so the tangent-space Z carries over to world space unchanged.
     out_Normal = vec4(
-        NormalWorldXY * 0.5 + 0.5,
-        0.0,
+        NormalWorldXY   * 0.5 + 0.5,
+        NormalTangent.z * 0.5 + 0.5,
         out_Albedo.a
     );
 
@@ -122,7 +124,7 @@ void main()
     out_Normal = vec4(
         0.5,
         0.5,
-        0.0,
+        1.0,
         out_Albedo.a
     );
 

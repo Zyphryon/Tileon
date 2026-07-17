@@ -94,7 +94,7 @@ fs_Input main(vs_Input Input)
     const float Spread = Input.Params0.z * sqrt(1.0 - Input.Params1.w * Input.Params1.w) / Input.Params1.w;
 
     const float2 Axis  = Input.Params1.xy * (Corner.x * Input.Params0.z);
-    const float2 Side  = float2(-Input.Params1.y, Input.Params1.x) * (Corner.y * 2.0 - 1.0) * (Spread * Corner.x);
+    const float2 Side  = float2(-Input.Params1.y, Input.Params1.x) * Corner.y * (Spread * Corner.x);
     const float2 World = Input.Params0.xy + Axis + Side;
 
 #else
@@ -146,8 +146,8 @@ float4 main(fs_Input Input) : SV_Target0
     clip(Attenuation - 0.001);
 
 #if   defined(ENABLE_NORMAL_MAPPING)
-    const float3 Normal     = s_Normal.Sample(s_NormalSampler, Input.World.zw).rgb * 2.0 - 1.0;
-    const float  NormalDotL = saturate(dot(Normal, normalize(float3(Distance2D, -0.5))));
+    const float3 Normal     = normalize(s_Normal.Sample(s_NormalSampler, Input.World.zw).rgb * 2.0 - 1.0);
+    const float  NormalDotL = saturate(dot(Normal, normalize(float3(Distance2D, 0.5))));
 #else
     const float  NormalDotL = 1.0;
 #endif

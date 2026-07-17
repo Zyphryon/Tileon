@@ -157,19 +157,18 @@ namespace Tileon::Stage
                 const Real32 Radius = Light.GetRadius();
                 Actor.Set(Extent { Vector2(-Radius, -Radius), Vector2(Radius * 2.0f, Radius * 2.0f) });
                 Actor.Set(Anchor { Vector2(0.0f, 0.0f) });
-            });
+            }, Scene::DSL::Opt(EcsPrefab));
 
         // Observes changes to the light cone component and updates the corresponding spatial properties of the actor.
-        Scene.CreateObserver<Scene::DSL::In<const Transform, const Spotlight>>(
+        Scene.CreateObserver<Scene::DSL::In<const Spotlight>>(
             "Render::Light::ObsUpdateSpotlightBoundaries",
             EcsOnSet,
-            [](Scene::Entity Actor, ConstRef<Transform> Transform, ConstRef<Spotlight> Light)
+            [](Scene::Entity Actor, ConstRef<Spotlight> Light)
             {
-                const Angle  Theta = Vector2::Normalize(Transform.GetWorldspace().GetBasisX()).GetAngle();
                 const Real32 Range = Light.GetRange();
 
-                const Angle A1 = Theta - Light.GetOuterAngle();
-                const Angle A2 = Theta + Light.GetOuterAngle();
+                const Angle A1 = Angle() - Light.GetOuterAngle();
+                const Angle A2 = Light.GetOuterAngle();
 
                 const Vector2 P1(Range * Angle::Cosine(A1), Range * Angle::Sine(A1));
                 const Vector2 P2(Range * Angle::Cosine(A2), Range * Angle::Sine(A2));
@@ -201,7 +200,7 @@ namespace Tileon::Stage
 
                 Actor.Set(Extent { Vector2(MinX, MinY), Vector2(MaxX - MinX, MaxY - MinY) });
                 Actor.Set(Anchor { Vector2(0.0f, 0.0f) });
-            });
+            }, Scene::DSL::Opt(EcsPrefab));
 
         // Creates the queries for the light stage.
         mQrDrawGlowlights = Scene.CreateQuery<

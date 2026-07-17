@@ -76,7 +76,7 @@ void main()
 
     vec2 Axis = a_Params1.xy * (Corner.x * a_Params0.z);
     vec2 Side = vec2(-a_Params1.y, a_Params1.x) *
-                (Corner.y * 2.0 - 1.0) *
+                Corner.y *
                 (Spread * Corner.x);
 
     World = a_Params0.xy + Axis + Side;
@@ -158,11 +158,10 @@ void main()
 
 #ifdef ENABLE_NORMAL_MAPPING
 
-    vec3 Normal =
-        texture(s_Normal, v_World.zw).rgb * 2.0 - 1.0;
+    vec3 Normal = normalize(texture(s_Normal, v_World.zw).rgb * 2.0 - 1.0);
 
     float NormalDotL =
-        max(dot(Normal, normalize(vec3(Distance2D, -0.5))), 0.0);
+        max(dot(Normal, normalize(vec3(Distance2D, 0.5))), 0.0);
 
 #else
 
