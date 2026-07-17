@@ -91,7 +91,7 @@ namespace Tileon::Editor
             return;
         }
 
-        EnsurePreview(Actor, Archetype, Placement, Object);
+        EnsurePreview(Actor, Archetype, Placement);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -109,9 +109,9 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Scene::Entity Workshop::EnsurePreview(Scene::Entity Actor, Scene::Entity Archetype, Placement Placement, UInt32 Object)
+    Scene::Entity Workshop::EnsurePreview(Scene::Entity Actor, Scene::Entity Archetype, Placement Placement)
     {
-        if (!mPreview.IsAlive() || mPreview.GetArchetype().GetHandle() != Object)
+        if (!mPreview.IsAlive() || mPreview.GetArchetype() != Archetype)
         {
             ClearPreview();
 
@@ -134,7 +134,16 @@ namespace Tileon::Editor
         {
             mPreview.SetParent(Actor);
         }
-        mPreview.Set(Pose(Vector2(Placement.GetOffsetX(), Placement.GetOffsetY())));
+
+        // Only the translation tracks the cursor; the scale and rotation the user dialed in stay untouched.
+        if (const Ptr<Pose> Pose = mPreview.TryGet<Tileon::Pose>())
+        {
+            Pose->SetTranslation(Vector2(Placement.GetOffsetX(), Placement.GetOffsetY()));
+        }
+        else
+        {
+            mPreview.Set(Tileon::Pose(Vector2(Placement.GetOffsetX(), Placement.GetOffsetY())));
+        }
 
         return mPreview;
     }
@@ -234,7 +243,7 @@ namespace Tileon::Editor
         }
 
         // Place whatever the preview was showing, so the result is exactly what sat under the cursor.
-        const Scene::Entity Instance = EnsurePreview(Actor, Archetype, Placement, Object);
+        const Scene::Entity Instance = EnsurePreview(Actor, Archetype, Placement);
 
         // Promote the preview into a placed entity by granting back everything it was deliberately denied.
         Instance.Remove<IntColor8>();
@@ -245,6 +254,9 @@ namespace Tileon::Editor
 
         // Mark the region as dirty so it gets saved and reloaded with the placed entity.
         Actor.Add<Persist>();
+
+        // Select what was just placed so the inspector targets it; the brush stays armed for the next stamp.
+        mContext.SetInteger("Selection.Entity", Instance.GetID());
 
         // Ownership passes to the world, so the next hover builds a fresh preview rather than moving this one.
         mPreview = Scene::Entity();

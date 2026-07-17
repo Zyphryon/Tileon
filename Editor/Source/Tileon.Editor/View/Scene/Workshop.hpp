@@ -129,6 +129,37 @@ namespace Tileon::Editor
         /// \brief Discards the preview, if one is currently being shown.
         void ClearPreview();
 
+        /// \brief Returns whether a placement preview is currently active.
+        ///
+        /// \return `true` if a preview entity exists, `false` otherwise.
+        ZY_INLINE Bool HasPreview() const
+        {
+            return mPreview.IsAlive();
+        }
+
+        /// \brief Grows or shrinks the pending placement preview about its origin.
+        ///
+        /// \param Steps The signed number of wheel steps; positive enlarges, negative shrinks.
+        ZY_INLINE void AdjustPreviewScale(Real32 Steps)
+        {
+            if (const Ptr<Pose> Pose = mPreview.TryGet<Tileon::Pose>())
+            {
+                const Real32 Scale = Max(Pose->GetScale().GetX() * Pow(1.1f, Steps), 0.1f);
+                Pose->SetScale(Vector2(Scale));
+            }
+        }
+
+        /// \brief Rotates the pending placement preview about its origin.
+        ///
+        /// \param Delta The angle to add to the preview's current rotation.
+        ZY_INLINE void AdjustPreviewRotation(Angle Delta)
+        {
+            if (const Ptr<Pose> Pose = mPreview.TryGet<Tileon::Pose>())
+            {
+                Pose->SetRotation(Pose->GetRotation() + Delta);
+            }
+        }
+
     private:
 
         /// \brief Represents a tile operation to be applied to a region.
@@ -173,11 +204,13 @@ namespace Tileon::Editor
         /// \return The frontmost entity at the placement, or an invalid entity if none was found.
         ZY_INLINE Scene::Entity PickEntity(Placement Placement)
         {
-            const SInt32  TileX = Floor(Placement.GetAbsoluteX());
-            const SInt32  TileY = Floor(Placement.GetAbsoluteY());
-            const IntRect Area(TileX, TileY, TileX + 1, TileY + 1);
+            const Real32 AbsX  = static_cast<Real32>(Placement.GetAbsoluteX());
+            const Real32 AbsY  = static_cast<Real32>(Placement.GetAbsoluteY());
+            const SInt32 TileX = Floor(AbsX);
+            const SInt32 TileY = Floor(AbsY);
 
-            return mContext.GetSupervisor().QueryFrontmost(Area);
+            const IntRect Area(TileX, TileY, TileX + 1, TileY + 1);
+            return mContext.GetSupervisor().QueryFrontmost(Area, Vector2(AbsX, AbsY));
         }
 
         /// \brief Instantiates an archetype into the region that owns the specified placement.
@@ -194,9 +227,8 @@ namespace Tileon::Editor
         /// \param Actor     The region that owns the placement, which the preview is parented into.
         /// \param Archetype The archetype the preview mirrors.
         /// \param Placement The placement in the world the preview should sit at.
-        /// \param Object    The index of the archetype being previewed.
         /// \return The preview instance.
-        Scene::Entity EnsurePreview(Scene::Entity Actor, Scene::Entity Archetype, Placement Placement, UInt32 Object);
+        Scene::Entity EnsurePreview(Scene::Entity Actor, Scene::Entity Archetype, Placement Placement);
 
         /// \brief Removes the frontmost entity found at the specified placement.
         ///

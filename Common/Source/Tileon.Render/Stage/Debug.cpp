@@ -85,7 +85,7 @@ namespace Tileon::Stage
         const IntRect Frustum = Director.GetFrustum();
 
         // Reset the boundary data for the current frame.
-        mBoundaryData.Clear();
+        mBoundaries.Clear();
 
         // Accumulate the boundaries of the visible entities and render them in a single batch.
         mQrDrawBoundaries.Run<const Bound>([&](ConstRef<Bound> Bounds)
@@ -104,10 +104,10 @@ namespace Tileon::Stage
                 static_cast<Real32>(AABB.GetMaximumX() - Origin.GetX()),
                 static_cast<Real32>(AABB.GetMaximumY() - Origin.GetY()));
 
-            mBoundaryData.Append((Minimum + Maximum) * 0.5f, (Maximum - Minimum) * 0.5f);
+            mBoundaries.Append((Minimum + Maximum) * 0.5f, (Maximum - Minimum) * 0.5f);
         });
 
-        if (const ConstSpan<GpuBoundaryLayout> Data = mBoundaryData; !Data.IsEmpty())
+        if (const ConstSpan<GpuBoundaryLayout> Data = mBoundaries; !Data.IsEmpty())
         {
             Graphic::Transient<GpuBoundaryLayout> Instances
                 = Graphics.AllocateTransientVertices<GpuBoundaryLayout>(Data.GetSize());

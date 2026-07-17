@@ -107,28 +107,72 @@ namespace Tileon
             return AnyOfEntity(Hitbox, Predicate);
         }
 
-        /// \brief Queries the frontmost entity within the specified hitbox that intersects it.
+        /// \brief Queries the entity within the specified hitbox that the cursor most likely intends to pick.
         ///
         /// \param Hitbox The area to query for intersecting entities.
-        /// \return The frontmost entity that intersects the hitbox, or an empty entity if none are found.
-        ZY_INLINE Scene::Entity QueryFrontmost(IntRect Hitbox)
+        /// \param Point  The precise world-space point the cursor is targeting, in tile units.
+        /// \param Band   The distance band within which two origins count as equally close.
+        /// \param Bias   The Footprint ratio (0..1) below which a smaller entity outranks a larger one outright.
+        /// \return The best-matching entity that intersects the hitbox, or an empty entity if none are found.
+        ZY_INLINE Scene::Entity QueryFrontmost(IntRect Hitbox, Vector2 Point, Real32 Band = 0.25f, Real32 Bias = 0.75f)
         {
             Scene::Entity Result;
-
-            // Find the entity with the highest maximum Y-coordinate that intersects the hitbox and satisfies the filter.
-            SInt32 MaxY = INT32_MIN;
+            Real32        BestDistance = 0.0f;
+            SInt32        BestFront    = INT32_MIN;
+            Real32        BestArea     = 0.0f;
 
             ForEachEntity(Hitbox, [&](Scene::Entity Actor)
             {
                 const IntRect AABB = Actor.Get<Bound>().GetRect();
 
-                if (const SInt32 ActorMaxY = AABB.GetMaximumY(); ActorMaxY > MaxY)
+                if (!AABB.Test(Hitbox))
                 {
-                    if (AABB.Test(Hitbox))
-                    {
-                        MaxY = ActorMaxY;
-                        Result = Actor;
-                    }
+                    return;
+                }
+
+                Vector2 Origin;
+
+                if (const ConstPtr<Transform> Transform = Actor.TryGet<const Tileon::Transform>())
+                {
+                    Origin = Transform->GetWorldspace().GetTranslation() + Vector2(Transform->GetOrigin());
+                }
+                else
+                {
+                    Origin = Vector2(
+                        AABB.GetMinimumX() + AABB.GetMaximumX(),
+                        AABB.GetMinimumY() + AABB.GetMaximumY()) * 0.5f;
+                }
+
+                const Real32 Distance = Point.GetDistanceSquared(Origin);
+                const SInt32 Front    = AABB.GetMaximumY();
+                const Real32 Area     = static_cast<Real32>(AABB.GetArea());
+
+                Bool Better;
+
+                if (!Result.IsValid())
+                {
+                    Better = true;
+                }
+                else if (Area < BestArea * Bias)        // meaningfully smaller -> prefer it
+                {
+                    Better = true;
+                }
+                else if (BestArea < Area * Bias)        // meaningfully larger -> keep the smaller one
+                {
+                    Better = false;
+                }
+                else                                    // comparable size -> closest origin, then frontmost
+                {
+                    const Bool Closer = Distance < BestDistance - Band;
+                    Better = Closer || (Abs(Distance - BestDistance) <= Band && Front > BestFront);
+                }
+
+                if (Better)
+                {
+                    Result       = Actor;
+                    BestDistance = Distance;
+                    BestFront    = Front;
+                    BestArea     = Area;
                 }
             });
             return Result;

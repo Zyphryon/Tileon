@@ -320,6 +320,49 @@ namespace Tileon::Editor::View
         const ImVec2 ViewportOrigin = Composer.GetItemRectMin();
         const ImVec2 ViewportSize   = Composer.GetItemRectSize();
 
+        // Mark the selected entity with corner brackets, drawn as an overlay so it shows under every brush.
+        if (const UInt64 Selected = GetContext().GetInteger("Selection.Entity", 0))
+        {
+            const ::Scene::Entity Actor = GetContext().GetScene().GetEntity(Selected);
+
+            if (Actor.IsValid() && Actor.Has<Tileon::Bound>())
+            {
+                const IntRect AABB   = Actor.Get<Tileon::Bound>().GetRect();
+                const Real32  RangeX = Director.GetViewport().GetX() * Director.GetDensity();
+                const Real32  RangeY = Director.GetViewport().GetY() * Director.GetDensity();
+
+                const auto ToScreen = [&](Real32 X, Real32 Y)
+                {
+                    const Vector2 Pixel = Director.GetScreenCoordinates(Placement(0, 0, X, Y));
+                    return ImVec2(
+                        ViewportOrigin.x + (Pixel.GetX() / RangeX) * ViewportSize.x,
+                        ViewportOrigin.y + (Pixel.GetY() / RangeY) * ViewportSize.y);
+                };
+
+                // The world is unrotated, so two opposite corners bound an axis-aligned screen rect.
+                const ImVec2 A = ToScreen(AABB.GetMinimumX(), AABB.GetMinimumY());
+                const ImVec2 B = ToScreen(AABB.GetMaximumX(), AABB.GetMaximumY());
+
+                const Real32 MinX = Min(A.x, B.x);
+                const Real32 MinY = Min(A.y, B.y);
+                const Real32 MaxX = Max(A.x, B.x);
+                const Real32 MaxY = Max(A.y, B.y);
+
+                constexpr UInt32 Color = IM_COL32(255, 170, 40, 235);
+                constexpr Real32 Thick = 2.0f;
+                const Real32     Arm   = Min(24.0f, Min(MaxX - MinX, MaxY - MinY) * 0.35f);
+
+                const Ptr<ImDrawList> List = ImGui::GetWindowDrawList();
+                List->AddLine(ImVec2(MinX, MinY), ImVec2(MinX + Arm, MinY), Color, Thick);
+                List->AddLine(ImVec2(MinX, MinY), ImVec2(MinX, MinY + Arm), Color, Thick);
+                List->AddLine(ImVec2(MaxX, MinY), ImVec2(MaxX - Arm, MinY), Color, Thick);
+                List->AddLine(ImVec2(MaxX, MinY), ImVec2(MaxX, MinY + Arm), Color, Thick);
+                List->AddLine(ImVec2(MaxX, MaxY), ImVec2(MaxX - Arm, MaxY), Color, Thick);
+                List->AddLine(ImVec2(MaxX, MaxY), ImVec2(MaxX, MaxY - Arm), Color, Thick);
+                List->AddLine(ImVec2(MinX, MaxY), ImVec2(MinX + Arm, MaxY), Color, Thick);
+                List->AddLine(ImVec2(MinX, MaxY), ImVec2(MinX, MaxY - Arm), Color, Thick);
+            }
+        }
 
         Bool Manipulating = false;
 
@@ -356,16 +399,38 @@ namespace Tileon::Editor::View
             const UInt32 AbsoluteY  = Composer.GetMousePos().y - Composer.GetItemRectMin().y;
             const Real32 NormalizeY = AbsoluteY / Composer.GetItemRectSize().y;
 
-            // Handle mouse wheel input for zooming towards the cursor position.
-            if (const Real32 Wheel = -Composer.GetMouseWheel(); Wheel != 0.0f)
+            // Ctrl + wheel resizes the pending entity.
+            if (const Real32 Wheel = Composer.GetMouseWheel(); Wheel != 0.0f)
             {
-                constexpr Real32 kFactor = 1.25f;
+                if (mWorkshop.HasPreview() && ImGui::GetIO().KeyCtrl)
+                {
+                    mWorkshop.AdjustPreviewScale(Wheel);
+                }
+                else
+                {
+                    constexpr Real32 kFactor = 1.25f;
 
-                const Real32  Zoom = Director.GetZoom() * (Wheel > 0.0f ? kFactor : (1.0f / kFactor));
-                const Vector2 Pixel(
-                    NormalizeX * Director.GetViewport().GetX() * Director.GetDensity(),
-                    NormalizeY * Director.GetViewport().GetY() * Director.GetDensity());
-                Director.Focus(Director.GetWorldCoordinates(Pixel), Zoom);
+                    const Real32  Step = -Wheel;
+                    const Real32  Zoom = Director.GetZoom() * (Step > 0.0f ? kFactor : (1.0f / kFactor));
+                    const Vector2 Pixel(
+                        NormalizeX * Director.GetViewport().GetX() * Director.GetDensity(),
+                        NormalizeY * Director.GetViewport().GetY() * Director.GetDensity());
+                    Director.Focus(Director.GetWorldCoordinates(Pixel), Zoom);
+                }
+            }
+
+            // Hold Q / E to rotate the pending entity smoothly; hold Shift for fine control.
+            if (mWorkshop.HasPreview())
+            {
+                const Real32 Direction =
+                    (ImGui::IsKeyDown(ImGuiKey_E) ? 1.0f : 0.0f) -
+                    (ImGui::IsKeyDown(ImGuiKey_Q) ? 1.0f : 0.0f);
+
+                if (Direction != 0.0f)
+                {
+                    const Real32 Speed = ImGui::GetIO().KeyShift ? 30.0f : 120.0f;
+                    mWorkshop.AdjustPreviewRotation(Angle::FromDegrees(Direction * Speed * ImGui::GetIO().DeltaTime));
+                }
             }
 
             // Handle mouse dragging for panning the camera when the hand brush is selected.
