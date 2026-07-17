@@ -30,8 +30,7 @@ namespace Tileon::Editor::View
         /// \brief Constructs the activity with the specified context.
         ///
         /// \param Context The context associated with this activity.
-        /// \param Content The content service associated with this activity.
-        Foundry(Ref<Context> Context, Ref<Content::Service> Content);
+        Foundry(Ref<Context> Context);
 
         /// \see Activity::OnDraw(Ref<UI::Composer>)
         void OnDraw(Ref<UI::Composer> Composer) override;

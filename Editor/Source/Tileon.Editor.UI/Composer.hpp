@@ -28,6 +28,11 @@ namespace Tileon::Editor::UI
     {
     public:
 
+        static constexpr ImVec4 kAxisTintX = ImVec4(0.72f, 0.28f, 0.30f, 1.0f);
+        static constexpr ImVec4 kAxisTintY = ImVec4(0.38f, 0.64f, 0.32f, 1.0f);
+
+    public:
+
         ZY_INLINE Bool Begin(Text Title, ImGuiWindowFlags Flags = ImGuiWindowFlags_None)
         {
             return ImGui::Begin(Title.GetData(), nullptr, Flags);
@@ -66,6 +71,21 @@ namespace Tileon::Editor::UI
         ZY_INLINE void SetNextItemOpen(Bool Open, ImGuiCond Condition = ImGuiCond_None)
         {
             ImGui::SetNextItemOpen(Open, Condition);
+        }
+
+        ZY_INLINE void PushID(Text ID)
+        {
+            ImGui::PushID(ID.GetData(), ID.GetData() + ID.GetSize());
+        }
+
+        ZY_INLINE void PushID(SInt32 ID)
+        {
+            ImGui::PushID(ID);
+        }
+
+        ZY_INLINE void PopID()
+        {
+            ImGui::PopID();
         }
 
         ZY_INLINE Bool BeginMainMenuBar()
@@ -123,6 +143,11 @@ namespace Tileon::Editor::UI
         ZY_INLINE void SliderFloat(Text ID, Ref<Real32> Value, Real32 Min, Real32 Max, Text Format = "%.2f")
         {
             ImGui::SliderFloat(ID.GetData(), AddressOf(Value), Min, Max, Format.GetData());
+        }
+
+        ZY_INLINE Bool SliderAngle(Text ID, Ref<Real32> Radians, Real32 Min = 0.0f, Real32 Max = 360.0f, Text Format = "%.1f°")
+        {
+            return ImGui::SliderAngle(ID.GetData(), AddressOf(Radians), Min, Max, Format.GetData());
         }
 
         ZY_INLINE void BeginTooltip()
@@ -482,6 +507,11 @@ namespace Tileon::Editor::UI
             ImGui::OpenPopup(ID.GetData(), Flags);
         }
 
+        ZY_INLINE Bool BeginPopup(Text ID, ImGuiWindowFlags Flags = ImGuiWindowFlags_None)
+        {
+            return ImGui::BeginPopup(ID.GetData(), Flags);
+        }
+
         ZY_INLINE Bool BeginPopupModal(Text ID, ImGuiWindowFlags Flags = ImGuiWindowFlags_None)
         {
             return ImGui::BeginPopupModal(ID.GetData(), nullptr, Flags);
@@ -614,6 +644,68 @@ namespace Tileon::Editor::UI
 
             ImGui::SetNextItemWidth(Width);
             Dirty |= InputInt(String<32>::Print<"{}_y">(ID), Y, Step, StepFast, Flags);
+
+            return Dirty;
+        }
+
+        ZY_INLINE Bool InputFloatAxis(
+            Text                ID,
+            Text                Tag,
+            ImVec4              Accent,
+            Ref<Real32>         Value,
+            Real32              Width,
+            Text                Format = "%.2f",
+            ImGuiInputTextFlags Flags  = ImGuiInputTextFlags_None)
+        {
+            ConstRef<ImGuiStyle> Style = ImGui::GetStyle();
+
+            const ImVec2 TagSize  = CalcTextSize(Tag);
+            const Real32 Padding  = Style.FramePadding.x;
+            const Real32 TagWidth = TagSize.x + Padding * 2.0f;
+            const Real32 Height   = ImGui::GetFrameHeight();
+            const ImVec2 Origin   = ImGui::GetCursorScreenPos();
+
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(TagWidth + Padding, Style.FramePadding.y));
+            ImGui::SetNextItemWidth(Width);
+            const Bool Dirty = InputFloat(ID, Value, 0.0f, 0.0f, Format, Flags);
+            ImGui::PopStyleVar();
+
+            const Ptr<ImDrawList> Canvas = ImGui::GetWindowDrawList();
+
+            Canvas->AddRectFilled(
+                Origin,
+                ImVec2(Origin.x + TagWidth, Origin.y + Height),
+                ImGui::GetColorU32(Accent),
+                Style.FrameRounding,
+                ImDrawFlags_RoundCornersLeft);
+            Canvas->AddText(
+                ImVec2(Origin.x + Padding, Origin.y + (Height - TagSize.y) * 0.5f),
+                ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, 0.90f)),
+                Tag.GetData(),
+                Tag.GetData() + Tag.GetSize());
+
+            return Dirty;
+        }
+
+        ZY_INLINE Bool InputFloatPair(
+            Text                ID,
+            Ref<Real32>         X,
+            Ref<Real32>         Y,
+            Text                Format = "%.2f",
+            ImGuiInputTextFlags Flags  = ImGuiInputTextFlags_None)
+        {
+            const Real32 Spacing = ImGui::GetStyle().ItemSpacing.x;
+            const Real32 Width   = (ImGui::GetContentRegionAvail().x - Spacing) * 0.5f;
+
+            PushID(ID);
+
+            Bool Dirty = InputFloatAxis("##x", "X", kAxisTintX, X, Width, Format, Flags);
+
+            ImGui::SameLine(0.0f, Spacing);
+
+            Dirty |= InputFloatAxis("##y", "Y", kAxisTintY, Y, Width, Format, Flags);
+
+            PopID();
 
             return Dirty;
         }

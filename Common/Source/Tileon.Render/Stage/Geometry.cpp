@@ -123,7 +123,7 @@ namespace Tileon::Stage
             {
                 Ref<Content::Service> Content = GetService<Content::Service>();
                 Actor.Set(Appearance(Content.Load<Graphic::Material>(Sprite.GetPath()), Sprite.GetSource()));
-            }, Scene::DSL::Not(EcsPrefab));
+            }, Scene::DSL::Opt(EcsPrefab));
 
         // Observe when an Animation component is attached, and automatically initialize the animator for playback.
         Scene.CreateObserver<Scene::DSL::In<const Animation>>(
@@ -132,7 +132,7 @@ namespace Tileon::Stage
             [](Scene::Entity Actor, ConstRef<Animation> Animation)
             {
                 Actor.Emplace<Animator>(0.0, Animator::Status::Repeat);
-            }, Scene::DSL::Not(EcsPrefab));
+            });
 
         // Observe changes to the typeface component to resolve font resources and trigger updates when necessary.
         Scene.CreateObserver<Scene::DSL::In<Typeface>>(

@@ -38,15 +38,22 @@ namespace Tileon::Editor::View
 
         if (Composer.Begin(GetTitle(), mVisible))
         {
-            mGallery.DrawToolbar(Composer);
-            Composer.Separator();
+            if (Composer.BeginTabBar("##palette_tabs"))
+            {
+                if (Composer.BeginTabItem("Terrain"))
+                {
+                    DrawTerrainTab(Composer);
+                    Composer.EndTabItem();
+                }
 
-            const Real32 BodyHeight = -(Composer.GetFrameHeightWithSpacing() + 8.0f);
-            Composer.BeginChild("##body", ImVec2(0.0f, BodyHeight), ImGuiChildFlags_None);
-            DrawGallery(Composer);
-            Composer.EndChild();
+                if (Composer.BeginTabItem("Entity"))
+                {
+                    DrawEntityTab(Composer);
+                    Composer.EndTabItem();
+                }
 
-            DrawBottomBar(Composer);
+                Composer.EndTabBar();
+            }
         }
         Composer.End();
     }
@@ -54,11 +61,49 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Palette::DrawGallery(Ref<UI::Composer> Composer)
+    void Palette::DrawTerrainTab(Ref<UI::Composer> Composer)
     {
-        mGallery.SetSelection(GetContext().GetInteger("Selection.Tile", 0));
+        mTerrains.DrawToolbar(Composer);
+        Composer.Separator();
 
-        mGallery.Begin(Composer);
+        const Real32 BodyHeight = -(Composer.GetFrameHeightWithSpacing() + 8.0f);
+        Composer.BeginChild("##terrain_body", ImVec2(0.0f, BodyHeight), ImGuiChildFlags_None);
+        DrawTerrainGallery(Composer);
+        Composer.EndChild();
+
+        DrawBottomBar(Composer, "##terrain_status", [&]()
+        {
+            DrawTerrainStatus(Composer);
+        });
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Palette::DrawEntityTab(Ref<UI::Composer> Composer)
+    {
+        mEntities.DrawToolbar(Composer);
+        Composer.Separator();
+
+        const Real32 BodyHeight = -(Composer.GetFrameHeightWithSpacing() + 8.0f);
+        Composer.BeginChild("##entity_body", ImVec2(0.0f, BodyHeight), ImGuiChildFlags_None);
+        DrawEntityGallery(Composer);
+        Composer.EndChild();
+
+        DrawBottomBar(Composer, "##entity_status", [&]()
+        {
+            DrawEntityStatus(Composer);
+        });
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Palette::DrawTerrainGallery(Ref<UI::Composer> Composer)
+    {
+        mTerrains.SetSelection(GetContext().GetInteger("Selection.Tile", 0));
+
+        mTerrains.Begin(Composer);
         mRepository.ForEachTerrain([&](ConstRef<Terrain> Terrain)
         {
             ConstRef<Tileset::Glyph> Glyph = mTileset.GetGlyph(Terrain.GetID());
@@ -70,13 +115,13 @@ namespace Tileon::Editor::View
             {
                 const Graphic::Object Thumbnail = Glyph.Material->GetImage(Graphic::TextureSlot::Albedo)->GetHandle();
 
-                WasSelected = mGallery.DrawItem(Composer,
+                WasSelected = mTerrains.DrawItem(Composer,
                     Terrain.GetID(),
                     Terrain.GetName(), Thumbnail, Glyph.Crop, Glyph.Tint);
             }
             else
             {
-                WasSelected = mGallery.DrawItem(Composer, Terrain.GetID(), Terrain.GetName());
+                WasSelected = mTerrains.DrawItem(Composer, Terrain.GetID(), Terrain.GetName());
             }
 
             // Set the selected tile in the context when the item is clicked.
@@ -85,23 +130,58 @@ namespace Tileon::Editor::View
                 GetContext().SetInteger("Selection.Tile", Terrain.GetID());
             }
         });
-        mGallery.End(Composer);
+        mTerrains.End(Composer);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Palette::DrawBottomBar(Ref<UI::Composer> Composer)
+    void Palette::DrawEntityGallery(Ref<UI::Composer> Composer)
     {
-        const Real32 BarHeight = Composer.GetFrameHeightWithSpacing() + 4.0f;
+        mEntities.SetSelection(GetContext().GetInteger("Selection.Archetype", 0));
 
-        Composer.PushStyleColor(ImGuiCol_ChildBg, Composer.GetStyleColorVec4(ImGuiCol_MenuBarBg));
-        Composer.BeginChild("##picker_status", ImVec2(0.0f, BarHeight), ImGuiChildFlags_None);
-        Composer.PopStyleColor();
+        mEntities.Begin(Composer);
+        mRepository.ForEachArchetype([&](Scene::Entity Archetype)
+        {
+            const UInt32 ID = static_cast<UInt32>(Archetype.GetID() - Scene::kMinRangeArchetypes);
 
-        const Real32 PadY = (BarHeight - Composer.GetTextLineHeight()) * 0.5f - Composer.GetStyle().ItemSpacing.y * 0.5f;
-        Composer.SetCursorPosY(PadY);
+            Graphic::Object Thumbnail = 0;
+            Rect            Crop      = Rect::One();
+            IntColor8       Tint      = IntColor8::White();
 
+            if (const ConstPtr<Appearance> Visual = Archetype.TryGet<const Appearance>())
+            {
+                ConstRetainer<Graphic::Material> Material = Visual->GetMaterial();
+
+                if (Material && Material->HasCompleted())
+                {
+                    if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(Graphic::TextureSlot::Albedo))
+                    {
+                        Thumbnail = Albedo->GetHandle();
+                        Crop      = Visual->GetSource();
+
+                        if (const ConstPtr<IntColor8> Color = Archetype.TryGet<const IntColor8>())
+                        {
+                            Tint = (* Color);
+                        }
+                    }
+                }
+            }
+
+            // An archetype that is still loading, failed, or has no sprite falls back to the gallery's placeholder.
+            if (mEntities.DrawItem(Composer, ID, Archetype.GetAlias(), Thumbnail, Crop, Tint))
+            {
+                GetContext().SetInteger("Selection.Archetype", ID);
+            }
+        });
+        mEntities.End(Composer);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Palette::DrawTerrainStatus(Ref<UI::Composer> Composer)
+    {
         const UInt16 Selection = GetContext().GetInteger("Selection.Tile", 0);
 
         if (mRepository.HasTerrain(Selection))
@@ -113,13 +193,38 @@ namespace Tileon::Editor::View
         }
         else
         {
-            constexpr Text kHint = "No terrain selected";
-
-            Composer.SetCursorPosX((Composer.GetWindowWidth() - Composer.CalcTextSize(kHint).x) * 0.5f);
-            Composer.TextDisabled(kHint);
+            DrawHint(Composer, "No terrain selected");
         }
+    }
 
-        Composer.EndChild();
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Palette::DrawEntityStatus(Ref<UI::Composer> Composer)
+    {
+        const UInt32        Selection = GetContext().GetInteger("Selection.Archetype", 0);
+        const Scene::Entity Archetype = mRepository.GetArchetype(Scene::kMinRangeArchetypes + Selection);
+
+        if (Selection != 0 && Archetype.IsValid())
+        {
+            const Text Alias = Archetype.GetAlias();
+
+            Composer.SetCursorPosX(Composer.GetStyle().ItemSpacing.x);
+            Composer.Label("{0:04}  {1}", Selection, Alias.IsEmpty() ? "(Unnamed)" : Alias);
+        }
+        else
+        {
+            DrawHint(Composer, "No archetype selected");
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Palette::DrawHint(Ref<UI::Composer> Composer, Text Hint)
+    {
+        Composer.SetCursorPosX((Composer.GetWindowWidth() - Composer.CalcTextSize(Hint).x) * 0.5f);
+        Composer.TextDisabled(Hint);
     }
 }
 

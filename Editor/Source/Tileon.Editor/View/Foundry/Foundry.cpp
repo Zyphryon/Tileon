@@ -21,12 +21,12 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Foundry::Foundry(Ref<Context> Context, Ref<Content::Service> Content)
+    Foundry::Foundry(Ref<Context> Context)
         : Activity     { Context, "Foundry" },
           mRepository  { Context.GetRepository() },
           mTileset     { Context.GetTileset() },
           mSelection   { 0 },
-          mBrowser     { Content, UI::Browser::Mode::Popup }
+          mBrowser     { Context.GetContent(), UI::Browser::Mode::Popup }
     {
     }
 
@@ -177,7 +177,7 @@ namespace Tileon::Editor::View
                 }
             },
             "...",
-            [&]()
+            [&]
             {
                 mBrowser.Open(".mtl");
             },

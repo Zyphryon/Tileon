@@ -23,7 +23,8 @@ namespace Tileon::Editor::View
 
     Archetypes::Archetypes(Ref<Context> Context)
         : Activity    { Context, "Archetypes" },
-          mRepository { Context.GetRepository() }
+          mRepository { Context.GetRepository() },
+          mAssembler  { Context }
     {
     }
 
@@ -32,8 +33,8 @@ namespace Tileon::Editor::View
 
     void Archetypes::OnDraw(Ref<UI::Composer> Composer)
     {
-        Composer.SetNextWindowSize(760.0f, 520.0f, ImGuiCond_FirstUseEver);
-        Composer.SetNextWindowSizeConstraints(560.0f, 360.0f, 1400.0f, 1200.0f);
+        Composer.SetNextWindowSize(1100.0f, 620.0f, ImGuiCond_FirstUseEver);
+        Composer.SetNextWindowSizeConstraints(560.0f, 360.0f, 1800.0f, 1400.0f);
 
         if (Composer.Begin(GetTitle(), mVisible))
         {
@@ -46,8 +47,13 @@ namespace Tileon::Editor::View
             if (mSelection.IsValid())
             {
                 Composer.SameLine();
-                Composer.BeginChild("##details_panel", ImVec2(0.0f, BodyHeight), ImGuiChildFlags_Borders);
+                Composer.BeginChild("##details_panel", ImVec2(380.0f, BodyHeight), ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders);
                 DrawDetailsPanel(Composer);
+                Composer.EndChild();
+
+                Composer.SameLine();
+                Composer.BeginChild("##preview_panel", ImVec2(0.0f, BodyHeight), ImGuiChildFlags_Borders);
+                DrawPreviewPanel(Composer);
                 Composer.EndChild();
             }
             else
@@ -89,9 +95,11 @@ namespace Tileon::Editor::View
 
             Composer.Selectable(Archetype.GetAlias(), Selected);
 
-            if (Composer.IsItemClicked())
+            if (Composer.IsItemClicked() && mSelection != Archetype)
             {
                 mSelection = Archetype;
+
+                mPreviewer.Reset();
             }
 
             if (Selected && WasPlusClicked)
@@ -141,7 +149,71 @@ namespace Tileon::Editor::View
 
         Composer.Section("Components");
 
-        // TODO: Components
+        mAssembler.Draw(Composer, mSelection);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Archetypes::DrawPreviewPanel(Ref<UI::Composer> Composer)
+    {
+        const ConstPtr<Appearance> Visual = mSelection.TryGet<const Appearance>();
+
+        if (!Visual)
+        {
+            DrawEmptyPanel(Composer, mSelection.Has<Typeface>()
+                ? "Text preview unavailable"_Text
+                : "This archetype has nothing to preview"_Text);
+            return;
+        }
+
+        ConstRetainer<Graphic::Material> Material = Visual->GetMaterial();
+
+        if (!Material)
+        {
+            DrawEmptyPanel(Composer, "No material assigned to this archetype");
+            return;
+        }
+
+        if (!Material->HasCompleted())
+        {
+            DrawEmptyPanel(Composer, Material->HasFailed() ? "Material failed to load"_Text : "Loading material..."_Text);
+            return;
+        }
+
+        if (Composer.BeginTabBar("##preview_tabs"))
+        {
+            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(Graphic::TextureSlot::Albedo))
+            {
+                if (Composer.BeginTabItem("Preview"))
+                {
+                    const Rect    Source = Visual->GetSource();
+                    const Vector2 Size(Source.GetWidth() * Albedo->GetWidth(), Source.GetHeight() * Albedo->GetHeight());
+
+                    const ConstPtr<IntColor8> Tint = mSelection.TryGet<const IntColor8>();
+
+                    mPreviewer.Draw(Composer, Albedo->GetHandle(), Size, Source, Tint ? Color::FromColor8(* Tint) : Color::White());
+
+                    Composer.EndTabItem();
+                }
+            }
+
+            for (const Graphic::TextureSlot Semantic : Enum::GetValues<Graphic::TextureSlot>())
+            {
+                if (ConstRetainer<Graphic::Image> Texture = Material->GetImage(Semantic))
+                {
+                    if (Composer.BeginTabItem(Enum::GetName(Semantic)))
+                    {
+                        const Vector2 Size(Texture->GetWidth(), Texture->GetHeight());
+                        mPreviewer.Draw(Composer, Texture->GetHandle(), Size, Rect::One());
+
+                        Composer.EndTabItem();
+                    }
+                }
+            }
+
+            Composer.EndTabBar();
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

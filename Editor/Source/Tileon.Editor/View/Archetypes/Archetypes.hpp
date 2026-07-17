@@ -13,6 +13,8 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Editor/Activity.hpp"
+#include "Tileon.Editor/Component/Assembler.hpp"
+#include "Tileon.Editor.UI/Widget/Previewer.hpp"
 #include "Tileon.World/Repository.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -46,6 +48,11 @@ namespace Tileon::Editor::View
         /// \param Composer The UI composer used to render the details panel elements.
         void DrawDetailsPanel(Ref<UI::Composer> Composer);
 
+        /// \brief Draws the preview panel of the archetypes interface, showing how the selected archetype looks.
+        ///
+        /// \param Composer The UI composer used to render the preview panel elements.
+        void DrawPreviewPanel(Ref<UI::Composer> Composer);
+
         /// \brief Draws the bottom bar of the archetypes interface.
         ///
         /// \param Composer The UI composer used to render the bottom bar elements.
@@ -62,12 +69,14 @@ namespace Tileon::Editor::View
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Ref<Repository> mRepository;
+        Ref<Repository>             mRepository;
+        Assembler                   mAssembler;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Scene::Entity   mSelection;
+        Scene::Entity               mSelection;
+        UI::Previewer               mPreviewer;
     };
 }
 

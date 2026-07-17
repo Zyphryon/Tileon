@@ -23,7 +23,7 @@ namespace Tileon::Editor::View
 
     Scene::Scene(Ref<Context> Context)
         : Activity  { Context, kTitle, true  },
-          mWorkshop { Context.GetController() },
+          mWorkshop { Context },
           mTarget   { Renderer::Target::Albedo }
     {
     }
@@ -63,12 +63,14 @@ namespace Tileon::Editor::View
         case Workshop::Mode::Tile:
             if (Composer.Button(ICON_FA_MAP "##mode", 32.0f))
             {
+                mWorkshop.SetBrush(Workshop::Brush::Pencil);
                 mWorkshop.SetMode(Workshop::Mode::Entity);
             }
             break;
         case Workshop::Mode::Entity:
             if (Composer.Button(ICON_FA_CUBE "##mode", 32.0f))
             {
+                mWorkshop.SetBrush(Workshop::Brush::Pencil);
                 mWorkshop.SetMode(Workshop::Mode::Tile);
             }
             break;
@@ -166,39 +168,42 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    void Scene::DrawBrushButton(Ref<UI::Composer> Composer, Workshop::Brush Brush, Text Icon)
+    {
+        const Bool Active = (mWorkshop.GetBrush() == Brush);
+
+        if (Active)
+        {
+            Composer.PushStyleColor(ImGuiCol_Button,        Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
+            Composer.PushStyleColor(ImGuiCol_ButtonHovered, Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
+        }
+
+        if (Composer.Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Brush)), 32.0f))
+        {
+            mWorkshop.SetBrush(Brush);
+        }
+
+        if (Active)
+        {
+            Composer.PopStyleColor(2);
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void Scene::DrawTileToolbar(Ref<UI::Composer> Composer)
     {
-        const auto DrawBrushButton = [&](Workshop::Brush Brush, Text Icon)
-        {
-            const Bool Active = (mWorkshop.GetBrush() == Brush);
-
-            if (Active)
-            {
-                Composer.PushStyleColor(ImGuiCol_Button,        Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
-                Composer.PushStyleColor(ImGuiCol_ButtonHovered, Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
-            }
-
-            if (Composer.Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Brush)), 32.0f))
-            {
-                mWorkshop.SetBrush(Brush);
-            }
-
-            if (Active)
-            {
-                Composer.PopStyleColor(2);
-            }
-        };
-
-        DrawBrushButton(Workshop::Brush::Select, ICON_FA_HAND);
+        DrawBrushButton(Composer, Workshop::Brush::Hand,   ICON_FA_HAND);
         Composer.SameLine();
 
-        DrawBrushButton(Workshop::Brush::Hand, ICON_FA_ARROW_POINTER);
+        DrawBrushButton(Composer, Workshop::Brush::Select, ICON_FA_ARROW_POINTER);
         Composer.SameLine();
 
-        DrawBrushButton(Workshop::Brush::Pencil, ICON_FA_BRUSH);
+        DrawBrushButton(Composer, Workshop::Brush::Pencil, ICON_FA_BRUSH);
         Composer.SameLine();
 
-        DrawBrushButton(Workshop::Brush::Bucket, ICON_FA_FILL_DRIP);
+        DrawBrushButton(Composer, Workshop::Brush::Bucket, ICON_FA_FILL_DRIP);
         Composer.SameLine();
 
         Composer.SeparatorEx(ImGuiSeparatorFlags_Vertical);
@@ -242,7 +247,15 @@ namespace Tileon::Editor::View
 
     void Scene::DrawEntityToolbar(Ref<UI::Composer> Composer)
     {
-        // TODO: Implement Entities.
+        // Entities are placed one at a time, so the area-filling bucket has no meaning here.
+        DrawBrushButton(Composer, Workshop::Brush::Hand,   ICON_FA_HAND);
+        Composer.SameLine();
+
+        DrawBrushButton(Composer, Workshop::Brush::Select, ICON_FA_ARROW_POINTER);
+        Composer.SameLine();
+
+        DrawBrushButton(Composer, Workshop::Brush::Pencil, ICON_FA_BRUSH);
+        Composer.SameLine();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -255,7 +268,15 @@ namespace Tileon::Editor::View
 
         // Draw the current frame rendered by the renderer to the interface.
         const Graphic::Object Texture = Renderer.GetTarget(mTarget);
-        Composer.Image(Texture, Composer.GetContentRegionAvail());
+
+        if (GetContext().GetGraphic().GetDescription().Capabilities.IsOriginBottomLeft)
+        {
+            Composer.Image(Texture, Composer.GetContentRegionAvail(), ImVec4(0, 1, 1, 0));
+        }
+        else
+        {
+            Composer.Image(Texture, Composer.GetContentRegionAvail(), ImVec4(0, 0, 1, 1));
+        }
 
         // Handle interactions with the viewport, such as hovering and clicking to manipulate the scene.
         if (ImGui::IsItemHovered())
@@ -266,7 +287,7 @@ namespace Tileon::Editor::View
             const Real32 NormalizeY = AbsoluteY / Composer.GetItemRectSize().y;
 
             // Handle mouse wheel input for zooming towards the cursor position.
-            if (const Real32 Wheel = Composer.GetMouseWheel(); Wheel != 0.0f)
+            if (const Real32 Wheel = -Composer.GetMouseWheel(); Wheel != 0.0f)
             {
                 constexpr Real32 kFactor = 1.25f;
 
@@ -301,11 +322,17 @@ namespace Tileon::Editor::View
                 const Bool IsLeftButton  = Composer.IsMouseClicked(ImGuiMouseButton_Left);
                 const Bool IsRightButton = Composer.IsMouseClicked(ImGuiMouseButton_Right);
 
-                // Get the currently selected tile from the context.
-                const UInt16 Selection = GetContext().GetInteger("Selection.Tile", 0);
+                // Get the currently selected object from the context, which depends on the active editing mode.
+                const UInt32 Selection  = GetContext().GetInteger(
+                    (mWorkshop.GetMode() == Workshop::Mode::Tile)
+                        ? "Selection.Tile"_Text
+                        : "Selection.Archetype"_Text, 0);
+
+                // The select brush picks whatever sits under the cursor, so it carries no object from the palette.
+                const Bool IsPicking = (mWorkshop.GetBrush() == Workshop::Brush::Select);
 
                 // Handle left-click for adding and right-click for removing tiles.
-                if (IsRightButton || (IsLeftButton && Selection != 0))
+                if (IsRightButton || (IsLeftButton && (IsPicking || Selection != 0)))
                 {
                     const Workshop::Command Command = IsLeftButton
                         ? Workshop::Command::Add

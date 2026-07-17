@@ -35,9 +35,11 @@ namespace Tileon::Editor::UI
 
         const Ptr<ImFontAtlas> Atlas = ImGui::GetIO().Fonts;
         Atlas->Clear();
-        Atlas->AddFontFromFileTTF("Editor\\Fonts\\Roboto-Medium.ttf",  16.0f);
-        Atlas->AddFontFromFileTTF("Editor\\Fonts\\fa-regular-400.ttf", 16.0f, &Config, kIconRange);
-        Atlas->AddFontFromFileTTF("Editor\\Fonts\\fa-solid-900.ttf",   16.0f, &Config, kIconRange);
+
+        const Filesystem::Path Path = Filesystem::GetRootFolder();
+        Atlas->AddFontFromFileTTF((Path + "Editor/Fonts/Roboto-Medium.ttf").GetData(),  16.0f);
+        Atlas->AddFontFromFileTTF((Path + "Editor/Fonts/fa-regular-400.ttf").GetData(), 16.0f, &Config, kIconRange);
+        Atlas->AddFontFromFileTTF((Path + "Editor/Fonts/fa-solid-900.ttf").GetData(),   16.0f, &Config, kIconRange);
         Atlas->Build();
 
         // Allow moving windows by dragging only the title bar.

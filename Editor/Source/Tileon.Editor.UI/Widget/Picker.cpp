@@ -130,9 +130,7 @@ namespace Tileon::Editor::UI
 
                     const Bool IsDirectory = (Item.Type == Filesystem::Type::Directory);
 
-                    const Text Label = IsDirectory
-                        ? String<160>::Print<"[D] {0}">(Item.Name)
-                        : String<160>::Print<"{0}">(Item.Name);
+                    Filesystem::Name Label = Filesystem::Name::Print<"{0}{1}">(IsDirectory ? "[D] " : "", Item.Name);
 
                     const Bool WasSelected = (static_cast<SInt32>(Index) == mSelection);
 

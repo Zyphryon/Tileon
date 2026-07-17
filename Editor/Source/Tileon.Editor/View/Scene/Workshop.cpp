@@ -22,11 +22,11 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Workshop::Workshop(Ref<Controller> Controller)
-        : mController { Controller },
-          mMode       { Mode::Tile },
-          mLevel      { Level::Base },
-          mBrush      { Brush::Pencil }
+    Workshop::Workshop(Ref<Context> Context)
+        : mContext { Context },
+          mMode    { Mode::Tile },
+          mLevel   { Level::Base },
+          mBrush   { Brush::Pencil }
     {
     }
 
@@ -74,7 +74,7 @@ namespace Tileon::Editor
 
     void Workshop::ExecuteOnTiles(Command Command, Placement Placement, UInt32 Object)
     {
-        Ref<Tileset> Tileset = mController.GetRenderer().GetTileset();
+        Ref<Tileset> Tileset = mContext.GetTileset();
 
         // Gets the tileset entry for the specified object ID and retrieves its column and row span.
         IntVector2 Span = IntVector2::One();
@@ -116,7 +116,88 @@ namespace Tileon::Editor
 
     void Workshop::ExecuteOnEntities(Command Command, Placement Placement, UInt32 Object)
     {
-        // TODO: Missing Entities.
+        switch (mBrush)
+        {
+        case Brush::Hand:
+        case Brush::Select:
+        {
+            if (Command == Command::Add)
+            {
+                SelectEntity(Placement);
+            }
+            break;
+        }
+        case Brush::Bucket:
+            break;
+        case Brush::Pencil:
+            if (Command == Command::Add)
+            {
+                AddEntity(Placement, Object);
+            }
+            else
+            {
+                RemoveEntity(Placement);
+            }
+            break;
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::AddEntity(Placement Placement, UInt32 Object)
+    {
+        const Scene::Entity Archetype = mContext.GetRepository().GetArchetype(Scene::kMinRangeArchetypes + Object);
+
+        if (!Archetype.IsValid())
+        {
+            return;
+        }
+
+        const Scene::Entity Actor = mContext.GetSupervisor().GetOrLoadRegion(
+            Placement.GetRegionX(),
+            Placement.GetRegionY(), true);
+
+        if (!Actor.IsValid())
+        {
+            return;
+        }
+
+        const Scene::Entity Instance = mContext.GetScene().CreateEntity();
+        Instance.SetArchetype(Archetype);
+        Instance.SetParent(Actor);
+        Instance.Add<Persist>();
+
+        // The offset is already region-local, which is the space the entity's pose is parented into.
+        Instance.Emplace<Pose>(Vector2(Placement.GetOffsetX(), Placement.GetOffsetY()));
+
+        // Mark the region as dirty so it gets saved and reloaded with the placed entity.
+        Actor.Add<Persist>();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::RemoveEntity(Placement Placement)
+    {
+        if (const Scene::Entity Instance = PickEntity(Placement); Instance.IsValid())
+        {
+            Instance.Add<Dispose>();
+
+            if (const Scene::Entity Actor = Instance.GetParent(); Actor.IsValid())
+            {
+                Actor.Add<Persist>();
+            }
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::SelectEntity(Placement Placement)
+    {
+        const Scene::Entity Instance = PickEntity(Placement);
+        mContext.SetInteger("Selection.Entity", Instance.IsValid() ? Instance.GetID() : 0);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -124,7 +205,7 @@ namespace Tileon::Editor
 
     void Workshop::ApplyTiles(Command Command, IntRect Area, Tile::Layer Layer, UInt16 Handle, IntVector2 Span)
     {
-        Ref<Supervisor> Supervisor = mController.GetWorld().GetSupervisor();
+        Ref<Supervisor> Supervisor = mContext.GetSupervisor();
 
         // Compute the range of regions that the global tile rect overlaps.
         const SInt16 RegionMinX = Coordinate::GetRegionX(Area.GetMinimumX());

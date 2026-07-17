@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Runtime/Controller.hpp"
+#include "Tileon.Editor/Context.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -57,10 +57,10 @@ namespace Tileon::Editor
 
     public:
 
-        /// \brief Constructs a workshop with the specified controller reference.
+        /// \brief Constructs a workshop with the specified context reference.
         ///
-        /// \param Controller The reference to the controller that the workshop will interact with.
-        Workshop(Ref<Controller> Controller);
+        /// \param Context The reference to the context that the workshop will interact with.
+        Workshop(Ref<Context> Context);
 
         /// \brief Updates the workshop, typically called once per frame.
         void Tick();
@@ -158,6 +158,35 @@ namespace Tileon::Editor
         /// \param Object    The unique identifier for the object to be added or removed.
         void ExecuteOnEntities(Command Command, Placement Placement, UInt32 Object);
 
+        /// \brief Finds the frontmost entity that covers the specified placement.
+        ///
+        /// \param Placement The placement in the world to pick an entity from.
+        /// \return The frontmost entity at the placement, or an invalid entity if none was found.
+        ZY_INLINE Scene::Entity PickEntity(Placement Placement)
+        {
+            const SInt32  TileX = Floor(Placement.GetAbsoluteX());
+            const SInt32  TileY = Floor(Placement.GetAbsoluteY());
+            const IntRect Area(TileX, TileY, TileX + 1, TileY + 1);
+
+            return mContext.GetSupervisor().QueryFrontmost(Area);
+        }
+
+        /// \brief Instantiates an archetype into the region that owns the specified placement.
+        ///
+        /// \param Placement The placement in the world where the entity should be created.
+        /// \param Object    The index of the archetype to instantiate.
+        void AddEntity(Placement Placement, UInt32 Object);
+
+        /// \brief Removes the frontmost entity found at the specified placement.
+        ///
+        /// \param Placement The placement in the world to remove an entity from.
+        void RemoveEntity(Placement Placement);
+
+        /// \brief Selects the frontmost entity found at the specified placement, clearing the selection if empty.
+        ///
+        /// \param Placement The placement in the world to select an entity from.
+        void SelectEntity(Placement Placement);
+
         /// \brief Applies the specified command to a given area of tiles on a specific layer.
         ///
         /// \param Command The command to apply (e.g., add or remove).
@@ -178,7 +207,7 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Ref<Controller>  mController;
+        Ref<Context>     mContext;
         Mode             mMode;
         Level            mLevel;
         Brush            mBrush;

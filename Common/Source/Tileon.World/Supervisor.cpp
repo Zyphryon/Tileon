@@ -120,7 +120,7 @@ namespace Tileon
         mRegionBoundaries = Boundaries;
 
         // Adjust spatial hierarchy to new boundaries.
-        AdjustHierarchy(Boundaries);
+        AdjustHierarchy(Boundaries * IntVector2(Region::kTilesPerX, Region::kTilesPerY));
         return true;
     }
 
@@ -265,6 +265,7 @@ namespace Tileon
         mTightBoundaries = NewTightBoundaries;
         mLooseRegistry   = Move(NewLooseRegistry);
         mTightRegistry   = Move(NewTightRegistry);
+        mLooseDirty.Clear();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

@@ -10,7 +10,8 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Context.hpp"
+#include "Registry.hpp"
+#include "Descriptor.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -21,21 +22,30 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Context::Context(Ref<Engine::Subsystem::Host> Host, AnyRef<Project> Project)
-        : Locator     { Host },
-          mController { Host, false },
-          mProject    { Move(Project) },
-          mRegistry   { GetService<Scene::Service>() }
+    Registry::Registry(Ref<Scene::Service> Scene)
+        : mScene { Scene }
     {
-        mController.Init(320, 200, Project.GetDensity());
-        mController.Load();
+        OnRegister();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Context::Teardown()
+    void Registry::OnRegister()
     {
-        mController.Teardown();
+        mScene.GetComponent<Descriptor>("Descriptor").Grant(Scene::Trait::Final);
+
+        Add<Pose>     ("Pose",      ICON_FA_UP_DOWN_LEFT_RIGHT, "Kinematic", Descriptor::Scope::Instance);
+        Add<Anchor>   ("Anchor",    ICON_FA_ANCHOR,             "Kinematic");
+        Add<Extent>   ("Extent",    ICON_FA_EXPAND,             "Volume");
+        Add<Velocity> ("Velocity",  ICON_FA_GAUGE_HIGH,         "Motion");
+        Add<Sprite>   ("Sprite",    ICON_FA_IMAGE,              "Render");
+        Add<Animation>("Animation", ICON_FA_FILM,               "Render");
+        Add<IntColor8>("Tint",      ICON_FA_PALETTE,            "Render");
+        Add<Typeface> ("Typeface",  ICON_FA_FONT,               "Typography");
+        Add<Label>    ("Label",     ICON_FA_COMMENT,            "Typography");
+        Add<Glowlight>("Glowlight", ICON_FA_LIGHTBULB,          "Light");
+        Add<Spotlight>("Spotlight", ICON_FA_LIGHTBULB,          "Light");
+        Add<Skylight> ("Skylight",  ICON_FA_SUN,                "Light");
     }
 }

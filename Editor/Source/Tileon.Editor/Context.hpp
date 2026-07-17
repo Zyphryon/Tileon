@@ -13,6 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Runtime/Controller.hpp"
+#include "Component/Registry.hpp"
 #include "Project.hpp"
 #include "Session.hpp"
 
@@ -23,7 +24,7 @@
 namespace Tileon::Editor
 {
     /// \brief Represents the context for the editor, providing access to various services.
-    class Context final : public Session, public Engine::Locator<Scene::Service, Content::Service>
+    class Context final : public Session, public Engine::Locator<Scene::Service, Content::Service, Graphic::Service>
     {
     public:
 
@@ -35,6 +36,30 @@ namespace Tileon::Editor
 
         /// \brief Tears down the context, releasing any resources it holds.
         void Teardown();
+
+        /// \brief Gets a reference to the scene service associated with the context.
+        ///
+        /// \return A reference to the scene service associated with the context.
+        ZY_INLINE Ref<Scene::Service> GetScene()
+        {
+            return GetService<Scene::Service>();
+        }
+
+        /// \brief Gets a reference to the content service associated with the context.
+        ///
+        /// \return A reference to the content service associated with the context.
+        ZY_INLINE Ref<Content::Service> GetContent()
+        {
+            return GetService<Content::Service>();
+        }
+
+        /// \brief Gets a reference to the graphic service associated with the context.
+        ///
+        /// \return A reference to the graphic service associated with the context.
+        ZY_INLINE Ref<Graphic::Service> GetGraphic()
+        {
+            return GetService<Graphic::Service>();
+        }
 
         /// \brief Gets a reference to the controller associated with the context.
         ///
@@ -84,6 +109,14 @@ namespace Tileon::Editor
             return mController.GetRenderer().GetTileset();
         }
 
+        /// \brief Gets a reference to the registry of inspectable components.
+        ///
+        /// \return A reference to the registry associated with the context.
+        ZY_INLINE Ref<Registry> GetRegistry()
+        {
+            return mRegistry;
+        }
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -91,5 +124,6 @@ namespace Tileon::Editor
 
         Controller mController;
         Project    mProject;
+        Registry   mRegistry;
     };
 }

@@ -148,7 +148,7 @@ namespace Tileon::Editor
         mContext = Unique<Context>::Create(* this, Move(Project));
 
         // Add editor activities to the list of activities, which will be rendered in the interface.
-        mActivities.Append(Retainer<View::Foundry>::Create(* mContext, * GetService<Content::Service>()));
+        mActivities.Append(Retainer<View::Foundry>::Create(* mContext));
         mActivities.Append(Retainer<View::Archetypes>::Create(* mContext));
         mActivities.Append(Retainer<View::Inspector>::Create(* mContext));
         mActivities.Append(Retainer<View::Palette>::Create(* mContext));

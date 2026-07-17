@@ -46,6 +46,13 @@ namespace Tileon::Editor::View
         /// \param Composer The UI composer used to render the toolbar elements.
         void DrawToolbar(Ref<UI::Composer> Composer);
 
+        /// \brief Draws a toolbar button that selects the given brush, highlighted while that brush is active.
+        ///
+        /// \param Composer The UI composer used to render the button.
+        /// \param Brush    The brush the button selects.
+        /// \param Icon     The icon displayed on the button.
+        void DrawBrushButton(Ref<UI::Composer> Composer, Workshop::Brush Brush, Text Icon);
+
         /// \brief Draws the tile editing toolbar for the scene activity.
         ///
         /// \param Composer The UI composer used to render the tile editing toolbar elements.

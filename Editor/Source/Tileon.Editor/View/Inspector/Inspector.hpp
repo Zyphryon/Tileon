@@ -13,6 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Editor/Activity.hpp"
+#include "Tileon.Editor/Component/Assembler.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -30,7 +31,7 @@ namespace Tileon::Editor::View
         /// \param Context The context associated with this activity.
         Inspector(Ref<Context> Context);
 
-        /// \copydoc Activity::OnDraw(Ref<UI::Composer>)
+        /// \see Activity::OnDraw(Ref<UI::Composer>)
         void OnDraw(Ref<UI::Composer> Composer) override;
 
     private:
@@ -38,22 +39,32 @@ namespace Tileon::Editor::View
         /// \brief Draws the header section of the inspector, which may include the title and any relevant controls.
         ///
         /// \param Composer The UI composer used to render the header section of the inspector.
-        void DrawHeader(Ref<UI::Composer> Composer);
+        /// \param Actor    The entity being inspected.
+        void DrawHeader(Ref<UI::Composer> Composer, Scene::Entity Actor);
 
         /// \brief Draws the main content section of the inspector, which displays the properties and controls for the selected entity.
         ///
         /// \param Composer The UI composer used to render the main content section of the inspector.
-        void DrawBody(Ref<UI::Composer> Composer);
+        /// \param Actor    The entity being inspected.
+        void DrawBody(Ref<UI::Composer> Composer, Scene::Entity Actor);
 
         /// \brief Draws the footer section of the inspector, which may include additional controls or information.
         ///
         /// \param Composer The UI composer used to render the footer section of the inspector.
-        void DrawFooter(Ref<UI::Composer> Composer);
+        /// \param Actor    The entity being inspected.
+        void DrawFooter(Ref<UI::Composer> Composer, Scene::Entity Actor);
+
+        /// \brief Draws a centered hint, shown when there is nothing to inspect.
+        ///
+        /// \param Composer The UI composer used to render the hint.
+        /// \param Message  The message to display.
+        void DrawEmptyPanel(Ref<UI::Composer> Composer, Text Message);
 
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+        Assembler mAssembler;
     };
 }

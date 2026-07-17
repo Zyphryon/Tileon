@@ -35,15 +35,24 @@ namespace Tileon
 
         Content.Read(kManifestUri, [this](Filesystem::Result Result, Blob Data)
         {
-            LoadManifest(Result, Move(Data));
+            GetService<Job::Service>().SubmitOnMain([this, Result, Data = Move(Data)] mutable
+            {
+                LoadManifest(Result, Move(Data));
+            });
         });
         Content.Read(kArchetypeUri, [this](Filesystem::Result Result, Blob Data)
         {
-            LoadArchetypeDatabase(Result, Move(Data));
+            GetService<Job::Service>().SubmitOnMain([this, Result, Data = Move(Data)] mutable
+            {
+                LoadArchetypeDatabase(Result, Move(Data));
+            });
         });
         Content.Read(kTerrainUri, [this](Filesystem::Result Result, Blob Data)
         {
-            LoadTerrainDatabase(Result, Move(Data));
+            GetService<Job::Service>().SubmitOnMain([this, Result, Data = Move(Data)] mutable
+            {
+                LoadTerrainDatabase(Result, Move(Data));
+            });
         });
     }
 
@@ -94,7 +103,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Repository::LoadManifest(Filesystem::Result Result, Blob Data)
+    void Repository::LoadManifest(Filesystem::Result Result, AnyRef<Blob> Data)
     {
         if (Result == Filesystem::Result::Success)
         {
@@ -121,7 +130,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Repository::LoadArchetypeDatabase(Filesystem::Result Result, Blob Data)
+    void Repository::LoadArchetypeDatabase(Filesystem::Result Result, AnyRef<Blob> Data)
     {
         if (Result == Filesystem::Result::Success)
         {
@@ -148,7 +157,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Repository::LoadTerrainDatabase(Filesystem::Result Result, Blob Data)
+    void Repository::LoadTerrainDatabase(Filesystem::Result Result, AnyRef<Blob> Data)
     {
         if (Result == Filesystem::Result::Success)
         {

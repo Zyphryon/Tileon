@@ -23,7 +23,7 @@
 namespace Tileon
 {
     /// \brief Manages the repository of terrains and archetypes in the world.
-    class Repository final : public Engine::Locator<Scene::Service, Content::Service>
+    class Repository final : public Engine::Locator<Job::Service, Scene::Service, Content::Service>
     {
     public:
 
@@ -141,19 +141,19 @@ namespace Tileon
     private:
 
         /// \brief Loads the world manifest from file.
-        void LoadManifest(Filesystem::Result Result, Blob Data);
+        void LoadManifest(Filesystem::Result Result, AnyRef<Blob> Data);
 
         /// \brief Saves the world manifest to file.
         void SaveManifest();
 
         /// \brief Loads the entity archetype database from file.
-        void LoadArchetypeDatabase(Filesystem::Result Result, Blob Data);
+        void LoadArchetypeDatabase(Filesystem::Result Result, AnyRef<Blob> Data);
 
         /// \brief Saves the entity archetype database to file.
         void SaveArchetypeDatabase();
 
         /// \brief Loads the terrain database from file.
-        void LoadTerrainDatabase(Filesystem::Result Result, Blob Data);
+        void LoadTerrainDatabase(Filesystem::Result Result, AnyRef<Blob> Data);
 
         /// \brief Saves the terrain database to file.
         void SaveTerrainDatabase();
