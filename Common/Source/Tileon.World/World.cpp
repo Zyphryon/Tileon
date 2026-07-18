@@ -134,7 +134,7 @@ namespace Tileon
 
                     if (Parent.IsValid())
                     {
-                        Actor.SetParent(Parent);
+                        Actor.SetParent(Parent, Scene::Hierarchy::Open);
 
                         // Remap the pose to be local to the new region so the entity appears at exactly
                         // the same world position after the parent change.

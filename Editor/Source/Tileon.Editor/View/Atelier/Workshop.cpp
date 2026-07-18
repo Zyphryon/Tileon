@@ -132,7 +132,7 @@ namespace Tileon::Editor
 
         if (mPreview.GetParent() != Actor)
         {
-            mPreview.SetParent(Actor);
+            mPreview.SetParent(Actor, Scene::Hierarchy::Open);
         }
 
         // Only the translation tracks the cursor; the scale and rotation the user dialed in stay untouched.
