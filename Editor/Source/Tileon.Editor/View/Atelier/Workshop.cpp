@@ -118,11 +118,7 @@ namespace Tileon::Editor
             mPreview = mContext.GetScene().CreateEntity();
             mPreview.SetArchetype(Archetype);
 
-            mPreview.Children([](Scene::Entity Child)
-            {
-                Child.Add<Unpickable>();
-            });
-            mPreview.Add<Unpickable>();
+            Scene::Entity::AddRecursively<Unpickable>(mPreview);
 
             // Fade the archetype's own tint, so the preview reads as not-yet-placed.
             const ConstPtr<IntColor8> Tint = Archetype.TryGet<const IntColor8>();
@@ -132,7 +128,7 @@ namespace Tileon::Editor
 
         if (mPreview.GetParent() != Actor)
         {
-            mPreview.SetParent(Actor, Scene::Hierarchy::Open);
+            mPreview.Attach(Actor, Scene::Hierarchy::Fixed);
         }
 
         // Only the translation tracks the cursor; the scale and rotation the user dialed in stay untouched.
@@ -248,13 +244,10 @@ namespace Tileon::Editor
 
         // Promote the preview into a placed entity by granting back everything it was deliberately denied.
         Instance.Remove<IntColor8>();
-        mPreview.Children([](Scene::Entity Child)
-        {
-            Child.Remove<Unpickable>();
-        });
-        Instance.Remove<Unpickable>();
         Instance.Add<Stale>();
         Instance.Add<Persist>();
+
+        Scene::Entity::RemoveRecursively<Unpickable>(mPreview);
 
         // Mark the region as dirty so it gets saved and reloaded with the placed entity.
         Actor.Add<Persist>();

@@ -188,10 +188,10 @@ namespace Tileon::Editor::View
                 // Reject no-ops and any move that would place an archetype under one of its own descendants.
                 if (Source.IsValid() && Source != Archetype && Source.GetParent() != Archetype && !IsAncestor(Archetype, Source))
                 {
-                    Source.SetParent(Archetype, Scene::Hierarchy::Open);
+                    Source.Attach(Archetype, Scene::Hierarchy::Open);
                 }
             }
-            ImGui::EndDragDropTarget();
+            ImGui::EndDragDropTarget(); 
         }
 
         if (Composer.BeginPopupContextItem())
@@ -205,7 +205,7 @@ namespace Tileon::Editor::View
 
             if (Composer.MenuItem("Detach from Parent", {}, Archetype.GetParent().IsValid()))
             {
-                Archetype.Remove(EcsChildOf, Archetype.GetParent());
+                Archetype.Detach();
             }
 
             if (Composer.MenuItem("Delete"))
@@ -299,7 +299,7 @@ namespace Tileon::Editor::View
 
             if (Composer.Button(ICON_FA_LINK_SLASH "  Detach", -1.0f))
             {
-                mSelection.Remove(EcsChildOf);
+                mSelection.Detach();
             }
         }
         else
@@ -440,7 +440,7 @@ namespace Tileon::Editor::View
 
             if (Parent.IsValid())
             {
-                Archetype.SetParent(Parent, Scene::Hierarchy::Open);
+                Archetype.Attach(Parent, Scene::Hierarchy::Open);
             }
 
             mSelection = Archetype;
