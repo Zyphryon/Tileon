@@ -12,12 +12,12 @@
 
 #include "Application.hpp"
 #include "View/Archetypes/Archetypes.hpp"
+#include "View/Atelier/Atelier.hpp"
 #include "View/Foundry/Foundry.hpp"
 #include "View/Hierarchy/Hierarchy.hpp"
 #include "View/Inspector/Inspector.hpp"
 #include "View/Palette/Palette.hpp"
 #include "View/Universe/Universe.hpp"
-#include "View/Scene/Scene.hpp"
 #include "Tileon.Editor.UI/Theme.hpp"
 #include "Tileon_Editor.Modules.hpp"
 #include <Zyphryon.Content/Mount/Disk.hpp>
@@ -223,7 +223,7 @@ namespace Tileon::Editor
         mActivities.Append(Retainer<View::Hierarchy>::Create(* mContext));
         mActivities.Append(Retainer<View::Palette>::Create(* mContext));
         mActivities.Append(Retainer<View::Universe>::Create(* mContext));
-        mActivities.Append(Retainer<View::Scene>::Create(* mContext));
+        mActivities.Append(Retainer<View::Atelier>::Create(* mContext));
 
         // Signal that we are waiting for the content service to finish loading all queued assets.
         mState = State::Loading;
@@ -337,13 +337,13 @@ namespace Tileon::Editor
 
     void Application::DrawGame()
     {
-        // Render the game view to an off-screen buffer, which will be displayed in the scene activity's viewport.
-        const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(View::Scene::kTitle.GetData());
+        // Render the game view to an off-screen buffer, which will be displayed in the atelier activity's viewport.
+        const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(View::Atelier::kTitle.GetData());
 
         if (Parent && Parent->Active)
         {
             const UInt32 ViewportID   = Parent->GetID("##viewport");
-            const Text   ViewportName = String<64>::Print<"{0}/##viewport_{1:08X}">(View::Scene::kTitle, ViewportID);
+            const Text   ViewportName = String<64>::Print<"{0}/##viewport_{1:08X}">(View::Atelier::kTitle, ViewportID);
 
             if (const ConstPtr<ImGuiWindow> Child = ImGui::FindWindowByName(ViewportName.GetData()); Child)
             {

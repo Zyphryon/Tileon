@@ -10,7 +10,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Scene.hpp"
+#include "Atelier.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -21,7 +21,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Scene::Scene(Ref<Context> Context)
+    Atelier::Atelier(Ref<Context> Context)
         : Activity  { Context, kTitle, true  },
           mWorkshop { Context },
           mGizmo    { Context },
@@ -32,7 +32,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Scene::OnDraw(Ref<UI::Composer> Composer)
+    void Atelier::OnDraw(Ref<UI::Composer> Composer)
     {
         mWorkshop.Tick();
 
@@ -63,7 +63,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Scene::DrawToolbar(Ref<UI::Composer> Composer)
+    void Atelier::DrawToolbar(Ref<UI::Composer> Composer)
     {
         // Draw mode switch button to toggle between tile editing and entity editing modes.
         switch (mWorkshop.GetMode())
@@ -106,6 +106,35 @@ namespace Tileon::Editor::View
             GetContext().GetDirector().SetZoom(1.0f);
         }
         Composer.SameLine();
+
+        // Camera position read-out that doubles as a "go to": shows the view centre in absolute world tiles and
+        // re centres the camera when a new coordinate is committed (Enter).
+        {
+            Ref<Director>   Director = GetContext().GetDirector();
+            const Placement Centre   = Director.GetPosition();
+
+            Real32 CameraX = static_cast<Real32>(Centre.GetAbsoluteX());
+            Real32 CameraY = static_cast<Real32>(Centre.GetAbsoluteY());
+
+            Bool GoTo = false;
+
+            Composer.Label("X");
+            Composer.SameLine();
+            Composer.SetNextItemWidth(72.0f);
+            GoTo |= Composer.InputFloat("##camera_x", CameraX, 0.0f, 0.0f, "%.1f", ImGuiInputTextFlags_EnterReturnsTrue);
+            Composer.SameLine();
+
+            Composer.Label("Y");
+            Composer.SameLine();
+            Composer.SetNextItemWidth(72.0f);
+            GoTo |= Composer.InputFloat("##camera_y", CameraY, 0.0f, 0.0f, "%.1f", ImGuiInputTextFlags_EnterReturnsTrue);
+            Composer.SameLine();
+
+            if (GoTo)
+            {
+                Director.SetPosition(Placement::FromAbsolute(CameraX, CameraY));
+            }
+        }
 
         Composer.SeparatorEx(ImGuiSeparatorFlags_Vertical);
         Composer.SameLine();
@@ -186,7 +215,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Scene::DrawBrushButton(Ref<UI::Composer> Composer, Workshop::Brush Brush, Text Icon)
+    void Atelier::DrawBrushButton(Ref<UI::Composer> Composer, Workshop::Brush Brush, Text Icon)
     {
         const Bool Active = (mWorkshop.GetBrush() == Brush);
 
@@ -210,7 +239,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Scene::DrawDebugButton(Ref<UI::Composer> Composer, Renderer::Debug Overlay, Text Icon)
+    void Atelier::DrawDebugButton(Ref<UI::Composer> Composer, Renderer::Debug Overlay, Text Icon)
     {
         const Bool Active = GetContext().GetRenderer().HasProperty(Overlay);
 
@@ -234,7 +263,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Scene::DrawTileToolbar(Ref<UI::Composer> Composer)
+    void Atelier::DrawTileToolbar(Ref<UI::Composer> Composer)
     {
         DrawBrushButton(Composer, Workshop::Brush::Hand,   ICON_FA_HAND);
         Composer.SameLine();
@@ -287,7 +316,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Scene::DrawEntityToolbar(Ref<UI::Composer> Composer)
+    void Atelier::DrawEntityToolbar(Ref<UI::Composer> Composer)
     {
         // Entities are placed one at a time, so the area-filling bucket has no meaning here.
         DrawBrushButton(Composer, Workshop::Brush::Hand,   ICON_FA_HAND);
@@ -303,7 +332,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Scene::DrawViewport(Ref<UI::Composer> Composer)
+    void Atelier::DrawViewport(Ref<UI::Composer> Composer)
     {
         Ref<Renderer> Renderer = GetContext().GetRenderer();
         Ref<Director> Director = GetContext().GetDirector();
@@ -326,7 +355,7 @@ namespace Tileon::Editor::View
         // Mark the selected entity with corner brackets, drawn as an overlay so it shows under every brush.
         if (const UInt64 Selected = GetContext().GetInteger("Selection.Entity", 0))
         {
-            const ::Scene::Entity Actor = GetContext().GetScene().GetEntity(Selected);
+            const Scene::Entity Actor = GetContext().GetScene().GetEntity(Selected);
 
             if (Actor.IsValid())
             {
@@ -399,8 +428,8 @@ namespace Tileon::Editor::View
                 }
             }
 
-            const UInt64          Selection = GetContext().GetInteger("Selection.Entity", 0);
-            const ::Scene::Entity Actor     = GetContext().GetScene().GetEntity(Selection);
+            const UInt64        Selection = GetContext().GetInteger("Selection.Entity", 0);
+            const Scene::Entity Actor     = GetContext().GetScene().GetEntity(Selection);
 
             Manipulating = mGizmo.Draw(Composer, Actor, ViewportOrigin, ViewportSize);
         }

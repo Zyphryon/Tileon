@@ -23,19 +23,19 @@
 namespace Tileon::Editor::View
 {
     /// \brief Responsible for rendering the game world and providing tools for editing and manipulating the scene.
-    class Scene final : public Activity
+    class Atelier final : public Activity
     {
     public:
 
-        /// \brief Static name identifier for the scene activity.
-        static constexpr Symbol kTitle = "Scene";
+        /// \brief Static name identifier for the atelier activity.
+        static constexpr Symbol kTitle = "Atelier";
 
     public:
 
         /// \brief Constructs the activity with the specified context.
         ///
         /// \param Context The context associated with this activity.
-        Scene(Ref<Context> Context);
+        Atelier(Ref<Context> Context);
 
         /// \see Activity::OnDraw(Ref<UI::Composer>)
         void OnDraw(Ref<UI::Composer> Composer) override;
