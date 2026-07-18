@@ -125,7 +125,8 @@ namespace Tileon
             {
                 const IntRect AABB = Actor.Get<Bound>().GetRect();
 
-                if (!AABB.Test(Hitbox))
+                // Skip anything flagged unpickable.
+                if (!AABB.Test(Hitbox) || Actor.Has<Unpickable>())
                 {
                     return;
                 }
@@ -244,6 +245,8 @@ namespace Tileon
                         ForEach([&](UInt64 ID)
                         {
                             const Scene::Entity Actor = Scene.GetEntity(ID);
+                            ZY_ASSERT(Actor.IsValid(), "Loose cell contains a dangling entity id");
+
                             AABB = IntRect::Union(AABB, Actor.Get<Bound>().GetRect());
                         });
                         Boundaries = AABB;
@@ -572,6 +575,11 @@ namespace Tileon
         /// \param OldestCenter The previous center coordinates of the entity's volume before the update.
         /// \param NewestCenter The new center coordinates of the entity's volume after the update.
         void UpdateEntityOnCell(Scene::Entity Actor, IntVector2 OldestCenter, IntVector2 NewestCenter);
+
+        /// \brief Recursively unlinks an entity and all of its descendants from their spatial cells.
+        ///
+        /// \param Root The subtree root to detach; call this before destroying the subtree.
+        void DetachEntityOnCell(Scene::Entity Root);
 
         /// \brief Handles asynchronous load result of a \ref Region.
         ///

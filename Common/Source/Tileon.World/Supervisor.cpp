@@ -83,13 +83,7 @@ namespace Tileon
                             SaveRegion(Actor);
                         }
 
-                        Actor.Children([this](Scene::Entity Child)
-                        {
-                            if (const ConstPtr<Bound> Bound = Child.TryGet<Tileon::Bound>())
-                            {
-                                RemoveEntityOnCell(Child, Bound->GetRect().GetCenter());
-                            }
-                        });
+                        DetachEntityOnCell(Actor);
                         Actor.Destruct();
                     }
                 }
@@ -178,7 +172,7 @@ namespace Tileon
 
             Actor = GetService<Scene::Service>().CreateEntity();
             Actor.SetName(Name);
-            Actor.SetAlias(Str32::Print<"Region ({0:4X}.{1:4X})">(RegionX, RegionY));
+            Actor.SetAlias(Str32::Print<"Region {0} {1}">(RegionX, RegionY));
             Actor.Emplace<Transform>(Matrix3x2::Identity(), IntVector2(RegionX * Region::kTilesPerX, RegionY * Region::kTilesPerY));
 
             const auto OnResult = [this, Handle = Actor.GetID(), RegionX, RegionY, CreateIfMissing](Filesystem::Result Result, Blob File)
@@ -355,11 +349,16 @@ namespace Tileon
         Loose.SetY(Clamp(Loose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
 
         const UInt32 LooseKey = GetKey(Loose.GetX(), Loose.GetY(), mLooseBoundaries);
-        if (!mLooseRegistry[LooseKey].Remove(Actor))
+
+        // The registry may not be sized yet (before the first Navigate) or may be torn down.
+        if (LooseKey < mLooseRegistry.GetSize())
         {
-            // Mark cell as dirty for next hierarchy update.
-            Guard Guard(mLooseMutex);
-            mLooseDirty.Append(LooseKey);
+            if (!mLooseRegistry[LooseKey].Remove(Actor))
+            {
+                // Mark cell as dirty for next hierarchy update.
+                Guard Guard(mLooseMutex);
+                mLooseDirty.Append(LooseKey);
+            }
         }
     }
 
@@ -391,6 +390,22 @@ namespace Tileon
             RemoveEntityOnCell(Actor, OldestCenter);
             InsertEntityOnCell(Actor, NewestCenter);
         }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Supervisor::DetachEntityOnCell(Scene::Entity Root)
+    {
+        if (const ConstPtr<Bound> Bound = Root.TryGet<Tileon::Bound>())
+        {
+            RemoveEntityOnCell(Root, Bound->GetRect().GetCenter());
+        }
+
+        Root.Children([this](Scene::Entity Child)
+        {
+            DetachEntityOnCell(Child);
+        });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

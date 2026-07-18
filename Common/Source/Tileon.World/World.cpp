@@ -63,6 +63,7 @@ namespace Tileon
         Scene.GetComponent<Dispose>("Dispose");
         Scene.GetComponent<Stale>("Stale");
         Scene.GetComponent<Dynamic>("Dynamic");
+        Scene.GetComponent<Unpickable>("Unpickable");
         Scene.GetComponent<Transform>("Transform");
         Scene.GetComponent<Pose>("Pose").With<Transform>().Grant(Scene::Trait::Serializable);
         Scene.GetComponent<Anchor>("Anchor").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
@@ -148,8 +149,8 @@ namespace Tileon
                 }
             });
 
-        // System that propagates dirty state to children (for static entities).
-        Scene.CreateSystem<Scene::DSL::Not<Stale>, Scene::DSL::Cascade<Stale>, Scene::DSL::Out<Stale>>(
+        // System that propagates stale states to all static children of a stale entity.
+        Scene.CreateSystem<Scene::DSL::Not<Stale>, Scene::DSL::Cascade<Stale>, Scene::DSL::Out<Ptr<Stale>>>(
             "World::PropagateDirtyStates",
             EcsPreUpdate,
             Scene::Execution::Concurrent,
@@ -213,16 +214,13 @@ namespace Tileon
             });
 
         /// System that disposes of entities marked for disposal.
-        Scene.CreateSystem<Scene::DSL::In<ConstPtr<Bound>, const Dispose>>(
+        Scene.CreateSystem<Scene::DSL::In<const Dispose>>(
             "World::DestroyEntitiesTagged",
             EcsPostFrame,
             Scene::Execution::Concurrent,
-            [this](Scene::Entity Actor, ConstPtr<Bound> Bounds)
+            [this](Scene::Entity Actor)
             {
-                if (Bounds)
-                {
-                   mSupervisor.RemoveEntityOnCell(Actor, Bounds->GetRect().GetCenter());
-                }
+                mSupervisor.DetachEntityOnCell(Actor);
                 Actor.Destruct();
             });
 

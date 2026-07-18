@@ -43,6 +43,12 @@ namespace Tileon::Editor::View
         /// \param Composer The UI composer used to render the list panel elements.
         void DrawListPanel(Ref<UI::Composer> Composer);
 
+        /// \brief Draws a single archetype as a tree node and, recursively, each of its children.
+        ///
+        /// \param Composer  The UI composer used to render the node.
+        /// \param Archetype The archetype entity to draw.
+        void DrawArchetypeNode(Ref<UI::Composer> Composer, Scene::Entity Archetype);
+
         /// \brief Draws the details panel of the archetypes interface.
         ///
         /// \param Composer The UI composer used to render the details panel elements.
@@ -64,6 +70,16 @@ namespace Tileon::Editor::View
         /// \param Message  The message to display in the empty panel.
         void DrawEmptyPanel(Ref<UI::Composer> Composer, Text Message);
 
+        /// \brief Creates a new archetype, optionally parented under another, and selects it.
+        ///
+        /// \param Parent The archetype to parent the new one under, or an invalid entity for a root archetype.
+        void CreateArchetype(Scene::Entity Parent);
+
+        /// \brief Deletes an archetype, clearing the selection first if it is the one being removed.
+        ///
+        /// \param Archetype The archetype to delete.
+        void DeleteArchetype(Scene::Entity Archetype);
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -75,8 +91,9 @@ namespace Tileon::Editor::View
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Scene::Entity               mSelection;
         UI::Previewer               mPreviewer;
+        Scene::Entity               mSelection;
+        Scene::Entity               mScroll;
     };
 }
 

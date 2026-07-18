@@ -101,7 +101,7 @@ namespace Tileon::Editor
     {
         if (mPreview.IsAlive())
         {
-            mPreview.Destruct();
+            mPreview.Add<Dispose>();
         }
         mPreview = Scene::Entity();
     }
@@ -118,11 +118,11 @@ namespace Tileon::Editor
             mPreview = mContext.GetScene().CreateEntity();
             mPreview.SetArchetype(Archetype);
 
-            // Kinetic on every frame, so the pose written below is turned into a world transform as the cursor moves.
-            mPreview.Add<Dynamic>();
-
-            // Keep out of reach of QueryFrontmost and of the region's cell bookkeeping.
-            mPreview.Remove<Bound>();
+            mPreview.Children([](Scene::Entity Child)
+            {
+                Child.Add<Unpickable>();
+            });
+            mPreview.Add<Unpickable>();
 
             // Fade the archetype's own tint, so the preview reads as not-yet-placed.
             const ConstPtr<IntColor8> Tint = Archetype.TryGet<const IntColor8>();
@@ -145,6 +145,7 @@ namespace Tileon::Editor
             mPreview.Set(Tileon::Pose(Vector2(Placement.GetOffsetX(), Placement.GetOffsetY())));
         }
 
+        mPreview.Add<Stale>();
         return mPreview;
     }
 
@@ -247,8 +248,11 @@ namespace Tileon::Editor
 
         // Promote the preview into a placed entity by granting back everything it was deliberately denied.
         Instance.Remove<IntColor8>();
-        Instance.Add<Bound>();
-        Instance.Remove<Dynamic>();
+        mPreview.Children([](Scene::Entity Child)
+        {
+            Child.Remove<Unpickable>();
+        });
+        Instance.Remove<Unpickable>();
         Instance.Add<Stale>();
         Instance.Add<Persist>();
 

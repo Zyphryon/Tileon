@@ -35,7 +35,7 @@ namespace Tileon::Editor
     {
         mScene.GetComponent<Descriptor>("Descriptor").Grant(Scene::Trait::Final);
 
-        Add<Pose>     ("Pose",      ICON_FA_UP_DOWN_LEFT_RIGHT, "Kinematic", Descriptor::Scope::Instance);
+        Add<Pose>     ("Pose",      ICON_FA_UP_DOWN_LEFT_RIGHT, "Kinematic");
         Add<Anchor>   ("Anchor",    ICON_FA_ANCHOR,             "Kinematic");
         Add<Extent>   ("Extent",    ICON_FA_EXPAND,             "Volume");
         Add<Velocity> ("Velocity",  ICON_FA_GAUGE_HIGH,         "Motion");
