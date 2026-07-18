@@ -13,6 +13,7 @@
 #include "Application.hpp"
 #include "View/Archetypes/Archetypes.hpp"
 #include "View/Foundry/Foundry.hpp"
+#include "View/Hierarchy/Hierarchy.hpp"
 #include "View/Inspector/Inspector.hpp"
 #include "View/Palette/Palette.hpp"
 #include "View/Universe/Universe.hpp"
@@ -219,6 +220,7 @@ namespace Tileon::Editor
         mActivities.Append(Retainer<View::Foundry>::Create(* mContext));
         mActivities.Append(Retainer<View::Archetypes>::Create(* mContext));
         mActivities.Append(Retainer<View::Inspector>::Create(* mContext));
+        mActivities.Append(Retainer<View::Hierarchy>::Create(* mContext));
         mActivities.Append(Retainer<View::Palette>::Create(* mContext));
         mActivities.Append(Retainer<View::Universe>::Create(* mContext));
         mActivities.Append(Retainer<View::Scene>::Create(* mContext));
@@ -266,6 +268,14 @@ namespace Tileon::Editor
                     }
                 }
 
+                Composer.Separator();
+
+                // Discarding the node makes the dockspace below rebuild the default arrangement next frame.
+                if (Composer.MenuItem("Reset Layout"))
+                {
+                    Composer.ResetDockSpace("EditorDockSpace");
+                }
+
                 Composer.EndMenu();
             }
 
@@ -291,6 +301,24 @@ namespace Tileon::Editor
 
             Composer.EndMainMenuBar();
         }
+
+        // Host dockspace filling the viewport's work area; the builder only runs on the first run.
+        Composer.DockSpace("EditorDockSpace", [](Ref<UI::Dock> Layout)
+        {
+            ImGuiID       Center = Layout.GetRoot();
+            const ImGuiID Left   = Layout.Split(Center, ImGuiDir_Left,  0.20f);
+            const ImGuiID Right  = Layout.Split(Center, ImGuiDir_Right, 0.25f);
+
+            // Stack the left column vertically: Palette on top, Hierarchy below.
+            ImGuiID       LeftTop    = Left;
+            const ImGuiID LeftBottom = Layout.Split(LeftTop, ImGuiDir_Down, 0.5f);
+
+            Layout.Attach("Palette",   LeftTop);
+            Layout.Attach("Hierarchy", LeftBottom);
+            Layout.Attach("Inspector", Right);
+            Layout.Attach("Universe",  Right);
+            Layout.Attach("Scene",     Center);
+        });
 
         // Draw each visible activity, allowing them to render their respective user interfaces.
         for (ConstRetainer<Activity> Activity : mActivities)

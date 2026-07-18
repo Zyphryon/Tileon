@@ -113,7 +113,7 @@ namespace Tileon
         /// \return A reference to this pose, modified by the new rotation.
         ZY_INLINE Ref<Pose> SetRotation(Angle Rotation)
         {
-            mRotation = Rotation;
+            mRotation = Angle::Normalize(Rotation);
             return (* this);
         }
 
@@ -166,7 +166,7 @@ namespace Tileon
         /// \return A reference to this pose, modified by the new rotation.
         ZY_INLINE Ref<Pose> Rotate(Angle Rotation)
         {
-            mRotation += Rotation;
+            mRotation = Angle::Normalize(mRotation + Rotation);
             return (* this);
         }
 

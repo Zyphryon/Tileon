@@ -347,9 +347,16 @@ namespace Tileon::Editor
 
         Bool Dirty = false;
 
-        if (Vector2 Translation = Component.GetTranslation() * Density; InspectVector(Composer, "Translation", Translation))
+        Vector2 Base = Vector2::Zero();
+
+        if (const ConstPtr<Tileon::Transform> Transform = Actor.TryGet<const Tileon::Transform>())
         {
-            Component.SetTranslation(Translation / Density);
+            Base = Vector2(Transform->GetOrigin());
+        }
+
+        if (Vector2 Translation = (Component.GetTranslation() + Base) * Density; InspectVector(Composer, "Translation", Translation))
+        {
+            Component.SetTranslation(Translation / Density - Base);
             Dirty = true;
         }
 

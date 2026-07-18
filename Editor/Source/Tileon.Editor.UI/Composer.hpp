@@ -23,6 +23,55 @@
 
 namespace Tileon::Editor::UI
 {
+    /// \brief Builds an initial dock layout by splitting a root node and assigning windows to the pieces.
+    class Dock final
+    {
+    public:
+
+        /// \brief Constructs a builder around the dockspace's root node.
+        ///
+        /// \param Root The identifier of the dockspace's root node.
+        ZY_INLINE explicit Dock(ImGuiID Root)
+            : mRoot { Root }
+        {
+        }
+
+        /// \brief Gets the root node, which also represents the area remaining after edges are split off.
+        ///
+        /// \return The root node identifier.
+        ZY_INLINE ImGuiID GetRoot() const
+        {
+            return mRoot;
+        }
+
+        /// \brief Carves a piece off a node toward an edge and returns it, leaving the remainder in \p Node.
+        ///
+        /// \param Node      The node to split; on return it holds the remaining area.
+        /// \param Direction The edge to carve the new piece from.
+        /// \param Ratio     The fraction (0..1) of \p Node the carved piece occupies.
+        /// \return The node representing the carved-off piece.
+        ZY_INLINE ImGuiID Split(Ref<ImGuiID> Node, ImGuiDir Direction, Real32 Ratio) const
+        {
+            return ImGui::DockBuilderSplitNode(Node, Direction, Ratio, nullptr, AddressOf(Node));
+        }
+
+        /// \brief Assigns a window to a node by its title.
+        ///
+        /// \param Window The title of the window to dock, as passed to \ref Composer::Begin.
+        /// \param Node   The node the window should occupy.
+        ZY_INLINE void Attach(Text Window, ImGuiID Node) const
+        {
+            ImGui::DockBuilderDockWindow(Window.GetData(), Node);
+        }
+
+    private:
+
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        ImGuiID mRoot;
+    };
+
     /// \brief Provides utility functions for rendering user interface elements in the editor.
     class Composer final
     {
@@ -46,6 +95,30 @@ namespace Tileon::Editor::UI
         ZY_INLINE void End()
         {
             ImGui::End();
+        }
+
+        template<typename Function>
+        ZY_INLINE void DockSpace(Text ID, AnyRef<Function> Builder)
+        {
+            const ImGuiID Node = ImGui::GetID(ID.GetData());
+
+            if (ImGui::DockBuilderGetNode(Node) == nullptr)
+            {
+                ImGui::DockBuilderAddNode(Node, ImGuiDockNodeFlags_DockSpace);
+                ImGui::DockBuilderSetNodeSize(Node, ImGui::GetMainViewport()->WorkSize);
+
+                Dock Layout(Node);
+                Builder(Layout);
+
+                ImGui::DockBuilderFinish(Node);
+            }
+
+            ImGui::DockSpaceOverViewport(Node, ImGui::GetMainViewport());
+        }
+
+        ZY_INLINE void ResetDockSpace(Text ID)
+        {
+            ImGui::DockBuilderRemoveNode(ImGui::GetID(ID.GetData()));
         }
 
         ZY_INLINE void BeginChild(Text ID, ImVec2 Size = ImVec2(0, 0), ImGuiChildFlags ChildFlags = ImGuiChildFlags_None, ImGuiWindowFlags Flags = ImGuiWindowFlags_None)

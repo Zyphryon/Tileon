@@ -22,7 +22,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Palette::Palette(Ref<Context> Context)
-        : Activity    { Context, "Palette" },
+        : Activity    { Context, "Palette", true },
           mRepository { Context.GetRepository() },
           mTileset    { Context.GetTileset() }
     {
@@ -90,7 +90,7 @@ namespace Tileon::Editor::View
         DrawEntityGallery(Composer);
         Composer.EndChild();
 
-        DrawBottomBar(Composer, "##entity_status", [&]()
+        DrawBottomBar(Composer, "##entity_status", [&]
         {
             DrawEntityStatus(Composer);
         });

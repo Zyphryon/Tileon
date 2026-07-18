@@ -153,7 +153,6 @@ namespace Tileon::Editor::View
     {
         constexpr Real32 kLabelW = 110.0f;
 
-        // Header.
         ImGui::SetWindowFontScale(1.5f);
         Composer.TextColored(ImVec4(0.46f, 0.72f, 0.98f, 1.00f), ICON_FA_CUBES "  New Project");
         ImGui::SetWindowFontScale(1.0f);
@@ -317,6 +316,7 @@ namespace Tileon::Editor::View
         if (Filesystem::CopyAll(Source, Path) == Filesystem::Result::Success)
         {
             Filesystem::Make(Path + Filesystem::Path("Data"));
+            Filesystem::Make(Path + Filesystem::Path("Font"));
             Filesystem::Make(Path + Filesystem::Path("Material"));
             Filesystem::Make(Path + Filesystem::Path("World"));
             return true;

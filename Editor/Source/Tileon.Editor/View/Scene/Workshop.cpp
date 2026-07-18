@@ -258,8 +258,12 @@ namespace Tileon::Editor
         // Select what was just placed so the inspector targets it; the brush stays armed for the next stamp.
         mContext.SetInteger("Selection.Entity", Instance.GetID());
 
-        // Ownership passes to the world, so the next hover builds a fresh preview rather than moving this one.
+        // Snapshot the placed pose so the replacement preview continues from the same scale and rotation.
         mPreview = Scene::Entity();
+        EnsurePreview(Actor, Archetype, Placement);
+
+        Pose Transformation = Instance.Get<Pose>();
+        mPreview.Set(Move(Transformation));
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

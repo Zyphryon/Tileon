@@ -23,7 +23,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Universe::Universe(Ref<Context> Context)
-        : Activity  { Context, "Universe" },
+        : Activity  { Context, "Universe", true },
           mRegistry { Context.GetRegistry() },
           mAction   { Action::None }
     {

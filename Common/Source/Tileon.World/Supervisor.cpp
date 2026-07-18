@@ -178,6 +178,7 @@ namespace Tileon
 
             Actor = GetService<Scene::Service>().CreateEntity();
             Actor.SetName(Name);
+            Actor.SetAlias(Str32::Print<"Region ({0:4X}.{1:4X})">(RegionX, RegionY));
             Actor.Emplace<Transform>(Matrix3x2::Identity(), IntVector2(RegionX * Region::kTilesPerX, RegionY * Region::kTilesPerY));
 
             const auto OnResult = [this, Handle = Actor.GetID(), RegionX, RegionY, CreateIfMissing](Filesystem::Result Result, Blob File)

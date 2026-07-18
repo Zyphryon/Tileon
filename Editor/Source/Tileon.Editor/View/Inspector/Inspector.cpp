@@ -22,7 +22,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Inspector::Inspector(Ref<Context> Context)
-        : Activity   { Context, "Inspector" },
+        : Activity   { Context, "Inspector", true },
           mAssembler { Context }
     {
     }
@@ -82,10 +82,7 @@ namespace Tileon::Editor::View
 
         Composer.Field("Name");
         Composer.SetNextItemWidth(-1.0f);
-        Composer.InputText("##entity_name", Actor.GetName(), [&](Text Value)
-        {
-            Actor.SetName(Value);
-        });
+        Composer.Label(Actor.GetName());
         Composer.Spacing();
 
         Composer.Field("Alias");

@@ -68,7 +68,7 @@ namespace Tileon
         Scene.GetComponent<Anchor>("Anchor").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Bound>("Bound");
         Scene.GetComponent<Extent>("Extent").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Bound>();
-        Scene.GetComponent<Velocity>("Velocity").With<Dynamic>();
+        Scene.GetComponent<Velocity>("Velocity").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Dynamic>();
         Scene.GetComponent<Region>("Region").Grant(Scene::Trait::Serializable);
 
         // Observe changes to the pivot component and mark entities as stale if they are not kinetic.
@@ -105,7 +105,7 @@ namespace Tileon
         Scene.CreateSystem<Scene::DSL::In<Pose>, Kinetic>(
             "World::RegionMigration",
             EcsPreUpdate,
-            Scene::Execution::Concurrent,
+            Scene::Execution::Immediate,
             [this](Scene::Entity Actor, Ref<Pose> Pose)
             {
                 ConstPtr<Region> Region = nullptr;

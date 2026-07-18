@@ -46,7 +46,10 @@ namespace Tileon::Editor::View
             DrawToolbar(Composer);
             Composer.EndChild();
 
+            Composer.PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
             Composer.BeginChild("##viewport", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
+            Composer.PopStyleColor();
+
             DrawViewport(Composer);
             Composer.EndChild();
         }
@@ -370,6 +373,7 @@ namespace Tileon::Editor::View
                     if (Composer.IsKeyPressed(ImGuiKey_Delete))
                     {
                         Actor.Add<Dispose>();
+                        Actor.Add<Persist>();
                     }
                 }
             }
