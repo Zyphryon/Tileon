@@ -84,26 +84,26 @@ namespace Tileon::Editor::View
             Flags |= ImGuiTreeNodeFlags_Selected;
         }
 
+        // A prefab part is nested under another world entity; regions sit at the top and everything directly beneath
+        // one is an independently-placed instance.
+        const Scene::Entity Parent = Actor.GetParent();
+        const Text          Icon   = Actor.Has<Region>()
+            ? ICON_FA_MAP
+            : (Parent.IsValid() && !Parent.Has<Region>() ? ICON_FA_PUZZLE_PIECE : ICON_FA_CUBE);
+
         String<128> Label;
 
         if (const Text Display = Actor.GetAlias(); !Display.IsEmpty())
         {
-            if (Actor.Has<Region>())
-            {
-                Label = String<128>::Print<"{0}  {1}###{2:016X}">(ICON_FA_MAP, Display, Actor.GetID());
-            }
-            else
-            {
-                Label = String<128>::Print<"{0}  {1}###{2:016X}">(ICON_FA_CUBE, Display, Actor.GetID());
-            }
+            Label = String<128>::Print<"{0}  {1}###{2:016X}">(Icon, Display, Actor.GetID());
         }
         else if (const Scene::Entity Archetype = Actor.GetArchetype(); Archetype.IsValid())
         {
-            Label = String<128>::Print<"{0}  {1}###{2:016X}">(ICON_FA_CUBE, Archetype.GetAlias(), Actor.GetID());
+            Label = String<128>::Print<"{0}  {1}###{2:016X}">(Icon, Archetype.GetAlias(), Actor.GetID());
         }
         else
         {
-            Label = String<128>::Print<"{0}  Entity {1:016X}###{2:016X}">(ICON_FA_CUBE, Actor.GetID(), Actor.GetID());
+            Label = String<128>::Print<"{0}  Entity {1:016X}###{2:016X}">(Icon, Actor.GetID(), Actor.GetID());
         }
 
         const Bool Open = Composer.TreeNode(Label, Flags);

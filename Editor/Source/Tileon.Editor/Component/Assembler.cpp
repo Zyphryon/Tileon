@@ -42,10 +42,12 @@ namespace Tileon::Editor
         mAction  = Action::None;
         mSubject = Scene::Entity();
 
+        // TODO: Remove ECS_IS_VALUE_PAIR (temporally fix until flecs fix it)
+        //
         // Draw the components the entity owns.
         Actor.Each([&](Scene::Entity Component)
         {
-            if (!Component.IsPair() && IsAuthorable(Actor, Component))
+            if (!Component.IsPair() && !ECS_IS_VALUE_PAIR(Component.GetID()) && IsAuthorable(Actor, Component))
             {
                 DrawComponent(Composer, Actor, Component, false);
             }
@@ -56,7 +58,7 @@ namespace Tileon::Editor
         {
             Archetype.Each([&](Scene::Entity Component)
             {
-                if (!Component.IsPair() && IsAuthorable(Actor, Component) && !Actor.GetHandle().owns(Component.GetID()))
+                if (!Component.IsPair() && !ECS_IS_VALUE_PAIR(Component.GetID()) && IsAuthorable(Actor, Component) && !Actor.Owns(Component.GetID()))
                 {
                     DrawComponent(Composer, Actor, Component, true);
                 }

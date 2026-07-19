@@ -143,6 +143,12 @@ namespace Tileon::Editor::View
         mEntities.Begin(Composer);
         mRepository.ForEachArchetype([&](Scene::Entity Archetype)
         {
+            // Only root archetypes are placeable.
+            if (Archetype.GetParent(Scene::Hierarchy::Fixed).IsValid())
+            {
+                return;
+            }
+
             const UInt32 ID = static_cast<UInt32>(Archetype.GetID() - Scene::kMinRangeArchetypes);
 
             Graphic::Object Thumbnail = 0;

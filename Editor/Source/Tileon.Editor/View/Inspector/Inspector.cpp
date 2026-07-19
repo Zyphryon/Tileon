@@ -110,6 +110,13 @@ namespace Tileon::Editor::View
 
     void Inspector::DrawBody(Ref<UI::Composer> Composer, Scene::Entity Actor)
     {
+        // Make the override-only nature explicit: a part's structure belongs to its archetype, not this instance.
+        if (Actor.GetParent(Scene::Hierarchy::Fixed).IsValid())
+        {
+            Composer.TextDisabled(ICON_FA_PUZZLE_PIECE "  Prefab part: structure is defined by its archetype");
+            Composer.Spacing();
+        }
+
         Composer.Section("Components");
 
         mAssembler.Draw(Composer, Actor);
@@ -127,12 +134,20 @@ namespace Tileon::Editor::View
 
         Composer.SameLine();
 
-        if (Composer.Button(ICON_FA_TRASH "  Destroy"))
+        // A prefab part is owned by its archetype and a region owns its own load/unload lifecycle, so neither may
+        // be destroyed from here; only an independently-placed instance can be removed.
+        const Bool Destroyable = !Actor.GetParent(Scene::Hierarchy::Fixed).IsValid() && !Actor.Has<Region>();
+
+        Composer.BeginDisabled(!Destroyable);
+
+        if (Composer.Button(ICON_FA_TRASH "  Destroy") && Destroyable)
         {
             Actor.Add<Dispose>();
 
             GetContext().SetInteger("Selection.Entity", 0);
         }
+
+        Composer.EndDisabled();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

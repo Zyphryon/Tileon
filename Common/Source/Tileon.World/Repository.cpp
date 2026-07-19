@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Repository.hpp"
+#include "Component/State/Lifecycle.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -69,7 +70,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Scene::Entity Repository::CreateArchetype()
+    Scene::Archetype Repository::CreateArchetype()
     {
         return GetService<Scene::Service>().CreateArchetype();
     }
@@ -77,9 +78,17 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Repository::DeleteArchetype(Scene::Entity Archetype)
+    void Repository::DeleteArchetype(Scene::Archetype Archetype)
     {
-        ZY_ASSERT(Archetype.IsArchetype(), "Must be an archetype.");
+        ZY_ASSERT(Archetype.IsValid(), "Must be a valid archetype.");
+
+        GetService<Scene::Service>().Defer([Archetype]
+        {
+            Archetype.Children([](Scene::Entity Instance)
+            {
+                Instance.Add<Dispose>();
+            });
+        });
         Archetype.Destruct();
     }
 

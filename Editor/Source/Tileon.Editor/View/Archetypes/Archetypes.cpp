@@ -21,9 +21,9 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    static Bool IsAncestor(Scene::Entity Node, Scene::Entity Candidate)
+    static Bool IsAncestor(Scene::Archetype Node, Scene::Archetype Candidate)
     {
-        for (Scene::Entity Walk = Node.GetParent(); Walk.IsValid(); Walk = Walk.GetParent())
+        for (Scene::Archetype Walk = Node.GetParent(); Walk.IsValid(); Walk = Walk.GetParent())
         {
             if (Walk == Candidate)
             {
@@ -36,9 +36,9 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    static Bool IsInheritedFrom(Scene::Entity Node, Scene::Entity Candidate)
+    static Bool IsInheritedFrom(Scene::Archetype Node, Scene::Archetype Candidate)
     {
-        for (Scene::Entity Walk = Node.GetArchetype(); Walk.IsValid(); Walk = Walk.GetArchetype())
+        for (Scene::Archetype Walk = Node.GetArchetype(); Walk.IsValid(); Walk = Walk.GetArchetype())
         {
             if (Walk == Candidate)
             {
@@ -106,20 +106,28 @@ namespace Tileon::Editor::View
     {
         if (Composer.Button(ICON_FA_PLUS "  Archetype", -1.0f))
         {
-            CreateArchetype(Scene::Entity());
+            CreateArchetype(Scene::Archetype());
         }
 
         Composer.Separator();
         Composer.BeginChild("##list_scroll");
 
-        // Draw the forest rooted at every archetype that has no parent; children are visited recursively.
-        mRepository.ForEachArchetype([&](Scene::Entity Archetype)
+        // Group every archetype under its parent in a single pass for O(N) walk of cached lists instead of the O(N^2)
+        mAdjacency.Clear();
+
+        mRepository.ForEachArchetype([&](Scene::Archetype Archetype)
         {
-            if (!Archetype.GetParent().IsValid())
-            {
-                DrawArchetypeNode(Composer, Archetype);
-            }
+            mAdjacency.FindOrInsert(Archetype.GetParent().GetID()).Append(Archetype);
         });
+
+        // Draw the forest rooted at every archetype that has no parent; children are visited recursively.
+        if (const ConstPtr<Sequence<Scene::Archetype>> Roots = mAdjacency.Find<UInt64>(0))
+        {
+            for (const Scene::Archetype Root : * Roots)
+            {
+                DrawArchetypeNode(Composer, Root);
+            }
+        }
 
         Composer.EndChild();
     }
@@ -127,15 +135,11 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Archetypes::DrawArchetypeNode(Ref<UI::Composer> Composer, Scene::Entity Archetype)
+    void Archetypes::DrawArchetypeNode(Ref<UI::Composer> Composer, Scene::Archetype Archetype)
     {
-        // Detect children up-front so leaves render without an expander arrow.
-        Bool HasChildren = false;
-
-        mRepository.ForEachArchetype([&](Scene::Entity Other)
-        {
-            HasChildren |= (Other.GetParent() == Archetype);
-        });
+        // Resolve children from the pre-built adjacency so leaves render without an expander arrow.
+        const ConstPtr<Sequence<Scene::Archetype>> Children    = mAdjacency.Find(Archetype.GetID());
+        const Bool                                 HasChildren = (Children && !Children->IsEmpty());
 
         const Bool Selected = (mSelection == Archetype);
 
@@ -166,7 +170,7 @@ namespace Tileon::Editor::View
         // Bring a freshly created archetype into view once, then clear the request so manual scrolling is left alone.
         if (mScroll == Archetype)
         {
-            mScroll = Scene::Entity();
+            mScroll = Scene::Archetype();
             Composer.SetScrollHereY(0.5f);
         }
 
@@ -183,15 +187,15 @@ namespace Tileon::Editor::View
         {
             if (const ConstPtr<ImGuiPayload> Data = ImGui::AcceptDragDropPayload("ARCHETYPE_NODE"))
             {
-                const Scene::Entity Source = mRepository.GetArchetype(* static_cast<ConstPtr<UInt64>>(Data->Data));
+                const Scene::Archetype Source = mRepository.GetArchetype(* static_cast<ConstPtr<UInt64>>(Data->Data));
 
                 // Reject no-ops and any move that would place an archetype under one of its own descendants.
                 if (Source.IsValid() && Source != Archetype && Source.GetParent() != Archetype && !IsAncestor(Archetype, Source))
                 {
-                    Source.Attach(Archetype, Scene::Hierarchy::Open);
+                    Archetype.Attach(Source);
                 }
             }
-            ImGui::EndDragDropTarget(); 
+            ImGui::EndDragDropTarget();
         }
 
         if (Composer.BeginPopupContextItem())
@@ -203,9 +207,9 @@ namespace Tileon::Editor::View
 
             Composer.Separator();
 
-            if (Composer.MenuItem("Detach from Parent", {}, Archetype.GetParent().IsValid()))
+            if (Composer.MenuItem("Detach from Parent", { }, Archetype.GetParent().IsValid()))
             {
-                Archetype.Detach();
+                Archetype.Detach(mSelection);
             }
 
             if (Composer.MenuItem("Delete"))
@@ -217,13 +221,10 @@ namespace Tileon::Editor::View
 
         if (Open && HasChildren)
         {
-            mRepository.ForEachArchetype([&](Scene::Entity Other)
+            for (const Scene::Archetype Child : * Children)
             {
-                if (Other.GetParent() == Archetype)
-                {
-                    DrawArchetypeNode(Composer, Other);
-                }
-            });
+                DrawArchetypeNode(Composer, Child);
+            }
 
             Composer.TreePop();
         }
@@ -259,16 +260,16 @@ namespace Tileon::Editor::View
         Composer.Field("Archetype");
         Composer.SetNextItemWidth(-1.0f);
 
-        const Scene::Entity Base = mSelection.GetArchetype();
+        const Scene::Archetype Base = mSelection.GetArchetype();
 
         if (Composer.BeginCombo("##archetype_base", Base.IsValid() ? Base.GetAlias() : "None"_Text))
         {
             if (Composer.Selectable("None", !Base.IsValid()))
             {
-                mSelection.SetArchetype(Scene::Entity());
+                mSelection.GetEntity().SetArchetype(Scene::Entity());
             }
 
-            mRepository.ForEachArchetype([&](Scene::Entity Candidate)
+            mRepository.ForEachArchetype([&](Scene::Archetype Candidate)
             {
                 // Exclude self and anything that already inherits from the selection, which would form a cycle.
                 if (Candidate == mSelection || IsInheritedFrom(Candidate, mSelection))
@@ -280,7 +281,7 @@ namespace Tileon::Editor::View
 
                 if (Composer.Selectable(Label, Candidate == Base))
                 {
-                    mSelection.SetArchetype(Candidate);
+                    mSelection.GetEntity().SetArchetype(Candidate.GetEntity());
                 }
             });
 
@@ -292,14 +293,14 @@ namespace Tileon::Editor::View
 
         Composer.Field("Parent");
 
-        if (const Scene::Entity Parent = mSelection.GetParent(); Parent.IsValid())
+        if (const Scene::Archetype Parent = mSelection.GetParent(); Parent.IsValid())
         {
             Composer.Label(Parent.GetAlias());
             Composer.Spacing();
 
             if (Composer.Button(ICON_FA_LINK_SLASH "  Detach", -1.0f))
             {
-                mSelection.Detach();
+                Parent.Detach(mSelection);
             }
         }
         else
@@ -310,7 +311,7 @@ namespace Tileon::Editor::View
 
         Composer.Section("Components");
 
-        mAssembler.Draw(Composer, mSelection);
+        mAssembler.Draw(Composer, mSelection.GetEntity());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -318,11 +319,12 @@ namespace Tileon::Editor::View
 
     void Archetypes::DrawPreviewPanel(Ref<UI::Composer> Composer)
     {
-        const ConstPtr<Appearance> Visual = mSelection.TryGet<const Appearance>();
+        const Scene::Entity        Actor  = mSelection.GetEntity();
+        const ConstPtr<Appearance> Visual = Actor.TryGet<const Appearance>();
 
         if (!Visual)
         {
-            DrawEmptyPanel(Composer, mSelection.Has<Typeface>()
+            DrawEmptyPanel(Composer, Actor.Has<Typeface>()
                 ? "Text preview unavailable"_Text
                 : "This archetype has nothing to preview"_Text);
             return;
@@ -351,7 +353,7 @@ namespace Tileon::Editor::View
                     const Rect    Source = Visual->GetSource();
                     const Vector2 Size(Source.GetWidth() * Albedo->GetWidth(), Source.GetHeight() * Albedo->GetHeight());
 
-                    const ConstPtr<IntColor8> Tint = mSelection.TryGet<const IntColor8>();
+                    const ConstPtr<IntColor8> Tint = Actor.TryGet<const IntColor8>();
 
                     mPreviewer.Draw(Composer, Albedo->GetHandle(), Size, Source, Tint ? Color::FromColor8(* Tint) : Color::White());
 
@@ -432,15 +434,15 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Archetypes::CreateArchetype(Scene::Entity Parent)
+    void Archetypes::CreateArchetype(Scene::Archetype Parent)
     {
-        if (const Scene::Entity Archetype = mRepository.CreateArchetype(); Archetype.IsValid())
+        if (const Scene::Archetype Archetype = mRepository.CreateArchetype(); Archetype.IsValid())
         {
             Archetype.SetAlias(Str32::Print<"Archetype.{0}">(Archetype.GetID() - Scene::kMinRangeArchetypes));
 
             if (Parent.IsValid())
             {
-                Archetype.Attach(Parent, Scene::Hierarchy::Open);
+                Parent.Attach(Archetype);
             }
 
             mSelection = Archetype;
@@ -452,11 +454,11 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Archetypes::DeleteArchetype(Scene::Entity Archetype)
+    void Archetypes::DeleteArchetype(Scene::Archetype Archetype)
     {
         if (mSelection == Archetype)
         {
-            mSelection = Scene::Entity();
+            mSelection = Scene::Archetype();
 
             mPreviewer.Reset();
         }

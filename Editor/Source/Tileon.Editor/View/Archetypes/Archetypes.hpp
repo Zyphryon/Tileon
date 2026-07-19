@@ -47,7 +47,7 @@ namespace Tileon::Editor::View
         ///
         /// \param Composer  The UI composer used to render the node.
         /// \param Archetype The archetype entity to draw.
-        void DrawArchetypeNode(Ref<UI::Composer> Composer, Scene::Entity Archetype);
+        void DrawArchetypeNode(Ref<UI::Composer> Composer, Scene::Archetype Archetype);
 
         /// \brief Draws the details panel of the archetypes interface.
         ///
@@ -73,27 +73,28 @@ namespace Tileon::Editor::View
         /// \brief Creates a new archetype, optionally parented under another, and selects it.
         ///
         /// \param Parent The archetype to parent the new one under, or an invalid entity for a root archetype.
-        void CreateArchetype(Scene::Entity Parent);
+        void CreateArchetype(Scene::Archetype Parent);
 
         /// \brief Deletes an archetype, clearing the selection first if it is the one being removed.
         ///
         /// \param Archetype The archetype to delete.
-        void DeleteArchetype(Scene::Entity Archetype);
+        void DeleteArchetype(Scene::Archetype Archetype);
 
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Ref<Repository>             mRepository;
-        Assembler                   mAssembler;
+        Ref<Repository>                           mRepository;
+        Assembler                                 mAssembler;
+        Table<UInt64, Sequence<Scene::Archetype>> mAdjacency;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        UI::Previewer               mPreviewer;
-        Scene::Entity               mSelection;
-        Scene::Entity               mScroll;
+        UI::Previewer                             mPreviewer;
+        Scene::Archetype                          mSelection;
+        Scene::Archetype                          mScroll;
     };
 }
 

@@ -90,6 +90,10 @@ namespace Tileon::Editor
 
     Bool Gizmo::Draw(Ref<UI::Composer> Composer, Scene::Entity Actor, ImVec2 Origin, ImVec2 Size)
     {
+        // Always manipulate the group as a whole: whether the selection is the instance root or one of its parts,
+        // transform the root, whose Pose cascades down to every part through World::ComputeWorldspace.
+        Actor = Actor.IsValid() ? Scene::Entity::ResolveRecursively(Actor, Scene::Hierarchy::Fixed) : Actor;
+
         if (!Actor.IsValid() || !Actor.Has<Pose>())
         {
             mHandle = Handle::None;

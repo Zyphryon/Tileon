@@ -268,8 +268,9 @@ namespace Tileon::Editor
 
     void Workshop::RemoveEntity(Placement Placement)
     {
-        if (const Scene::Entity Instance = PickEntity(Placement); Instance.IsValid())
+        if (Scene::Entity Instance = PickEntity(Placement); Instance.IsValid())
         {
+            Instance = Scene::Entity::ResolveRecursively(Instance, Scene::Hierarchy::Fixed);
             Instance.Add<Dispose>();
 
             if (const Scene::Entity Actor = Instance.GetParent(); Actor.IsValid())
@@ -284,8 +285,13 @@ namespace Tileon::Editor
 
     void Workshop::SelectEntity(Placement Placement)
     {
-        const Scene::Entity Instance = PickEntity(Placement);
-        mContext.SetInteger("Selection.Entity", Instance.IsValid() ? Instance.GetID() : 0);
+        Scene::Entity Instance = PickEntity(Placement);
+
+        if (Instance.IsValid())
+        {
+            Instance = Scene::Entity::ResolveRecursively(Instance, Scene::Hierarchy::Fixed);
+        }
+        mContext.SetInteger("Selection.Entity", Instance.GetID());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

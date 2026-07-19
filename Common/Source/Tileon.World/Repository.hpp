@@ -57,13 +57,13 @@ namespace Tileon
 
         /// \brief Creates a new entity archetype in the repository.
         ///
-        /// \return The archetype entity that was created.
-        Scene::Entity CreateArchetype();
+        /// \return The archetype that was created.
+        Scene::Archetype CreateArchetype();
 
         /// \brief Deletes an entity archetype from the repository.
         ///
-        /// \param Archetype The archetype entity to delete from the repository.
-        void DeleteArchetype(Scene::Entity Archetype);
+        /// \param Archetype The archetype to delete.
+        void DeleteArchetype(Scene::Archetype Archetype);
 
         /// \brief Gets an entity archetype by its unique identifier.
         ///

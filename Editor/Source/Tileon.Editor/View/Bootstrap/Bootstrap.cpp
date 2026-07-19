@@ -315,10 +315,10 @@ namespace Tileon::Editor::View
 
         if (Filesystem::CopyAll(Source, Path) == Filesystem::Result::Success)
         {
-            Filesystem::Make(Path + Filesystem::Path("Data"));
-            Filesystem::Make(Path + Filesystem::Path("Font"));
-            Filesystem::Make(Path + Filesystem::Path("Material"));
-            Filesystem::Make(Path + Filesystem::Path("World"));
+            Filesystem::Make(Path + Filesystem::Path("/Data"));
+            Filesystem::Make(Path + Filesystem::Path("/Font"));
+            Filesystem::Make(Path + Filesystem::Path("/Material"));
+            Filesystem::Make(Path + Filesystem::Path("/World"));
             return true;
         }
         return false;

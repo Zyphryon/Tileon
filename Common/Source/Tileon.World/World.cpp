@@ -65,12 +65,21 @@ namespace Tileon
         Scene.GetComponent<Dynamic>("Dynamic");
         Scene.GetComponent<Unpickable>("Unpickable");
         Scene.GetComponent<Transform>("Transform");
-        Scene.GetComponent<Pose>("Pose").With<Transform>().Grant(Scene::Trait::Serializable);
+        Scene.GetComponent<Pose>("Pose").With<Transform>().Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Anchor>("Anchor").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Bound>("Bound");
         Scene.GetComponent<Extent>("Extent").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Bound>();
         Scene.GetComponent<Velocity>("Velocity").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Dynamic>();
         Scene.GetComponent<Region>("Region").Grant(Scene::Trait::Serializable);
+
+        // Observe changes to the local transform and mark entities as stale if they are not kinetic.
+        Scene.CreateObserver<Scene::DSL::With<Pose>, Scene::DSL::Not<Dynamic>>(
+            "World::OnSetPoseMarkDirty",
+            EcsOnSet,
+            [](Scene::Entity Actor)
+            {
+                Actor.Add<Stale>();
+            });
 
         // Observe changes to the pivot component and mark entities as stale if they are not kinetic.
         Scene.CreateObserver<Scene::DSL::With<Anchor>, Scene::DSL::Not<Dynamic>>(
