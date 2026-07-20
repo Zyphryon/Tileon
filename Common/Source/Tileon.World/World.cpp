@@ -188,6 +188,15 @@ namespace Tileon
                 }
             });
 
+        // System to introduce a sync point. TODO: Find a better way?
+        Scene.CreateSystem<>(
+            "World::SyncComputeWorldspace",
+            EcsOnUpdate,
+            Scene::Execution::Immediate,
+            []
+            {
+            });
+
         // System that computes world-space volumes from local-space volumes and updates spatial partitioning.
         Scene.CreateSystem<Scene::DSL::In<const Transform, const Extent, Bound>, Kinetic>(
             "World::ComputeHierarchy",
