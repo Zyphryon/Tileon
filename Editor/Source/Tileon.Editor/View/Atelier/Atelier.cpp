@@ -87,7 +87,6 @@ namespace Tileon::Editor::View
         }
         Composer.SameLine();
 
-
         // Draw common toolbar elements that are always visible.
         if (Composer.Button(ICON_FA_MAGNIFYING_GLASS_PLUS "##zoom_in", 32.0f))
         {
@@ -207,6 +206,8 @@ namespace Tileon::Editor::View
                 if (Composer.Selectable(Enum::GetName(Type), Selected))
                 {
                     mTarget = Type;
+
+                    GetContext().GetRenderer().SetOutput(Type);
                 }
 
                 if (Selected)

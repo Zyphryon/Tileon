@@ -95,6 +95,11 @@ namespace Tileon
             return mRenderer.GetTarget(Enum::Cast(Type)).GetTexture();
         }
 
+        /// \brief Restricts the pipeline to the phases required to produce the specified target.
+        ///
+        /// \param Type The target the pipeline must produce, every phase past its producer is skipped.
+        void SetOutput(Target Type);
+
         /// \brief Changes the state of a specific diagnostic overlay.
         ///
         /// \param Mask   The overlay to set or clear.
@@ -133,5 +138,7 @@ namespace Tileon
 
         Render::Renderer mRenderer;
         Tileset          mTileset;
+        Target           mOutput;
+        Bool             mImmediate;
     };
 }

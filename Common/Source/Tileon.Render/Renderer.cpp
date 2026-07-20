@@ -26,9 +26,11 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Renderer::Renderer(Ref<Engine::Subsystem::Host> Host, Bool Immediate)
-        : Locator   { Host },
-          mRenderer { Host },
-          mTileset  { Host }
+        : Locator    { Host },
+          mRenderer  { Host },
+          mTileset   { Host },
+          mOutput    { Target::Final },
+          mImmediate { Immediate }
     {
         OnCreate(Host, Immediate);
         OnRegister(* Host.GetService<Scene::Service>());
@@ -75,6 +77,35 @@ namespace Tileon
         mRenderer.GetPass<Stage::Debug>(Enum::Cast(Phase::Debug)).SetDirector(Director);
 
         mRenderer.Run(Global.GetStream());
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Renderer::SetOutput(Target Type)
+    {
+        Phase Producer;
+
+        // Find the phase that writes the requested target, everything after it is skipped.
+        switch (Type)
+        {
+        case Target::Albedo:
+        case Target::Normal:
+        case Target::Depth:
+            Producer = Phase::Geometry;
+            break;
+        case Target::Radiance:
+            Producer = Phase::Light;
+            break;
+        default:
+            Producer = Phase::Debug;
+            break;
+        }
+
+        for (const Phase Stage : Enum::GetValues<Phase>())
+        {
+            mRenderer.GetPass(Enum::Cast(Stage)).SetActive(Enum::Cast(Stage) <= Enum::Cast(Producer));
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
