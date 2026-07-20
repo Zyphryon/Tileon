@@ -128,7 +128,7 @@ namespace Tileon::Editor
 
         if (mPreview.GetParent() != Actor)
         {
-            mPreview.Attach(Actor, Scene::Hierarchy::Fixed);
+            mPreview.Attach(Actor, Scene::Hierarchy::Open);
         }
 
         // Only the translation tracks the cursor; the scale and rotation the user dialed in stay untouched.
@@ -247,7 +247,7 @@ namespace Tileon::Editor
         Instance.Add<Stale>();
         Instance.Add<Persist>();
 
-        Scene::Entity::RemoveRecursively<Unpickable>(mPreview);
+        Scene::Entity::RemoveRecursively<Unpickable>(Instance);
 
         // Mark the region as dirty so it gets saved and reloaded with the placed entity.
         Actor.Add<Persist>();
