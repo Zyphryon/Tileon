@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Hierarchy.hpp"
+#include "Tileon.World/Component/State/Lifecycle.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -54,6 +55,12 @@ namespace Tileon::Editor::View
                 DrawEmptyPanel(Composer, "No regions are currently loaded");
             }
             Composer.EndChild();
+
+            // Pressing Delete removes the selected entity.
+            if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && Composer.IsKeyPressed(ImGuiKey_Delete))
+            {
+                DeleteSelection();
+            }
         }
         Composer.End();
     }
@@ -86,10 +93,9 @@ namespace Tileon::Editor::View
 
         // A prefab part is nested under another world entity; regions sit at the top and everything directly beneath
         // one is an independently-placed instance.
-        const Scene::Entity Parent = Actor.GetParent();
-        const Text          Icon   = Actor.Has<Region>()
+        const Text Icon = Actor.Has<Region>()
             ? ICON_FA_MAP
-            : (Parent.IsValid() && !Parent.Has<Region>() ? ICON_FA_PUZZLE_PIECE : ICON_FA_CUBE);
+            : (Actor.GetParent(Scene::Hierarchy::Fixed).IsValid() ? ICON_FA_PUZZLE_PIECE : ICON_FA_CUBE);
 
         String<128> Label;
 
@@ -116,10 +122,19 @@ namespace Tileon::Editor::View
 
         if (Composer.BeginPopupContextItem())
         {
-            Composer.InputText("##rename", Actor.GetAlias(), [Actor](Text Value)
+            // A prefab part's identity is defined by its archetype, so it may not be renamed here; only
+            // regions and independently-placed instances carry their own editable alias.
+            if (Actor.GetParent(Scene::Hierarchy::Fixed).IsValid())
             {
-                Actor.SetAlias(Value);
-            });
+                Composer.TextDisabled("Prefab part: name defined by its archetype");
+            }
+            else
+            {
+                Composer.InputText("##rename", Actor.GetAlias(), [Actor](Text Value)
+                {
+                    Actor.SetAlias(Value);
+                });
+            }
             Composer.EndPopup();
         }
 
@@ -131,6 +146,33 @@ namespace Tileon::Editor::View
             }
             Composer.TreePop();
         }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Hierarchy::DeleteSelection()
+    {
+        Ref<Context>  Context = GetContext();
+        Scene::Entity Actor   = Context.GetScene().GetEntity(Context.GetInteger("Selection.Entity", 0));
+
+        // Regions own their own load/unload lifecycle and must never be deleted from the tree.
+        if (!Actor.IsValid() || Actor.Has<Region>())
+        {
+            return;
+        }
+
+        // Resolve to the instance root so deleting a prefab part removes the whole placed instance, matching
+        // the viewport's delete behaviour and never leaving a structurally-locked part orphaned.
+        Actor = Scene::Entity::ResolveRecursively(Actor, Scene::Hierarchy::Fixed);
+
+        if (const Scene::Entity Region = Actor.GetParent(); Region.IsValid())
+        {
+            Region.Add<Persist>();
+        }
+
+        Actor.Add<Dispose>();
+        Context.SetInteger("Selection.Entity", 0);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

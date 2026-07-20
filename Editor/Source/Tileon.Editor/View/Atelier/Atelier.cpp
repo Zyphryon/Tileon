@@ -74,6 +74,7 @@ namespace Tileon::Editor::View
                 mWorkshop.SetBrush(Workshop::Brush::Pencil);
                 mWorkshop.SetMode(Workshop::Mode::Entity);
             }
+            Composer.Tooltip("Switch to entity mode");
             break;
         case Workshop::Mode::Entity:
             if (Composer.Button(ICON_FA_CUBE "##mode", 32.0f))
@@ -81,6 +82,7 @@ namespace Tileon::Editor::View
                 mWorkshop.SetBrush(Workshop::Brush::Pencil);
                 mWorkshop.SetMode(Workshop::Mode::Tile);
             }
+            Composer.Tooltip("Switch to tile mode");
             break;
         }
         Composer.SameLine();
@@ -92,6 +94,7 @@ namespace Tileon::Editor::View
             const Real32 Current = GetContext().GetDirector().GetZoom();
             GetContext().GetDirector().SetZoom(Current * 0.9f);
         }
+        Composer.Tooltip("Zoom in");
         Composer.SameLine();
 
         if (Composer.Button(ICON_FA_MAGNIFYING_GLASS_MINUS "##zoom_out", 32.0f))
@@ -99,12 +102,14 @@ namespace Tileon::Editor::View
             const Real32 Current = GetContext().GetDirector().GetZoom();
             GetContext().GetDirector().SetZoom(Current * 1.1f);
         }
+        Composer.Tooltip("Zoom out");
         Composer.SameLine();
 
         if (Composer.Button(ICON_FA_HOUSE "##reset_view", 32.0f))
         {
             GetContext().GetDirector().SetZoom(1.0f);
         }
+        Composer.Tooltip("Reset zoom");
         Composer.SameLine();
 
         // Camera position read-out that doubles as a "go to": shows the view centre in absolute world tiles and
@@ -122,12 +127,14 @@ namespace Tileon::Editor::View
             Composer.SameLine();
             Composer.SetNextItemWidth(72.0f);
             GoTo |= Composer.InputFloat("##camera_x", CameraX, 0.0f, 0.0f, "%.1f", ImGuiInputTextFlags_EnterReturnsTrue);
+            Composer.Tooltip("Camera X — press Enter to jump");
             Composer.SameLine();
 
             Composer.Label("Y");
             Composer.SameLine();
             Composer.SetNextItemWidth(72.0f);
             GoTo |= Composer.InputFloat("##camera_y", CameraY, 0.0f, 0.0f, "%.1f", ImGuiInputTextFlags_EnterReturnsTrue);
+            Composer.Tooltip("Camera Y — press Enter to jump");
             Composer.SameLine();
 
             if (GoTo)
@@ -154,10 +161,10 @@ namespace Tileon::Editor::View
         Composer.SameLine();
 
         // Draw the diagnostic overlay toggles.
-        DrawDebugButton(Composer, Renderer::Debug::Grid, ICON_FA_BORDER_ALL);
+        DrawDebugButton(Composer, Renderer::Debug::Grid, ICON_FA_BORDER_ALL, "Toggle grid overlay");
         Composer.SameLine();
 
-        DrawDebugButton(Composer, Renderer::Debug::Boundaries, ICON_FA_OBJECT_GROUP);
+        DrawDebugButton(Composer, Renderer::Debug::Boundaries, ICON_FA_OBJECT_GROUP, "Toggle boundaries overlay");
         Composer.SameLine();
 
         // Draw projection mode and frame selector combos on the far right of the toolbar.
@@ -168,7 +175,7 @@ namespace Tileon::Editor::View
 
         const Director::Mode CurrentMode = GetContext().GetDirector().GetMode();
 
-        if (Composer.BeginCombo("##mode", Enum::GetName(CurrentMode)))
+        if (Composer.BeginCombo("##projection", Enum::GetName(CurrentMode)))
         {
             for (const Director::Mode Type : Enum::GetValues<Director::Mode>())
             {
@@ -186,6 +193,7 @@ namespace Tileon::Editor::View
             }
             Composer.EndCombo();
         }
+        Composer.Tooltip("Projection mode");
 
         Composer.SameLine();
         Composer.SetNextItemWidth(96.0f);
@@ -208,6 +216,7 @@ namespace Tileon::Editor::View
             }
             Composer.EndCombo();
         }
+        Composer.Tooltip("Displayed render target");
 
         ImGui::PopStyleVar();
     }
@@ -215,7 +224,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Atelier::DrawBrushButton(Ref<UI::Composer> Composer, Workshop::Brush Brush, Text Icon)
+    void Atelier::DrawBrushButton(Ref<UI::Composer> Composer, Workshop::Brush Brush, Text Icon, Text Tooltip)
     {
         const Bool Active = (mWorkshop.GetBrush() == Brush);
 
@@ -230,6 +239,8 @@ namespace Tileon::Editor::View
             mWorkshop.SetBrush(Brush);
         }
 
+        Composer.Tooltip(Tooltip);
+
         if (Active)
         {
             Composer.PopStyleColor(2);
@@ -239,7 +250,7 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Atelier::DrawDebugButton(Ref<UI::Composer> Composer, Renderer::Debug Overlay, Text Icon)
+    void Atelier::DrawDebugButton(Ref<UI::Composer> Composer, Renderer::Debug Overlay, Text Icon, Text Tooltip)
     {
         const Bool Active = GetContext().GetRenderer().HasProperty(Overlay);
 
@@ -254,6 +265,8 @@ namespace Tileon::Editor::View
             GetContext().GetRenderer().SetProperty(Overlay, !Active);
         }
 
+        Composer.Tooltip(Tooltip);
+
         if (Active)
         {
             Composer.PopStyleColor(2);
@@ -265,23 +278,23 @@ namespace Tileon::Editor::View
 
     void Atelier::DrawTileToolbar(Ref<UI::Composer> Composer)
     {
-        DrawBrushButton(Composer, Workshop::Brush::Hand,   ICON_FA_HAND);
+        DrawBrushButton(Composer, Workshop::Brush::Hand,   ICON_FA_HAND,          "Pan the view");
         Composer.SameLine();
 
-        DrawBrushButton(Composer, Workshop::Brush::Select, ICON_FA_ARROW_POINTER);
+        DrawBrushButton(Composer, Workshop::Brush::Select, ICON_FA_ARROW_POINTER, "Select");
         Composer.SameLine();
 
-        DrawBrushButton(Composer, Workshop::Brush::Pencil, ICON_FA_BRUSH);
+        DrawBrushButton(Composer, Workshop::Brush::Pencil, ICON_FA_BRUSH,         "Paint tiles");
         Composer.SameLine();
 
-        DrawBrushButton(Composer, Workshop::Brush::Bucket, ICON_FA_FILL_DRIP);
+        DrawBrushButton(Composer, Workshop::Brush::Bucket, ICON_FA_FILL_DRIP,     "Fill the region");
         Composer.SameLine();
 
         Composer.SeparatorEx(ImGuiSeparatorFlags_Vertical);
         Composer.SameLine();
 
         // Draw the layer selection buttons for switching between layers.
-        const auto DrawLayerButton = [&](Workshop::Level Level, Text Icon)
+        const auto DrawLayerButton = [&](Workshop::Level Level, Text Icon, Text Hint)
         {
             const Bool Active = (mWorkshop.GetLevel() == Level);
 
@@ -296,6 +309,8 @@ namespace Tileon::Editor::View
                 mWorkshop.SetLevel(Level);
             }
 
+            Composer.Tooltip(Hint);
+
             if (Active)
             {
                 Composer.PopStyleColor(2);
@@ -306,10 +321,10 @@ namespace Tileon::Editor::View
         ImGui::Text(ICON_FA_LAYER_GROUP);
         Composer.SameLine();
 
-        DrawLayerButton(Workshop::Level::Base,   ICON_FA_1);
+        DrawLayerButton(Workshop::Level::Base,   ICON_FA_1, "Base layer");
         Composer.SameLine();
 
-        DrawLayerButton(Workshop::Level::Detail, ICON_FA_2);
+        DrawLayerButton(Workshop::Level::Detail, ICON_FA_2, "Detail layer");
         Composer.SameLine();
     }
 
@@ -319,13 +334,13 @@ namespace Tileon::Editor::View
     void Atelier::DrawEntityToolbar(Ref<UI::Composer> Composer)
     {
         // Entities are placed one at a time, so the area-filling bucket has no meaning here.
-        DrawBrushButton(Composer, Workshop::Brush::Hand,   ICON_FA_HAND);
+        DrawBrushButton(Composer, Workshop::Brush::Hand,   ICON_FA_HAND,          "Pan the view");
         Composer.SameLine();
 
-        DrawBrushButton(Composer, Workshop::Brush::Select, ICON_FA_ARROW_POINTER);
+        DrawBrushButton(Composer, Workshop::Brush::Select, ICON_FA_ARROW_POINTER, "Select");
         Composer.SameLine();
 
-        DrawBrushButton(Composer, Workshop::Brush::Pencil, ICON_FA_BRUSH);
+        DrawBrushButton(Composer, Workshop::Brush::Pencil, ICON_FA_BRUSH,         "Place entity");
         Composer.SameLine();
     }
 

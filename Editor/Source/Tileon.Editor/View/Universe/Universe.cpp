@@ -78,16 +78,28 @@ namespace Tileon::Editor::View
 
     void Universe::DrawComponent(Ref<UI::Composer> Composer, Scene::Entity Component)
     {
-        const ConstPtr<Descriptor> Info  = Component.TryGet<const Descriptor>();
-        const String<128>          Label = String<128>::Print<"{0}  {1}##{2}">(Info->GetIcon(), Info->GetLabel(), Component.GetID());
+        const ConstPtr<Descriptor> Info    = Component.TryGet<const Descriptor>();
+
+        // A singleton's value lives on the component entity itself, so the world "holds" it only when that
+        // entity carries its own component. Absent ones are still listed, but as an empty, addable entry.
+        const Bool                 Present = Component.Has(Component);
+        const String<128>          Label   = String<128>::Print<"{0}  {1}##{2}">(Info->GetIcon(), Info->GetLabel(), Component.GetID());
 
         const Bool Open = Composer.TreeNode(Label, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth);
 
         if (Composer.BeginPopupContextItem())
         {
-            if (Composer.MenuItem("Remove"))
+            if (Present)
             {
-                mAction  = Action::Remove;
+                if (Composer.MenuItem("Remove"))
+                {
+                    mAction  = Action::Remove;
+                    mSubject = Component;
+                }
+            }
+            else if (Composer.MenuItem("Add"))
+            {
+                mAction  = Action::Add;
                 mSubject = Component;
             }
             Composer.EndPopup();
@@ -95,7 +107,11 @@ namespace Tileon::Editor::View
 
         if (Open)
         {
-            if (Info->HasFields())
+            if (!Present)
+            {
+                Composer.TextDisabled("Not present");
+            }
+            else if (Info->HasFields())
             {
                 if (Info->Inspect(Composer, GetContext(), Component, Component.TryGet(Component)))
                 {

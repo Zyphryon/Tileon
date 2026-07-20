@@ -47,6 +47,11 @@ namespace Tileon::Editor::View
         /// \param Message  The message to display.
         void DrawEmptyPanel(Ref<UI::Composer> Composer, Text Message);
 
+        /// \brief Disposes of the currently selected entity, resolving a prefab part to its instance root.
+        ///
+        /// Regions are left untouched, as they own their own load/unload lifecycle.
+        void DeleteSelection();
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

@@ -264,6 +264,14 @@ namespace Tileon::Editor::UI
             }
         }
 
+        ZY_INLINE void Tooltip(Text Text)
+        {
+            if (!Text.IsEmpty() && IsItemHovered(ImGuiHoveredFlags_ForTooltip))
+            {
+                SetTooltip(Text);
+            }
+        }
+
         ZY_INLINE void SameLine(Real32 OffsetX = 0.0f, Real32 Spacing = -1.0f)
         {
             ImGui::SameLine(OffsetX, Spacing);
