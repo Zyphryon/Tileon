@@ -69,6 +69,9 @@ namespace Tileon::Editor::View
             Composer.EndChild();
         }
         Composer.End();
+
+        // The browser is modal, so it is drawn outside the window that hosts the fields which opened it.
+        mAssembler.DrawSelector(Composer);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

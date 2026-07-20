@@ -161,27 +161,11 @@ namespace Tileon
         /// \brief Represents a single frame in the sequence, containing a value and its duration.
         struct Frame final
         {
-            /// \brief The coordinates of the frame, representing the area of the sprite sheet to use for this frame.
+            /// The coordinates of the frame, representing the area of the sprite sheet to use for this frame.
             Rect   Data;
 
-            /// \brief The duration of the frame in seconds.
+            /// The duration of the frame in seconds.
             Real32 Duration;
-
-            /// \brief Constructs an empty frame with default values.
-            ZY_INLINE Frame()
-                : Duration { 0.0f }
-            {
-            }
-
-            /// \brief Constructs a frame with the specified value and duration.
-            ///
-            /// \param Data     The coordinates of the frame, representing the area of the sprite sheet.
-            /// \param Duration The duration of the frame in seconds.
-            ZY_INLINE Frame(Rect Data, Real32 Duration)
-                : Data     { Data },
-                  Duration { Duration }
-            {
-            }
         };
 
     private:

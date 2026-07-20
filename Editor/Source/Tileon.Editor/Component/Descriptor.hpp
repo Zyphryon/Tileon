@@ -1,4 +1,4 @@
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+ // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // Copyright (C) 2025-2026 Tileon contributors (see AUTHORS.md)
 //
 // This work is licensed under the terms of the MIT license.
@@ -25,9 +25,9 @@ namespace Tileon::Editor
     /// \tparam Type The component type to check for an `Inspect` overload.
     template<typename Type>
     concept IsInspectable = requires (
-        Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Type> Component)
+        Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Type> Component)
     {
-        Inspect(Composer, Context, Actor, Component);
+        Inspect(Composer, Workspace, Actor, Component);
     };
 
     /// \brief Type-erased inspection dispatcher for a single component type.
@@ -36,7 +36,7 @@ namespace Tileon::Editor
     public:
 
         /// \brief Signature for a component inspection handler.
-        using Handler = Bool (*)(Ref<UI::Composer>, Ref<Context>, Scene::Entity, Ptr<void>);
+        using Handler = Bool (*)(Ref<UI::Composer>, Ref<Workspace>, Scene::Entity, Ptr<void>);
 
         /// \brief Defines the kind of entity a component may be authored on.
         enum class Scope : UInt8
@@ -87,13 +87,13 @@ namespace Tileon::Editor
         /// \brief Draws the component, allowing the user to modify it.
         ///
         /// \param Composer  The UI composer used to render the fields of the component.
-        /// \param Context   The editor context, supplying the services an inspector may need.
+        /// \param Workspace The workspace being drawn in, supplying services and the view's widgets.
         /// \param Actor     The entity that owns the component instance.
         /// \param Component The raw pointer to the component instance.
         /// \return `true` if the user modified the component, `false` otherwise.
-        ZY_INLINE Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ptr<void> Component) const
+        ZY_INLINE Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ptr<void> Component) const
         {
-            return mInspector && Component ? mInspector(Composer, Context, Actor, Component) : false;
+            return mInspector && Component ? mInspector(Composer, Workspace, Actor, Component) : false;
         }
 
         /// \brief Checks whether the component carries data the user can edit.
@@ -155,14 +155,14 @@ namespace Tileon::Editor
         /// \brief Inspection handler generated for `Type` by `Create<Type>()`.
         ///
         /// \param Composer  The UI composer used to render the fields of the component.
-        /// \param Context   The editor context, supplying the services an inspector may need.
+        /// \param Workspace The workspace being drawn in, supplying services and the view's widgets.
         /// \param Actor     The entity that owns the component instance.
         /// \param Component The raw pointer to the component instance.
         /// \return `true` if the user modified the component, `false` otherwise.
         template<typename Type>
-        ZY_INLINE static Bool OnInspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ptr<void> Component)
+        ZY_INLINE static Bool OnInspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ptr<void> Component)
         {
-            return Editor::Inspect(Composer, Context, Actor, * static_cast<Ptr<Type>>(Component));
+            return Editor::Inspect(Composer, Workspace, Actor, * static_cast<Ptr<Type>>(Component));
         }
 
     private:

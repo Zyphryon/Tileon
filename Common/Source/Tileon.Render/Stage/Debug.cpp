@@ -53,7 +53,6 @@ namespace Tileon::Stage
     {
         Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
 
-
         Graphic::Transient<GpuGridLayout> Data = Graphics.AllocateTransientUniforms<GpuGridLayout>(1);
         Data[0].Camera    = mDirector->GetViewProjectionInverse();
         Data[0].Dimension = Vector2(Region::kTilesPerX, Region::kTilesPerY);

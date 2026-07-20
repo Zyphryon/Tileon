@@ -69,6 +69,7 @@ namespace Tileon::Editor::View
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         Ref<Registry> mRegistry;
+        UI::Selector  mSelector;
         Action        mAction;
         Scene::Entity mSubject;
     };

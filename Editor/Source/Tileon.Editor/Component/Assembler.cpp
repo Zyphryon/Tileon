@@ -25,6 +25,7 @@ namespace Tileon::Editor
     Assembler::Assembler(Ref<Context> Context)
         : mContext  { Context },
           mRegistry { Context.GetRegistry() },
+          mSelector { Context.GetContent() },
           mAction   { Action::None }
     {
     }
@@ -89,6 +90,9 @@ namespace Tileon::Editor
         const ConstPtr<Descriptor> Info  = Component.TryGet<const Descriptor>();
         const String<128>          Label = String<128>::Print<"{0}  {1}##{2}">(Info->GetIcon(), Info->GetLabel(), Component.GetID());
 
+        // The browser belongs to this assembler, so two views can each have one open on their own subject.
+        Workspace Workspace(mContext, mSelector);
+
         const Bool Open = Composer.TreeNode(Label, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth);
 
         if (Composer.BeginPopupContextItem())
@@ -125,7 +129,7 @@ namespace Tileon::Editor
 
                 // The values on show belong to the archetype, so it is the archetype an inspector would be editing.
                 Composer.BeginDisabled();
-                Info->Inspect(Composer, mContext, Archetype, Archetype.TryGet(Component));
+                Info->Inspect(Composer, Workspace, Archetype, Archetype.TryGet(Component));
                 Composer.EndDisabled();
 
                 if (Composer.SmallButton("Override"))
@@ -136,7 +140,7 @@ namespace Tileon::Editor
             }
             else if (Info->HasFields())
             {
-                if (Info->Inspect(Composer, mContext, Actor, Actor.TryGet(Component)))
+                if (Info->Inspect(Composer, Workspace, Actor, Actor.TryGet(Component)))
                 {
                     Actor.Notify(Component);
                 }

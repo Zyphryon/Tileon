@@ -66,7 +66,7 @@ namespace Tileon
         /// \param Sequence The sequence to advance the animator with, providing frame count and duration.
         void Advance(Real64 Time, ConstRef<Animation> Sequence);
 
-        /// \brief Sets the currtent timestamp of the animator.
+        /// \brief Sets the current timestamp of the animator.
         ///
         /// \param Timestamp The new timestamp value.
         ZY_INLINE void SetTimestamp(Real64 Timestamp)

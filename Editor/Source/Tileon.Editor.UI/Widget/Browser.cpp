@@ -51,6 +51,8 @@ namespace Tileon::Editor::UI
 
         if (mMode == Mode::Popup)
         {
+            Composer.PushID(this);
+
             if (mOpen)
             {
                 Composer.OpenPopup("##browser_modal");
@@ -64,6 +66,8 @@ namespace Tileon::Editor::UI
 
                 Composer.EndPopup();
             }
+
+            Composer.PopID();
         }
         else
         {

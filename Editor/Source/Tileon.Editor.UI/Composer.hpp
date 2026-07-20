@@ -156,6 +156,11 @@ namespace Tileon::Editor::UI
             ImGui::PushID(ID);
         }
 
+        ZY_INLINE void PushID(ConstPtr<void> ID)
+        {
+            ImGui::PushID(ID);
+        }
+
         ZY_INLINE void PopID()
         {
             ImGui::PopID();
@@ -440,6 +445,11 @@ namespace Tileon::Editor::UI
         ZY_INLINE void EndDisabled()
         {
             ImGui::EndDisabled();
+        }
+
+        ZY_INLINE Bool IsDisabled() const
+        {
+            return (ImGui::GetCurrentContext()->CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
         }
 
         ZY_INLINE void Header(Text Label)

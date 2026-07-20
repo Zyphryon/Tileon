@@ -242,12 +242,37 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     template<typename Callback>
-    static void InspectPath(Ref<UI::Composer> Composer, Text Label, Text Value, AnyRef<Callback> Action)
+    static void InspectAsset(
+        Ref<UI::Composer>      Composer,
+        Ref<Workspace>         Workspace,
+        Scene::Entity          Actor,
+        Text                   Label,
+        Text                   Filter,
+        ConstRef<Content::Uri> Value,
+        AnyRef<Callback>       Action)
     {
-        // TODO: Swap the raw path field for the asset browser once it can be embedded as a picker.
+        Ref<UI::Selector> Selector = Workspace.Selector;
+
+        const UInt64 Key = Composer.IsDisabled() ? 0 : HashCombine(Actor.GetID(), Label);
+
+        if (Str Selection; Selector.Consume(Key, Selection))
+        {
+            Action(Content::Uri(Move(Selection)));
+        }
+
         Composer.FieldInline(Label);
         Composer.PushID(Label);
-        Composer.InputText("##value", Value, Action, ImGuiInputTextFlags_EnterReturnsTrue);
+        Composer.InputTextWithButton("##value", Value.GetPath(),
+            [&](Text Path)
+            {
+                Action(Content::Uri(Str::Print<"Resources://{0}">(Path)));
+            },
+            ICON_FA_ELLIPSIS,
+            [&]
+            {
+                Selector.Open(Key, Filter);
+            },
+            ImGuiInputTextFlags_EnterReturnsTrue);
         Composer.PopID();
     }
 
@@ -299,9 +324,9 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Anchor> Component)
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Anchor> Component)
     {
-        const Real32 Density = Context.GetDirector().GetDensity();
+        const Real32 Density = Workspace.Context.GetDirector().GetDensity();
 
         Vector2 Value = Component.GetValue() * Density;
 
@@ -316,9 +341,9 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Extent> Component)
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Extent> Component)
     {
-        const Real32 Density = Context.GetDirector().GetDensity();
+        const Real32 Density = Workspace.Context.GetDirector().GetDensity();
 
         Bool Dirty = false;
 
@@ -341,9 +366,9 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Pose> Component)
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Pose> Component)
     {
-        const Real32 Density = Context.GetDirector().GetDensity();
+        const Real32 Density = Workspace.Context.GetDirector().GetDensity();
 
         Bool Dirty = false;
 
@@ -386,7 +411,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Velocity> Component)
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Velocity> Component)
     {
         Bool Dirty = false;
 
@@ -409,7 +434,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Glowlight> Component)
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Glowlight> Component)
     {
         Bool Dirty = false;
 
@@ -440,7 +465,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Spotlight> Component)
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Spotlight> Component)
     {
         Bool  Dirty = false;
         Angle Inner = Component.GetInnerAngle();
@@ -489,7 +514,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Skylight> Component)
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Skylight> Component)
     {
         Bool Dirty = false;
 
@@ -536,22 +561,23 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Sprite> Component)
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Sprite> Component)
     {
         Bool Dirty = false;
 
-        InspectPath(Composer, "Path", Component.GetPath().GetUrl(), [&](Text Value)
-        {
-            Component.SetPath(Str::Print<"Resources://{0}">(Value));
-            Dirty = true;
-        });
+        InspectAsset(Composer, Workspace, Actor, "Path", ".mtl", Component.GetPath(),
+            [&](AnyRef<Content::Uri> Path)
+            {
+                Component.SetPath(Move(Path));
+                Dirty = true;
+            });
 
         Composer.Spacing();
 
         Real32 ScaleX = 1.0f;
         Real32 ScaleY = 1.0f;
 
-        ConstRetainer<Graphic::Material> Material = Context.GetContent().Load<Graphic::Material>(Component.GetPath());
+        ConstRetainer<Graphic::Material> Material = Workspace.Context.GetContent().Load<Graphic::Material>(Component.GetPath());
 
         if (Material && Material->HasCompleted())
         {
@@ -570,7 +596,7 @@ namespace Tileon::Editor
 
         if (Dirty)
         {
-            Rescale(Context, Actor, Component);
+            Rescale(Workspace.Context, Actor, Component);
         }
         return Dirty;
     }
@@ -578,7 +604,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Animation> Component)
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Animation> Component)
     {
         Bool Dirty = false;
 
@@ -684,19 +710,20 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Typeface> Component)
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Typeface> Component)
     {
-        const Real32 Density = Context.GetDirector().GetDensity();
+        const Real32 Density = Workspace.Context.GetDirector().GetDensity();
 
         Bool Dirty = false;
 
         ConstRetainer<::Render::Font> Font = Component.GetFont();
 
-        InspectPath(Composer, "Font", Font ? Font->GetKey().GetUrl() : Text(), [&](Text Value)
-        {
-            Component.SetFont(Str::Print<"Resources://{0}">(Value));
-            Dirty = true;
-        });
+        InspectAsset(Composer, Workspace, Actor, "Font", ".artery", Font ? Font->GetKey() : Content::Uri(),
+            [&](AnyRef<Content::Uri> Path)
+            {
+                Component.SetFont(Move(Path));
+                Dirty = true;
+            });
 
         Composer.Spacing();
 
@@ -711,9 +738,9 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<Label> Component)
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Label> Component)
     {
-        const Real32 Density = Context.GetDirector().GetDensity();
+        const Real32 Density = Workspace.Context.GetDirector().GetDensity();
 
         Bool Dirty = false;
 
@@ -748,7 +775,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<UI::Composer> Composer, Ref<Context> Context, Scene::Entity Actor, Ref<IntColor8> Component)
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<IntColor8> Component)
     {
         return InspectTint(Composer, "Color", Component);
     }

@@ -98,6 +98,9 @@ namespace Tileon::Editor::View
             DrawBottomBar(Composer);
         }
         Composer.End();
+
+        // The browser is modal, so it is drawn outside the window that hosts the fields which opened it.
+        mAssembler.DrawSelector(Composer);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

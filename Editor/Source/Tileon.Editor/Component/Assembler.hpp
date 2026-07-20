@@ -37,6 +37,17 @@ namespace Tileon::Editor
         /// \param Actor    The entity whose components are being edited.
         void Draw(Ref<UI::Composer> Composer, Scene::Entity Actor);
 
+        /// \brief Draws the asset browser a field opened, if any.
+        ///
+        /// Kept apart from \ref Draw because the browser is modal and belongs at window scope, while the component
+        /// list is drawn inside a child. Views call this after closing the child that hosts the list.
+        ///
+        /// \param Composer The UI composer used to render the browser.
+        ZY_INLINE void DrawSelector(Ref<UI::Composer> Composer)
+        {
+            mSelector.Draw(Composer);
+        }
+
     private:
 
         /// \brief Defines the structural changes that can be requested while drawing.
@@ -85,6 +96,7 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+        UI::Selector  mSelector;
         Action        mAction;
         Scene::Entity mSubject;
     };

@@ -25,6 +25,7 @@ namespace Tileon::Editor::View
     Universe::Universe(Ref<Context> Context)
         : Activity  { Context, "Universe", true },
           mRegistry { Context.GetRegistry() },
+          mSelector { Context.GetContent() },
           mAction   { Action::None }
     {
     }
@@ -71,6 +72,9 @@ namespace Tileon::Editor::View
             Apply();
         }
         Composer.End();
+
+        // The browser is modal, so it is drawn outside the window that hosts the fields which opened it.
+        mSelector.Draw(Composer);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -81,9 +85,11 @@ namespace Tileon::Editor::View
         const ConstPtr<Descriptor> Info    = Component.TryGet<const Descriptor>();
 
         // A singleton's value lives on the component entity itself, so the world "holds" it only when that
-        // entity carries its own component. Absent ones are still listed, but as an empty, addable entry.
+        // entity carries its own component.
         const Bool                 Present = Component.Has(Component);
         const String<128>          Label   = String<128>::Print<"{0}  {1}##{2}">(Info->GetIcon(), Info->GetLabel(), Component.GetID());
+
+        Workspace Workspace(GetContext(), mSelector);
 
         const Bool Open = Composer.TreeNode(Label, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth);
 
@@ -113,7 +119,7 @@ namespace Tileon::Editor::View
             }
             else if (Info->HasFields())
             {
-                if (Info->Inspect(Composer, GetContext(), Component, Component.TryGet(Component)))
+                if (Info->Inspect(Composer, Workspace, Component, Component.TryGet(Component)))
                 {
                     Component.Notify(Component);
                 }
