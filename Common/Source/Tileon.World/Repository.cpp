@@ -22,6 +22,17 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    static Bool IsOverridable(Scene::Entity Component)  // TODO: Core
+    {
+        const Scene::Entity::Handle Handle = Component.GetHandle();
+
+        return !Handle.has(flecs::OnInstantiate, flecs::Inherit)
+            && !Handle.has(flecs::OnInstantiate, flecs::DontInherit);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     Repository::Repository(Ref<Engine::Subsystem::Host> Host)
         : Locator { Host }
     {
@@ -82,6 +93,7 @@ namespace Tileon
     {
         ZY_ASSERT(Archetype.IsValid(), "Must be a valid archetype.");
 
+        // Make sure to remove all instances of the archetype we're removing.
         GetService<Scene::Service>().Defer([Archetype]
         {
             Archetype.Children([](Scene::Entity Instance)
@@ -89,7 +101,76 @@ namespace Tileon
                 Instance.Add<Dispose>();
             });
         });
-        Archetype.Destruct();
+
+        if (const Scene::Archetype Parent = Archetype.GetParent(); Parent.IsValid())
+        {
+            Parent.Detach(Archetype);
+        }
+        else
+        {
+            Archetype.Destruct();
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Repository::AttachArchetype(Scene::Archetype Parent, Scene::Archetype Part)
+    {
+        ZY_ASSERT(Parent.IsValid(), "Must be a valid archetype.");
+        ZY_ASSERT(Part.IsValid(), "Must be a valid archetype.");
+
+        Parent.Attach(Part);
+
+        GetService<Scene::Service>().Defer([this, Parent, Part]
+        {
+            // Re-parenting leaves the old instances hanging under the wrong host, drop them before respawning.
+            Part.Children([](Scene::Entity Instance)
+            {
+                Instance.Add<Dispose>();
+            });
+
+            Ref<Scene::Service> Scene = GetService<Scene::Service>();
+
+            Parent.Children([&Scene, Part](Scene::Entity Instance)
+            {
+                Scene.CreateEntity()
+                    .SetName(Part.GetName())
+                    .SetArchetype(Part.GetEntity())
+                    .Attach(Instance, Scene::Hierarchy::Fixed);
+            });
+        });
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Repository::RefreshArchetype(Scene::Archetype Archetype)
+    {
+        ZY_ASSERT(Archetype.IsValid(), "Must be a valid archetype.");
+
+        Archetype.Invalidate();
+
+        GetService<Scene::Service>().Defer([Archetype]
+        {
+            Archetype.Children([Archetype](Scene::Entity Instance)
+            {
+                // An instance only ever receives copies at the moment its archetype link is created.
+                for (Scene::Archetype Base = Archetype; Base.IsValid(); Base = Base.GetArchetype())
+                {
+                    Base.GetEntity().Each([Instance](Scene::Entity Component)
+                    {
+                        // TODO: Fix Flecs IsPair
+                        if (ecs_id_is_pair(Component.GetID()) || !IsOverridable(Component) || Instance.Owns(Component))
+                        {
+                            return;
+                        }
+                        Instance.Add(Component);
+                    });
+                }
+                Instance.Add<Stale>();
+            });
+        });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

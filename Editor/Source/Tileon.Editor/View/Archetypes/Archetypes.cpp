@@ -54,7 +54,8 @@ namespace Tileon::Editor::View
     Archetypes::Archetypes(Ref<Context> Context)
         : Activity    { Context, "Archetypes" },
           mRepository { Context.GetRepository() },
-          mAssembler  { Context }
+          mAssembler  { Context },
+          mOperation  { Operation::None }
     {
     }
 
@@ -128,6 +129,7 @@ namespace Tileon::Editor::View
                 DrawArchetypeNode(Composer, Root);
             }
         }
+        FlushDeferOperation();
 
         Composer.EndChild();
     }
@@ -192,7 +194,7 @@ namespace Tileon::Editor::View
                 // Reject no-ops and any move that would place an archetype under one of its own descendants.
                 if (Source.IsValid() && Source != Archetype && Source.GetParent() != Archetype && !IsAncestor(Archetype, Source))
                 {
-                    Archetype.Attach(Source);
+                    mRepository.AttachArchetype(Archetype, Source);
                 }
             }
             ImGui::EndDragDropTarget();
@@ -209,12 +211,19 @@ namespace Tileon::Editor::View
 
             if (Composer.MenuItem("Detach from Parent", { }, Archetype.GetParent().IsValid()))
             {
-                Archetype.Detach(mSelection);
+                mPending   = Archetype;
+                mOperation = Operation::Detach;
             }
 
             if (Composer.MenuItem("Delete"))
             {
-                DeleteArchetype(Archetype);
+                mPending   = Archetype;
+                mOperation = Operation::Delete;
+            }
+
+            if (Composer.MenuItem("Refresh"))
+            {
+                mRepository.RefreshArchetype(mSelection);
             }
             Composer.EndPopup();
         }
@@ -300,7 +309,8 @@ namespace Tileon::Editor::View
 
             if (Composer.Button(ICON_FA_LINK_SLASH "  Detach", -1.0f))
             {
-                Parent.Detach(mSelection);
+                mPending   = mSelection;
+                mOperation = Operation::Detach;
             }
         }
         else
@@ -442,7 +452,7 @@ namespace Tileon::Editor::View
 
             if (Parent.IsValid())
             {
-                Parent.Attach(Archetype);
+                mRepository.AttachArchetype(Parent, Archetype);
             }
 
             mSelection = Archetype;
@@ -454,15 +464,38 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Archetypes::DeleteArchetype(Scene::Archetype Archetype)
+    void Archetypes::FlushDeferOperation()
     {
-        if (mSelection == Archetype)
+        if (!mPending.IsValid())
+        {
+            return;
+        }
+
+        if (mSelection.IsValid() && (mSelection == mPending || IsAncestor(mSelection, mPending)))
         {
             mSelection = Scene::Archetype();
 
             mPreviewer.Reset();
         }
-        mRepository.DeleteArchetype(Archetype);
+        if (mScroll.IsValid() && (mScroll == mPending || IsAncestor(mScroll, mPending)))
+        {
+            mScroll = Scene::Archetype();
+        }
+
+        switch (mOperation)
+        {
+        case Operation::Delete:
+            mRepository.DeleteArchetype(mPending);
+            break;
+        case Operation::Detach:
+            // TODO
+            break;
+        case Operation::None:
+            break;
+        }
+
+        mPending   = Scene::Archetype();
+        mOperation = Operation::None;
     }
 }
 

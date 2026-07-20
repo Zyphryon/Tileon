@@ -38,6 +38,14 @@ namespace Tileon::Editor::View
 
     private:
 
+        /// \brief Identifies the destructive edit queued while the archetype tree is being walked.
+        enum class Operation : UInt8
+        {
+            None,       ///< No edit is pending.
+            Delete,     ///< Remove the archetype from the repository.
+            Detach,     ///< Remove the archetype from its parent.
+        };
+
         /// \brief Draws the list panel of the archetypes interface.
         ///
         /// \param Composer The UI composer used to render the list panel elements.
@@ -75,10 +83,8 @@ namespace Tileon::Editor::View
         /// \param Parent The archetype to parent the new one under, or an invalid entity for a root archetype.
         void CreateArchetype(Scene::Archetype Parent);
 
-        /// \brief Deletes an archetype, clearing the selection first if it is the one being removed.
-        ///
-        /// \param Archetype The archetype to delete.
-        void DeleteArchetype(Scene::Archetype Archetype);
+        /// \brief Applies the queued destructive edit, if any, and releases every reference into the doomed subtree.
+        void FlushDeferOperation();
 
     private:
 
@@ -95,6 +101,8 @@ namespace Tileon::Editor::View
         UI::Previewer                             mPreviewer;
         Scene::Archetype                          mSelection;
         Scene::Archetype                          mScroll;
+        Scene::Archetype                          mPending;
+        Operation                                 mOperation;
     };
 }
 

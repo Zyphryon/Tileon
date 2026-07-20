@@ -65,6 +65,17 @@ namespace Tileon
         /// \param Archetype The archetype to delete.
         void DeleteArchetype(Scene::Archetype Archetype);
 
+        /// \brief Attaches an archetype as a fixed part of another and propagates it to live instances.
+        ///
+        /// \param Parent The archetype to receive the part.
+        /// \param Part   The archetype to attach.
+        void AttachArchetype(Scene::Archetype Parent, Scene::Archetype Part);
+
+        /// \brief Propagates a component change made on an archetype to every instance already spawned from it.
+        ///
+        /// \param Archetype The archetype whose component set changed.
+        void RefreshArchetype(Scene::Archetype Archetype);
+
         /// \brief Gets an entity archetype by its unique identifier.
         ///
         /// \param ID The unique identifier of the archetype.
