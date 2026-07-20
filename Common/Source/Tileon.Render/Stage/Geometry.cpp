@@ -25,9 +25,10 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Geometry::Geometry(Ref<Engine::Subsystem::Host> Host, ConstRef<Tileset> Tileset)
-        : Locator  { Host },
-          mCanvas  { Host },
-          mTileset { AddressOf(Tileset) }
+        : Locator     { Host },
+          mCanvas     { Host },
+          mTileset    { AddressOf(Tileset) },
+          mGeneration { 0 }
     {
         OnRegister(* Host.GetService<Scene::Service>());
         OnLoad(* Host.GetService<Content::Service>());
@@ -48,14 +49,20 @@ namespace Tileon::Stage
         mCanvas.Begin();
         {
             // Draw sprite entities.
-            // TODO: Frustum Culling
             mCanvas.SetTechnique(Render::Canvas::Type::Sprite, mTechniques[Enum::Cast(Kind::SpriteOpaqueWithNormal)]);
-            mQrDrawSprites.Run<const Transform, const Extent, const Appearance, ConstPtr<IntColor8>>([&](
+            mQrDrawSprites.Run<const Transform, const Extent, const Bound, const Appearance, ConstPtr<IntColor8>>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
+                ConstRef<Bound>      Bound,
                 ConstRef<Appearance> Appearance,
                 ConstPtr<IntColor8>  Tint)
             {
+                // Cull against the frustum. A zero bound means the volume was never computed, so keep it.
+                if (const IntRect AABB = Bound.GetRect(); !AABB.IsAlmostZero() && !AABB.Test(Frustum))
+                {
+                    return;
+                }
+
                 const IntColor8 Color  = Tint ? (* Tint) : IntColor8::White();
                 const Real32    Depth = Depth::Midground(Frustum, Transform.GetOrigin(), Transform.GetWorldspace());
 
@@ -64,13 +71,19 @@ namespace Tileon::Stage
             });
 
             // Draw text entities.
-            // TODO: Frustum Culling
-            mQrDrawTexts.Run<const Transform, const Typeface, const Label, ConstPtr<IntColor8>>([&](
+            mQrDrawTexts.Run<const Transform, const Bound, const Typeface, const Label, ConstPtr<IntColor8>>([&](
                 ConstRef<Transform> Transform,
+                ConstRef<Bound>     Bound,
                 ConstRef<Typeface>  Typeface,
                 ConstRef<Label>     Label,
                 ConstPtr<IntColor8> Tint)
             {
+                // Cull against the frustum. A zero bound means the volume was never computed, so keep it.
+                if (const IntRect AABB = Bound.GetRect(); !AABB.IsAlmostZero() && !AABB.Test(Frustum))
+                {
+                    return;
+                }
+
                 const IntColor8 Color = Tint ? (* Tint) : IntColor8::White();
                 const Real32    Depth = Depth::Midground(Frustum, Transform.GetOrigin(), Transform.GetWorldspace());
 
@@ -79,10 +92,18 @@ namespace Tileon::Stage
             });
 
             // Draw tile regions, culling against the view frustum to minimize overdraw.
-            // TODO: SpriteOpaqueWithNormal?
+            const UInt32 Generation = Tileset.GetGeneration();
+            const Bool   Refreshed  = (mGeneration != Generation);
+            mGeneration = Generation;
+
             mCanvas.SetTechnique(Render::Canvas::Type::Sprite, mTechniques[Enum::Cast(Kind::SpriteOpaque)]);
-            mQrDrawRegions.Run<const Region>([&](ConstRef<Region> Region)
+            mQrDrawRegions.Run<const Region, Mosaic>([&](ConstRef<Region> Region, Ref<Mosaic> Mosaic)
             {
+                if (Refreshed)
+                {
+                    Mosaic.Invalidate();
+                }
+
                 const SInt32 WorldRegionX = Region.GetX() * Region::kTilesPerX;
                 const SInt32 WorldRegionY = Region.GetY() * Region::kTilesPerY;
 
@@ -95,7 +116,7 @@ namespace Tileon::Stage
                 if (const IntRect Overlap = IntRect::Intersection(Boundaries, Frustum); !Overlap.IsAlmostZero())
                 {
                     const IntRect Tiles = Overlap - IntRect(WorldRegionX, WorldRegionY, WorldRegionX, WorldRegionY);
-                    DrawRegion(Tileset, Region, Origin, Tiles);
+                    DrawRegion(Tileset, Region, Mosaic, Origin, Tiles);
                 }
             });
         }
@@ -114,6 +135,20 @@ namespace Tileon::Stage
         Scene.GetComponent<Sprite>("Sprite").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Label>("Label").Grant(Scene::Trait::Serializable);
         Scene.GetComponent<Typeface>("Typeface").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<Mosaic>("Mosaic");
+        Scene.GetComponent<Region>("Region").With<Mosaic>();
+
+        // Observe tile edits so the cache is rebuilt on the next draw.
+        Scene.CreateObserver<Scene::DSL::With<Region>>(
+            "Render::Geometry::ObsInvalidateMosaicOnRegionUpdate",
+            EcsOnSet,
+            [](Scene::Entity Actor)
+            {
+                if (const Ptr<Mosaic> Cache = Actor.TryGet<Mosaic>())
+                {
+                    Cache->Invalidate();
+                }
+            });
 
         // Observe changes to the sprite component to resolve material resources and trigger updates when necessary.
         Scene.CreateObserver<Scene::DSL::In<const Sprite>>(
@@ -125,7 +160,7 @@ namespace Tileon::Stage
                 Actor.Set(Appearance(Content.Load<Graphic::Material>(Sprite.GetPath()), Sprite.GetSource()));
             }, Scene::DSL::Opt(EcsPrefab));
 
-        // Observe when an Animation component is attached, and automatically initialize the animator for playback.
+        // Observe when an animation component is attached, and automatically initialize the animator for playback.
         Scene.CreateObserver<Scene::DSL::In<const Animation>>(
             "Render::Geometry::ObsUpdateAnimatorOnAnimationUpdate",
             EcsOnSet,
@@ -190,15 +225,15 @@ namespace Tileon::Stage
 
         // Create the queries for retrieving renderable components.
         mQrDrawSprites = Scene.CreateQuery<
-            Scene::DSL::In<const Transform, const Extent, const Appearance, ConstPtr<IntColor8>>
+            Scene::DSL::In<const Transform, const Extent, const Bound, const Appearance, ConstPtr<IntColor8>>
         >("Render::Geometry::DrawSprites", Scene::Cache::Auto);
 
         mQrDrawTexts = Scene.CreateQuery<
-            Scene::DSL::In<const Transform, const Typeface, const Label, ConstPtr<IntColor8>>
+            Scene::DSL::In<const Transform, const Bound, const Typeface, const Label, ConstPtr<IntColor8>>
         >("Render::Geometry::DrawTexts", Scene::Cache::Auto);
 
         mQrDrawRegions = Scene.CreateQuery<
-            Scene::DSL::In<const Region>
+            Scene::DSL::In<const Region, Mosaic>
         >("Render::Geometry::DrawRegions", Scene::Cache::Auto);
     }
 
@@ -218,124 +253,41 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Geometry::DrawRegion(ConstRef<Tileset> Tileset, ConstRef<Region> Region, IntVector2 Origin, IntRect Boundaries)
+    void Geometry::DrawRegion(ConstRef<Tileset> Tileset, ConstRef<Region> Region, Ref<Mosaic> Mosaic, IntVector2 Origin, IntRect Boundaries)
     {
         const SInt32 RegionX = (Region.GetX() * Region::kTilesPerX) - Origin.GetX();
         const SInt32 RegionY = (Region.GetY() * Region::kTilesPerY) - Origin.GetY();
 
-        // Calculate bitmasks for efficiently determining which tiles to render based on the visible boundaries.
-        const UInt32 TileYMask = ((1ull << (Boundaries.GetWidth())) - 1ull) << Boundaries.GetX();
+        // Merging the region's tiles is independent of the camera, so it runs only when the tiles or the
+        // tileset glyphs change rather than once per frame.
+        if (Mosaic.IsStale())
+        {
+            Mosaic.Rebuild(Region, Tileset);
+        }
 
-        // Iterate through each layer of the region and draw the visible tiles within the specified boundaries.
+        // Iterate through each layer of the region and draw the visible blocks within the specified boundaries.
         for (const Tile::Layer Layer : Enum::GetValues<Tile::Layer>())
         {
-            Array<UInt32, Region::kTilesPerX> Resolution { };
-
             const Real32 Depth = Depth::Background(Enum::Cast(Layer));
 
-            for (UInt32 TileY = Boundaries.GetMinimumY(); TileY < Boundaries.GetMaximumY(); ++TileY)
+            for (ConstRef<Mosaic::Block> Block : Mosaic.GetBlocks(Layer))
             {
-                // Skip rows that have no visible tiles based on the precomputed bitmask for the current Y coordinate.
-                if (HasBit(Resolution[TileY], TileYMask))
+                const IntRect Area(Block.X, Block.Y, Block.X + Block.Width, Block.Y + Block.Height);
+
+                // Skip blocks that lie entirely outside the visible slice of the region.
+                if (!Area.Test(Boundaries))
                 {
                     continue;
                 }
 
-                for (UInt32 TileX = Boundaries.GetMinimumX(); TileX < Boundaries.GetMaximumX(); ++TileX)
+                // Fetches the motif corresponding to the terrain handle for the current layer of the block.
+                ConstRef<Tileset::Glyph> Glyph = Tileset.GetGlyph(Block.Handle);
+
+                // Draw all merged tiles as a single sprite.
+                if (Glyph.Material)
                 {
-                    // Skip tiles that are empty based on the precomputed bitmask for the current X coordinate within the row.
-                    if (HasBit(Resolution[TileY], 1u << TileX))
-                    {
-                        continue;
-                    }
-
-                    // Fetches the tile at the specified coordinates within the region.
-                    ConstRef<Tile> Tile = Region.GetTile(TileX, TileY);
-                    const UInt16 Handle = Tile.GetHandle(Layer);
-                    const UInt16 Weight = Tile.GetWeight(Layer);
-
-                    if (Handle == 0)
-                    {
-                        continue;
-                    }
-
-                    // Fetches the motif corresponding to the terrain handle for the current layer of the tile.
-                    ConstRef<Tileset::Glyph> Glyph = Tileset.GetGlyph(Handle);
-
-                    const IntVector2 Span  = Glyph.Span;
-                    const UInt32 MaxInnerX = Min(Boundaries.GetMaximumX(), TileX + (Span.GetX() - Weight % Span.GetX()));
-                    const UInt32 MaxInnerY = Boundaries.GetMaximumY();
-                    UInt8        CountX    = 1;
-                    UInt8        CountY    = 1;
-
-                   // Try to expand horizontally to adjacent columns that share the same terrain.
-                   for (UInt32 InnerX = TileX + 1; InnerX < MaxInnerX; ++InnerX, ++CountX)
-                   {
-                       if (HasBit(Resolution[TileY], 1u << InnerX))
-                       {
-                           break;
-                       }
-
-                       const UInt16 ExpectedWeight = Weight + (InnerX - TileX);
-
-                       ConstRef<Tileon::Tile> InnerTile = Region.GetTile(InnerX, TileY);
-
-                       if (InnerTile.GetHandle(Layer) != Handle || InnerTile.GetWeight(Layer) != ExpectedWeight)
-                       {
-                           break;
-                       }
-                   }
-
-                   const UInt32 Mask = ((1u << CountX) - 1) << TileX;
-                   Resolution[TileY] |= Mask;
-
-                   // Try to expand vertically to adjacent rows that share the same terrain.
-                   UInt16 RowWeight = Weight + Span.GetX();
-
-                   for (UInt32 InnerY = TileY + 1; InnerY < MaxInnerY; ++InnerY, ++CountY, RowWeight += Span.GetX())
-                   {
-                       Bool Merge = true;
-
-                       for (UInt32 InnerX = TileX; InnerX < TileX + CountX; ++InnerX)
-                       {
-                           if (HasBit(Resolution[InnerY], 1u << InnerX))
-                           {
-                               Merge = false;
-                               break;
-                           }
-
-                           ConstRef<Tileon::Tile> InnerTile = Region.GetTile(InnerX, InnerY);
-
-                           const UInt16 ExpectedWeight = RowWeight + (InnerX - TileX);
-
-                           if (InnerTile.GetHandle(Layer) != Handle || InnerTile.GetWeight(Layer) != ExpectedWeight)
-                           {
-                               Merge = false;
-                               break;
-                           }
-                       }
-
-                       if (Merge)
-                       {
-                           Resolution[InnerY] |= Mask;
-                       }
-                       else
-                       {
-                           break;
-                       }
-                   }
-
-                   // Draw all merged tiles as a single sprite.
-                   if (Glyph.Material)
-                   {
-                       const Vector3 Position(
-                           RegionX + static_cast<SInt32>(TileX),
-                           RegionY + static_cast<SInt32>(TileY), Depth);
-                       DrawTile(Position, IntVector2(CountX, CountY), Weight, Glyph);
-                   }
-
-                   // Advance the X coordinate by the number of merged tiles to skip over them in the iteration.
-                   TileX += CountX - 1;
+                    const Vector3 Position(RegionX + Block.X, RegionY + Block.Y, Depth);
+                    DrawTile(Position, IntVector2(Block.Width, Block.Height), Block.Weight, Glyph);
                 }
             }
         }
@@ -349,7 +301,6 @@ namespace Tileon::Stage
         const IntVector2 Span = Glyph.Span;
         const Rect       Crop = Glyph.Crop;
 
-        // TODO: Cache in Glyph to prevent two division per draw?
         const Real32 UCoordPerTile = Crop.GetWidth()  / Span.GetX();
         const Real32 VCoordPerTile = Crop.GetHeight() / Span.GetY();
 

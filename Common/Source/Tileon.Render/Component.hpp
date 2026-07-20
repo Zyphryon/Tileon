@@ -18,5 +18,6 @@
 #include "Component/Sprite/Animator.hpp"
 #include "Component/Sprite/Appearance.hpp"
 #include "Component/Sprite/Sprite.hpp"
+#include "Component/Tile/Mosaic.hpp"
 #include "Component/Typography/Label.hpp"
 #include "Component/Typography/Typeface.hpp"

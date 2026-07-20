@@ -378,7 +378,7 @@ namespace Tileon
         if (OldLoose == NewLoose)
         {
             const UInt32 LooseKey = GetKey(NewLoose.GetX(), NewLoose.GetY(), mLooseBoundaries);
-            if (!mLooseRegistry[LooseKey].Update(Actor))
+            if (!mLooseRegistry[LooseKey].Update())
             {
                 // Mark cell as dirty for next hierarchy update.
                 Guard Guard(mLooseMutex);

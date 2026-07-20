@@ -75,6 +75,12 @@ namespace Tileon
         /// \param Motif The motif whose glyph cache should be rebuilt.
         void Refresh(ConstRef<Motif> Motif);
 
+        /// \brief Clones the properties of one motif to another.
+        ///
+        /// \param Source The unique identifier of the source motif.
+        /// \param Target The unique identifier of the target motif.
+        void Clone(UInt16 Source, UInt16 Target);
+
         /// \brief Gets a reference to the motif associated with the specified terrain.
         ///
         /// \param ID The unique identifier of the terrain to retrieve.
@@ -97,6 +103,14 @@ namespace Tileon
             return mGlyphs[ID];
         }
 
+        /// \brief Gets the revision of the glyph cache.
+        ///
+        /// \return A counter bumped on every glyph refresh, letting derived caches detect staleness.
+        ZY_INLINE UInt32 GetGeneration() const
+        {
+            return mGeneration;
+        }
+
     private:
 
         /// \brief Loads the tileset database from file.
@@ -112,5 +126,6 @@ namespace Tileon
 
         Pool<Motif, kLimit>  mRegistry;
         Array<Glyph, kLimit> mGlyphs;
+        UInt32               mGeneration;
     };
 }

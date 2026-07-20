@@ -199,16 +199,16 @@ namespace Tileon
         struct HierarchyLooseCell final
         {
             /// \brief Indicates if the cell's boundaries need to be refreshed.
-            Bool        Dirty;
+            Atomic<Bool> Dirty;
 
             /// \brief The boundaries of the cell within the grid.
-            IntRect     Boundaries;
-
-            /// \brief Mutex for synchronizing access to the hierarchy.
-            Mutex       Mutex;
+            IntRect      Boundaries;
 
             /// \brief Flat array of cells in the region.
-            Bag<UInt64> Entities;
+            Bag<UInt64>  Entities;
+
+            /// \brief Mutex for synchronizing access to the hierarchy.
+            Mutex        Mutex;
 
             /// \brief Default constructor.
             ZY_INLINE HierarchyLooseCell()
@@ -218,7 +218,7 @@ namespace Tileon
 
             /// \brief Move constructor.
             ZY_INLINE HierarchyLooseCell(AnyRef<HierarchyLooseCell> Other) noexcept
-                : Dirty      { Other.Dirty },
+                : Dirty      { Other.Dirty.load() },
                   Boundaries { Other.Boundaries },
                   Entities   { Move(Other.Entities) }
             {
@@ -266,9 +266,7 @@ namespace Tileon
                 Entities.Insert(Actor.GetID());
 
                 // Mark cell as dirty to recalculate boundaries later.
-                const Bool WasDirty = Dirty;
-                Dirty = true;
-                return WasDirty;
+                return Dirty.exchange(true);
             }
 
             /// \brief Removes an entity from the cell.
@@ -279,24 +277,16 @@ namespace Tileon
             {
                 Guard Guard(Mutex);
                 Entities.Erase(Actor.GetID());
-
-                // Mark cell as dirty to recalculate boundaries later.
-                const Bool WasDirty = Dirty;
-                Dirty = true;
-                return WasDirty;
+                return Dirty.exchange(true);
             }
 
-            /// \brief Updates an entity from the cell.
+            /// \brief Flags the cell for a boundary refresh after one of its entities moved within it.
             ///
-            /// \param Actor The entity to update.
             /// \return `true` if the cell was previously dirty, `false` otherwise.
-            ZY_INLINE Bool Update(Scene::Entity Actor)
+            ZY_INLINE Bool Update()
             {
-                Guard Guard(Mutex);
-
-                const Bool WasDirty = Dirty;
-                Dirty = true;
-                return WasDirty;
+                // Membership is unchanged, so only the flag moves and no lock is required.
+                return Dirty.exchange(true);
             }
 
             /// \brief Iterates over all entities in the cell and applies a callback function.
@@ -331,7 +321,7 @@ namespace Tileon
             /// \brief Move assignment operator.
             ZY_INLINE Ref<HierarchyLooseCell> operator=(AnyRef<HierarchyLooseCell> Other) noexcept
             {
-                Dirty      = Exchange(Other.Dirty, false);
+                Dirty.store(Other.Dirty.exchange(false));
                 Boundaries = Move(Other.Boundaries);
                 Entities   = Move(Other.Entities);
                 return (* this);
@@ -421,6 +411,8 @@ namespace Tileon
         template<typename Function>
         ZY_INLINE void ForEachEntity(IntRect Volume, AnyRef<Function> Action)
         {
+            Ref<Scene::Service> Scene = GetService<Scene::Service>();
+
             thread_local Bag<UInt32> LooseAlreadyProcessed;
             LooseAlreadyProcessed.Clear();
 
@@ -446,7 +438,7 @@ namespace Tileon
                     // Iterate all entities inside the loose cell.
                     LooseCell.ForEach([&](UInt64 ID)
                     {
-                        Action(GetService<Scene::Service>().GetEntity(ID));
+                        Action(Scene.GetEntity(ID));
                     });
                 });
             });
@@ -460,6 +452,8 @@ namespace Tileon
         template<typename Function>
         ZY_INLINE Bool AnyOfEntity(IntRect Volume, AnyRef<Function> Predicate)
         {
+            Ref<Scene::Service> Scene = GetService<Scene::Service>();
+
             thread_local Bag<UInt32> LooseAlreadyProcessed;
             LooseAlreadyProcessed.Clear();
 
@@ -485,7 +479,7 @@ namespace Tileon
                     // Iterate all entities inside the loose cell.
                     return LooseCell.AnyOf([&](UInt64 ID)
                     {
-                        return Predicate(GetService<Scene::Service>().GetEntity(ID));
+                        return Predicate(Scene.GetEntity(ID));
                     });
                 });
             });

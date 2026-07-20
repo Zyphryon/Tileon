@@ -22,7 +22,8 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Tileset::Tileset(Ref<Engine::Subsystem::Host> Host)
-        : Locator { Host }
+        : Locator     { Host },
+          mGeneration { 0 }
     {
     }
 
@@ -82,6 +83,26 @@ namespace Tileon
         }
         Glyph.Span = Motif.GetSpan();
         Glyph.Tint = Motif.GetTint();
+
+        // Bump the revision so caches derived from the glyph data rebuild themselves.
+        ++mGeneration;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Tileset::Clone(UInt16 Source, UInt16 Target)
+    {
+        ConstRef<Motif> SourceMotif = GetMotif(Source);
+        Ref<Motif>      TargetMotif = GetMotif(Target);
+
+        TargetMotif.SetMaterial(Content::Uri(SourceMotif.GetMaterial()));
+        TargetMotif.SetSpan(SourceMotif.GetSpan());
+        TargetMotif.SetTint(SourceMotif.GetTint());
+        TargetMotif.SetEasing(SourceMotif.GetEasing());
+        TargetMotif.SetAnimation(Animation(SourceMotif.GetAnimation()));
+
+        Refresh(TargetMotif);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

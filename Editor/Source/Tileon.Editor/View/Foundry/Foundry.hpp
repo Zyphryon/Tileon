@@ -73,6 +73,11 @@ namespace Tileon::Editor::View
         /// \param Message  The message to display in the placeholder panel.
         void DrawEmptyPanel(Ref<UI::Composer> Composer, Text Message);
 
+        /// \brief Copies a terrain along with its motif and selects the copy.
+        ///
+        /// \param ID The unique identifier of the terrain to copy.
+        void CloneTerrain(UInt16 ID);
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -85,6 +90,7 @@ namespace Tileon::Editor::View
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         UInt16          mSelection;
+        UInt16          mScroll;
         UI::Previewer   mPreviewer;
         UI::Browser     mBrowser;
     };

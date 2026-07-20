@@ -366,5 +366,8 @@ namespace Tileon::Editor
 
         // Mark the region as dirty so it gets saved and reloaded with the updated tile data.
         Operation.Actor.Add<Persist>();
+
+        // The tiles were mutated in place, so signal the change for the render-side block cache.
+        Operation.Actor.Notify<Tileon::Region>();
     }
 }

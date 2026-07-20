@@ -44,6 +44,9 @@ namespace Tileon::Stage
             Director.GetPosition().GetBaseX(),
             Director.GetPosition().GetBaseY());
 
+        // Lights are culled against the frustum by their world-space bound.
+        const IntRect Frustum = Director.GetFrustum();
+
         // The normal buffer is the sole input every light technique samples.
         const Array Textures = { mNormal->GetTexture() };
 
@@ -74,12 +77,18 @@ namespace Tileon::Stage
         });
 
         // Accumulate the glowlights in the scene and render them in a single batch.
-        // TODO: Frustum Culling
-        mQrDrawGlowlights.Run<const Transform, const Glowlight, ConstPtr<IntColor8>>([&](
+        mQrDrawGlowlights.Run<const Transform, const Bound, const Glowlight, ConstPtr<IntColor8>>([&](
             ConstRef<Transform> Transform,
+            ConstRef<Bound>     Bound,
             ConstRef<Glowlight> Light,
             ConstPtr<IntColor8> Tint)
         {
+            // Cull against the frustum. A zero bound means the volume was never computed, so keep it.
+            if (const IntRect AABB = Bound.GetRect(); !AABB.IsAlmostZero() && !AABB.Test(Frustum))
+            {
+                return;
+            }
+
             const Vector2 Center = Transform.GetWorldspace().GetTranslation() + Vector2(Transform.GetOrigin() - Origin);
             const Color   Color  = (Tint ? Math::Color::FromColor8(* Tint) : Color::White()) * Light.GetIntensity();
             const Vector2 Scale  = Transform.GetWorldspace().GetScale();
@@ -89,12 +98,18 @@ namespace Tileon::Stage
         });
 
         // Accumulate the spotlights in the scene and render them in a single batch.
-        // TODO: Frustum Culling
-        mQrDrawSpotlights.Run<const Transform, const Spotlight, ConstPtr<IntColor8>>([&](
+        mQrDrawSpotlights.Run<const Transform, const Bound, const Spotlight, ConstPtr<IntColor8>>([&](
             ConstRef<Transform> Transform,
+            ConstRef<Bound>     Bound,
             ConstRef<Spotlight> Light,
             ConstPtr<IntColor8> Tint)
         {
+            // Cull against the frustum. A zero bound means the volume was never computed, so keep it.
+            if (const IntRect AABB = Bound.GetRect(); !AABB.IsAlmostZero() && !AABB.Test(Frustum))
+            {
+                return;
+            }
+
             const Vector2 Center = Transform.GetWorldspace().GetTranslation() + Vector2(Transform.GetOrigin() - Origin);
             const Color   Color  = (Tint ? Math::Color::FromColor8(* Tint) : Color::White()) * Light.GetIntensity();
 
@@ -204,11 +219,11 @@ namespace Tileon::Stage
 
         // Creates the queries for the light stage.
         mQrDrawGlowlights = Scene.CreateQuery<
-            Scene::DSL::In<const Transform, const Glowlight, ConstPtr<IntColor8>>
+            Scene::DSL::In<const Transform, const Bound, const Glowlight, ConstPtr<IntColor8>>
         >("Render::Light::DrawGlowlights", Scene::Cache::Auto);
 
         mQrDrawSpotlights = Scene.CreateQuery<
-            Scene::DSL::In<const Transform, const Spotlight, ConstPtr<IntColor8>>
+            Scene::DSL::In<const Transform, const Bound, const Spotlight, ConstPtr<IntColor8>>
         >("Render::Light::DrawSpotlights", Scene::Cache::Auto);
 
         mQrDrawSkylight = Scene.CreateQuery<

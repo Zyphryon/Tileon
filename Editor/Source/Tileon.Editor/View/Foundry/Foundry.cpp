@@ -26,6 +26,7 @@ namespace Tileon::Editor::View
           mRepository  { Context.GetRepository() },
           mTileset     { Context.GetTileset() },
           mSelection   { 0 },
+          mScroll      { 0 },
           mBrowser     { Context.GetContent(), UI::Browser::Mode::Popup }
     {
     }
@@ -130,8 +131,22 @@ namespace Tileon::Editor::View
                 Composer.SetScrollHereY(0.5f);
             }
 
+            // Bring a freshly cloned terrain into view once, then clear the request.
+            if (mScroll == Terrain.GetID())
+            {
+                mScroll = 0;
+                Composer.SetScrollHereY(0.5f);
+            }
+
             if (Composer.BeginPopupContextItem())
             {
+                if (Composer.MenuItem("Clone"))
+                {
+                    CloneTerrain(Terrain.GetID());
+                }
+
+                Composer.Separator();
+
                 if (Composer.MenuItem("Delete"))
                 {
                     mRepository.DeleteTerrain(Terrain.GetID());
@@ -501,5 +516,18 @@ namespace Tileon::Editor::View
 
         Composer.SetCursorPosX((Available.x - HintSize.x) * 0.5f);
         Composer.TextDisabled(Message);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Foundry::CloneTerrain(UInt16 ID)
+    {
+        Ref<Terrain> Terrain = mRepository.CloneTerrain(ID);
+        mTileset.Clone(ID, Terrain.GetID());
+
+        mSelection = Terrain.GetID();
+        mScroll    = Terrain.GetID();
+        mPreviewer.Reset();
     }
 }

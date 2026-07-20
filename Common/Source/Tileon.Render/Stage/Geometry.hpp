@@ -12,6 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+#include "Tileon.Render/Component/Tile/Mosaic.hpp"
 #include "Tileon.Render/Director.hpp"
 #include "Tileon.Render/Tileset.hpp"
 #include <Canvas/Canvas.hpp>
@@ -76,9 +77,10 @@ namespace Tileon::Stage
         ///
         /// \param Tileset    The tileset containing the tile data to use for drawing the region.
         /// \param Region     The region to draw.
+        /// \param Mosaic     The region's block cache, rebuilt in place when it has gone stale.
         /// \param Origin     The origin point in world coordinates where the region should be drawn.
         /// \param Boundaries The boundaries within which to draw the region.
-        void DrawRegion(ConstRef<Tileset> Tileset, ConstRef<Region> Region, IntVector2 Origin, IntRect Boundaries);
+        void DrawRegion(ConstRef<Tileset> Tileset, ConstRef<Region> Region, Ref<Mosaic> Mosaic, IntVector2 Origin, IntRect Boundaries);
 
         /// \brief Draws a tile at the specified position.
         ///
@@ -101,6 +103,7 @@ namespace Tileon::Stage
 
         ConstPtr<Tileset>  mTileset;
         ConstPtr<Director> mDirector;
+        UInt32             mGeneration;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

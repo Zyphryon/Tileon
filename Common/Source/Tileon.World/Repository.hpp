@@ -88,6 +88,12 @@ namespace Tileon
         /// \return A reference to the terrain that was created.
         Ref<Terrain> CreateTerrain();
 
+        /// \brief Creates a new terrain by copying an existing one.
+        ///
+        /// \param ID The unique identifier of the terrain to copy.
+        /// \return A reference to the terrain that was created.
+        Ref<Terrain> CloneTerrain(UInt16 ID);
+
         /// \brief Deletes a terrain from the repository.
         ///
         /// \param ID The unique identifier of the terrain to delete from the repository.
@@ -96,7 +102,7 @@ namespace Tileon
         /// \brief Checks if a terrain with the given unique identifier exists in the repository.
         ///
         /// \param ID The unique identifier of the terrain to check for existence.
-        /// \return `true` if a terrain with the given ID exists, `false`
+        /// \return `true` if a terrain with the given ID exists, `false` otherwise.
         ZY_INLINE Bool HasTerrain(UInt16 ID) const
         {
             return mTerrains.IsAllocated(ID);

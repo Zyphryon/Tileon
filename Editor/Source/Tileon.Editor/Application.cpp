@@ -279,6 +279,21 @@ namespace Tileon::Editor
                 Composer.EndMenu();
             }
 
+            // Draw the "Settings" menu.
+            if (Composer.BeginMenu("Settings"))
+            {
+                Ref<Platform::Window> Window = GetService<Platform::Service>()->GetWindow();
+
+                Bool Fullscreen = Window.IsFullscreen();
+
+                if (Composer.Checkbox("Fullscreen", Fullscreen))
+                {
+                    Window.SetFullscreen(Fullscreen);
+                }
+
+                Composer.EndMenu();
+            }
+
             // Draw the "Help" menu.
             if (Composer.BeginMenu("Help"))
             {

@@ -43,6 +43,17 @@ namespace Tileon
         {
         }
 
+        /// \brief Constructs a terrain by copying the properties of another terrain, but with a new unique identifier.
+        ///
+        /// \param ID   The unique identifier for the new terrain.
+        /// \param Copy The terrain to copy the properties from.
+        ZY_INLINE Terrain(UInt16 ID, ConstRef<Terrain> Copy)
+            : mID         { ID },
+              mProperties { Copy.mProperties },
+              mName       { Copy.mName }
+        {
+        }
+
         /// \brief Destructor for the Terrain class.
         ZY_INLINE ~Terrain()
         {
