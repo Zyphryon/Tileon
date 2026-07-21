@@ -71,12 +71,13 @@ namespace Tileon::Stage
             });
 
             // Draw text entities.
-            mQrDrawTexts.Run<const Transform, const Bound, const Typeface, const Label, ConstPtr<IntColor8>>([&](
+            mQrDrawTexts.Run<const Transform, const Bound, const Typeface, const Label, ConstPtr<IntColor8>, ConstPtr<Emphasis>>([&](
                 ConstRef<Transform> Transform,
                 ConstRef<Bound>     Bound,
                 ConstRef<Typeface>  Typeface,
                 ConstRef<Label>     Label,
-                ConstPtr<IntColor8> Tint)
+                ConstPtr<IntColor8> Tint,
+                ConstPtr<Emphasis>  Emphasis)
             {
                 // Cull against the frustum. A zero bound means the volume was never computed, so keep it.
                 if (const IntRect AABB = Bound.GetRect(); !AABB.IsAlmostZero() && !AABB.Test(Frustum))
@@ -88,7 +89,9 @@ namespace Tileon::Stage
                 const Real32    Depth = Depth::Midground(Frustum, Transform.GetOrigin(), Transform.GetWorldspace());
 
                 const Render::TextStyle Stype(Typeface.GetFont(), Typeface.GetSize(), Color, Label.GetSpacing());
-                mCanvas.DrawText(Stype, Label.GetContent(), Transform.Rebase(Origin), Depth, {});
+
+                mCanvas.DrawText(Stype, Label.GetContent(), Transform.Rebase(Origin), Depth,
+                    Emphasis ? Emphasis->GetEffect() : Render::TextEffect());
             });
 
             // Draw tile regions, culling against the view frustum to minimize overdraw.
@@ -133,10 +136,20 @@ namespace Tileon::Stage
         Scene.GetComponent<Appearance>("Appearance");
         Scene.GetComponent<Animation>("Animation").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Sprite>("Sprite").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Label>("Label").Grant(Scene::Trait::Serializable);
+        Scene.GetComponent<Label>("Label").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Typeface>("Typeface").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<Emphasis>("Emphasis").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
         Scene.GetComponent<Mosaic>("Mosaic");
         Scene.GetComponent<Region>("Region").With<Mosaic>();
+
+        // Attaches a Label to an instance entity that don't have it if it has a typeface.
+        Scene.CreateObserver<Scene::DSL::With<Typeface>>(
+            "Render::Geometry::ObsAttachLabelWithTypeface",
+            EcsOnAdd,
+            [](Scene::Entity Actor)
+            {
+                Actor.Set(Label());
+            });
 
         // Observe tile edits so the cache is rebuilt on the next draw.
         Scene.CreateObserver<Scene::DSL::With<Region>>(
@@ -229,7 +242,7 @@ namespace Tileon::Stage
         >("Render::Geometry::DrawSprites", Scene::Cache::Auto);
 
         mQrDrawTexts = Scene.CreateQuery<
-            Scene::DSL::In<const Transform, const Bound, const Typeface, const Label, ConstPtr<IntColor8>>
+            Scene::DSL::In<const Transform, const Bound, const Typeface, const Label, ConstPtr<IntColor8>, ConstPtr<Emphasis>>
         >("Render::Geometry::DrawTexts", Scene::Cache::Auto);
 
         mQrDrawRegions = Scene.CreateQuery<

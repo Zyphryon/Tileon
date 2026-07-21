@@ -28,7 +28,7 @@ namespace Tileon
 
         /// \brief Constructs a default typeface with no associated font resource.
         ZY_INLINE Typeface()
-            : mSize { 0.0f }
+            : mSize { 12.0f }
         {
         }
 

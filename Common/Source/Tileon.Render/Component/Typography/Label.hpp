@@ -27,7 +27,10 @@ namespace Tileon
     public:
 
         /// \brief Default constructor.
-        ZY_INLINE Label() = default;
+        ZY_INLINE Label()
+            : mContent { "Undefined" }
+        {
+        }
 
         /// \brief Constructs a text component with the specific properties.
         ///

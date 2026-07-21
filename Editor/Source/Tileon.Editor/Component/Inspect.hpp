@@ -142,4 +142,13 @@ namespace Tileon::Editor
     /// \param Component The component to inspect.
     /// \return `true` if the user modified the component, `false` otherwise.
     Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<IntColor8> Component);
+
+    /// \brief Draws the editable fields of an emphasis component.
+    ///
+    /// \param Composer  The UI composer used to render the fields of the component.
+    /// \param Workspace The workspace being drawn in, supplying services and the view's widgets.
+    /// \param Actor     The entity that owns the component being inspected.
+    /// \param Component The component to inspect.
+    /// \return `true` if the user modified the component, `false` otherwise.
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Emphasis> Component);
 }

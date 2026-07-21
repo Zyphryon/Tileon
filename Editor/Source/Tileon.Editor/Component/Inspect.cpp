@@ -779,4 +779,41 @@ namespace Tileon::Editor
     {
         return InspectTint(Composer, "Color", Component);
     }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Emphasis> Component)
+    {
+        ConstRef<Render::TextEffect> Effect = Component.GetEffect();
+
+        Color  OutsetColor     = Effect.GetOutsetColor();
+        Real32 OutsetOffset    = Effect.GetOutsetOffset();
+        Real32 OutsetWidth     = Effect.GetOutsetWidthRelative();
+        Real32 OutsetBias      = Effect.GetOutsetWidthAbsolute();
+        Real32 OutsetBlur      = Effect.GetOutsetBlur();
+        Real32 InsetRoundness  = Effect.GetInsetRoundness();
+        Real32 InsetThreshold  = Effect.GetInsetThreshold();
+
+        Bool Dirty = false;
+
+        Composer.FieldInline("Outset Color");
+        Composer.PushID("Outset Color");
+        Dirty |= Composer.InputTintSmall("##value", OutsetColor);
+        Composer.PopID();
+
+        Dirty |= InspectScalar(Composer, "Outset Offset",    OutsetOffset);
+        Dirty |= InspectScalar(Composer, "Outset Width",     OutsetWidth);
+        Dirty |= InspectScalar(Composer, "Outset Bias",      OutsetBias);
+        Dirty |= InspectScalar(Composer, "Outset Blur",      OutsetBlur);
+        Dirty |= InspectScalar(Composer, "Inset Roundness",  InsetRoundness);
+        Dirty |= InspectScalar(Composer, "Inset Threshold",  InsetThreshold);
+
+        if (Dirty)
+        {
+            Component.SetEffect(Render::TextEffect(
+                OutsetColor, OutsetOffset, OutsetWidth, OutsetBias, OutsetBlur, InsetRoundness, InsetThreshold));
+        }
+        return Dirty;
+    }
 }

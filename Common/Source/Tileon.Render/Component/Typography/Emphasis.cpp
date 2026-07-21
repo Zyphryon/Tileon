@@ -6,19 +6,8 @@
 // For a copy, see <https://opensource.org/licenses/MIT>.
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#pragma once
-
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Component/Light/Glowlight.hpp"
-#include "Component/Light/Skylight.hpp"
-#include "Component/Light/Spotlight.hpp"
-#include "Component/Sprite/Animator.hpp"
-#include "Component/Sprite/Appearance.hpp"
-#include "Component/Sprite/Sprite.hpp"
-#include "Component/Tile/Mosaic.hpp"
-#include "Component/Typography/Emphasis.hpp"
-#include "Component/Typography/Label.hpp"
-#include "Component/Typography/Typeface.hpp"
+#include "Emphasis.hpp"
