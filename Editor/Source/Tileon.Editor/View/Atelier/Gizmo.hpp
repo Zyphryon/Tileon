@@ -12,8 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Editor/Context.hpp"
-#include "Tileon.Editor.UI/Composer.hpp"
+#include "Lens.hpp"
 #include <Zyphryon.Base/Container/Bag.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -134,22 +133,6 @@ namespace Tileon::Editor
         /// \param Actor The entity to look up.
         /// \return The region component holding the entity, or `nullptr` when it sits outside one.
         ConstPtr<Region> GetRegion(Scene::Entity Actor) const;
-
-        /// \brief Projects a world placement into the viewport.
-        ///
-        /// \param World  The placement to project.
-        /// \param Origin The top-left corner of the viewport, in screen space.
-        /// \param Size   The size of the viewport, in screen space.
-        /// \return The corresponding position in screen space.
-        ImVec2 ToScreen(Placement World, ImVec2 Origin, ImVec2 Size) const;
-
-        /// \brief Un-projects a viewport position back into the world.
-        ///
-        /// \param Screen The position to un-project, in screen space.
-        /// \param Origin The top-left corner of the viewport, in screen space.
-        /// \param Size   The size of the viewport, in screen space.
-        /// \return The corresponding world placement.
-        Placement ToWorld(ImVec2 Screen, ImVec2 Origin, ImVec2 Size) const;
 
         /// \brief Draws the handles that translate the entity, and reports which one the cursor wants.
         ///

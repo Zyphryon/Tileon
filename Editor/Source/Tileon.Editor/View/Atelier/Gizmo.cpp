@@ -102,7 +102,8 @@ namespace Tileon::Editor
             return false;
         }
 
-        const ImVec2 Anchor = ToScreen(GetOrigin(Primary), Origin, Size);
+        const Lens   Lens   = { mContext.GetDirector(), Origin, Size };
+        const ImVec2 Anchor = Lens.Project(GetOrigin(Primary));
 
         Handle Hovered = Handle::None;
 
@@ -124,7 +125,7 @@ namespace Tileon::Editor
             if (Hovered != Handle::None && Composer.IsMouseClicked(ImGuiMouseButton_Left))
             {
                 mHandle  = Hovered;
-                mGrab    = ToWorld(Composer.GetMousePos(), Origin, Size);
+                mGrab    = Lens.Unproject(Composer.GetMousePos());
                 mStart   = GetOrigin(Primary);
                 mOrigin  = Primary.Get<const Pose>();
                 mReach   = Max(Distance(Composer.GetMousePos(), Anchor), 1.0f);
@@ -143,7 +144,7 @@ namespace Tileon::Editor
             return true;
         }
 
-        const Placement Cursor = ToWorld(Composer.GetMousePos(), Origin, Size);
+        const Placement Cursor = Lens.Unproject(Composer.GetMousePos());
         const Vector2   Delta(
             static_cast<Real32>(Cursor.GetAbsoluteX() - mGrab.GetAbsoluteX()),
             static_cast<Real32>(Cursor.GetAbsoluteY() - mGrab.GetAbsoluteY()));
@@ -421,35 +422,5 @@ namespace Tileon::Editor
             return Placement(Region->GetX(), Region->GetY(), Pose->GetTranslation().GetX(), Pose->GetTranslation().GetY());
         }
         return Placement();
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    ImVec2 Gizmo::ToScreen(Placement World, ImVec2 Origin, ImVec2 Size) const
-    {
-        Ref<Director> Director = mContext.GetDirector();
-
-        const Vector2 Pixel  = Director.GetScreenCoordinates(World);
-        const Real32  RangeX = Director.GetViewport().GetX() * Director.GetDensity();
-        const Real32  RangeY = Director.GetViewport().GetY() * Director.GetDensity();
-
-        return ImVec2(
-            Origin.x + (Pixel.GetX() / RangeX) * Size.x,
-            Origin.y + (Pixel.GetY() / RangeY) * Size.y);
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    Placement Gizmo::ToWorld(ImVec2 Screen, ImVec2 Origin, ImVec2 Size) const
-    {
-        Ref<Director> Director = mContext.GetDirector();
-
-        const Real32 RangeX = Director.GetViewport().GetX() * Director.GetDensity();
-        const Real32 RangeY = Director.GetViewport().GetY() * Director.GetDensity();
-
-        const Vector2 Coordinates(((Screen.x - Origin.x) / Size.x) * RangeX, ((Screen.y - Origin.y) / Size.y) * RangeY);
-        return Director.GetWorldCoordinates(Coordinates);
     }
 }

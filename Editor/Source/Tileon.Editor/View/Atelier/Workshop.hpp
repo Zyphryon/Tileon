@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Editor/Context.hpp"
+#include "Lens.hpp"
 #include <Zyphryon.Base/Container/Bag.hpp>
 #include <Zyphryon.Base/Memory/Blob.hpp>
 
@@ -115,6 +115,25 @@ namespace Tileon::Editor
             return mBrush;
         }
 
+        /// \brief Sets whether painted tiles align their atlas to the world grid.
+        ///
+        /// When Seamless, a multi-tile terrain tiles seamlessly across the grid; when not, each stamp lands its
+        /// motif exactly where it was placed, which is what precise single-tile work needs.
+        ///
+        /// \param Seamless `true` to align to the world grid, `false` to stamp at the paint position.
+        ZY_INLINE void SetSeamless(Bool Seamless)
+        {
+            mSeamless = Seamless;
+        }
+
+        /// \brief Gets whether painted tiles align their atlas to the world grid.
+        ///
+        /// \return `true` when aligning to the world grid, `false` when stamping at the paint position.
+        ZY_INLINE Bool IsSeamless() const
+        {
+            return mSeamless;
+        }
+
         /// \brief Executes an editing command at the specified placement in the world.
         ///
         /// \param Command   The editing command to execute (e.g., add or remove).
@@ -194,11 +213,13 @@ namespace Tileon::Editor
         /// \param Placement The placement in the world to pick from.
         void SelectToggle(Placement Placement);
 
-        /// \brief Selects every pickable entity whose bound overlaps the given area.
+        /// \brief Selects every pickable entity whose centre falls inside the drawn screen-space box.
         ///
-        /// \param Area     The world-tile rectangle to select within.
+        /// \param Lens     The viewport projection used to place entities on screen.
+        /// \param Minimum  The top-left corner of the box, in screen space.
+        /// \param Maximum  The bottom-right corner of the box, in screen space.
         /// \param Additive `true` to add to the current selection, `false` to replace it.
-        void SelectWithin(IntRect Area, Bool Additive);
+        void SelectWithin(ConstRef<Lens> Lens, ImVec2 Minimum, ImVec2 Maximum, Bool Additive);
 
         /// \brief Destroys every selected entity and clears the selection.
         void DeleteSelection();
@@ -329,6 +350,7 @@ namespace Tileon::Editor
         Mode             mMode;
         Level            mLevel;
         Brush            mBrush;
+        Bool             mSeamless;
         Sequence<OpTile> mOperations;
         Scene::Entity    mPreview;
         Bag<UInt64>      mSelection;

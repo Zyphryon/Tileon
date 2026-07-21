@@ -21,6 +21,27 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    static Bool CollectBounds(Scene::Entity Actor, Ref<IntRect> Result, Bool Started)
+    {
+        if (const ConstPtr<Tileon::Bound> Volume = Actor.TryGet<const Tileon::Bound>())
+        {
+            if (const IntRect Rect = Volume->GetRect(); !Rect.IsAlmostZero())
+            {
+                Result  = Started ? IntRect::Union(Result, Rect) : Rect;
+                Started = true;
+            }
+        }
+
+        Actor.Children([&](auto Child)
+        {
+            Started = CollectBounds(Scene::Entity(Child), Result, Started);
+        });
+        return Started;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     Atelier::Atelier(Ref<Context> Context)
         : Activity      { Context, kTitle, true  },
           mWorkshop     { Context },
@@ -331,6 +352,30 @@ namespace Tileon::Editor::View
 
         DrawLayerButton(Workshop::Level::Detail, ICON_FA_2, "Detail layer");
         Composer.SameLine();
+
+        Composer.SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        Composer.SameLine();
+
+        const Bool Seamless = mWorkshop.IsSeamless();
+
+        if (Seamless)
+        {
+            Composer.PushStyleColor(ImGuiCol_Button,        Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
+            Composer.PushStyleColor(ImGuiCol_ButtonHovered, Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
+        }
+
+        if (Composer.Button(ICON_FA_MAGNET "##align", 32.0f))
+        {
+            mWorkshop.SetSeamless(!Seamless);
+        }
+
+        Composer.Tooltip(Seamless ? "Grid-aligned (seamless terrain)"_Text : "Free stamp (precise placement)"_Text);
+
+        if (Seamless)
+        {
+            Composer.PopStyleColor(2);
+        }
+        Composer.SameLine();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -375,50 +420,48 @@ namespace Tileon::Editor::View
         // Keep the multi-selection set consistent with single-selection changes made in Hierarchy or Inspector.
         mWorkshop.ReconcileSelection();
 
+        const Lens Lens(Director, ViewportOrigin, ViewportSize);
+
         // Mark every selected entity with corner brackets, drawn as an overlay so they show under any brush.
         {
-            const Real32 RangeX = Director.GetViewport().GetX() * Director.GetDensity();
-            const Real32 RangeY = Director.GetViewport().GetY() * Director.GetDensity();
-
-            const auto ToScreen = [&](Real32 X, Real32 Y)
-            {
-                const Vector2 Pixel = Director.GetScreenCoordinates(Placement(0, 0, X, Y));
-                return ImVec2(
-                    ViewportOrigin.x + (Pixel.GetX() / RangeX) * ViewportSize.x,
-                    ViewportOrigin.y + (Pixel.GetY() / RangeY) * ViewportSize.y);
-            };
-
             const auto DrawBrackets = [&](IntRect AABB)
             {
-                // The world is unrotated, so two opposite corners bound an axis-aligned screen rect.
-                const ImVec2 A = ToScreen(AABB.GetMinimumX(), AABB.GetMinimumY());
-                const ImVec2 B = ToScreen(AABB.GetMaximumX(), AABB.GetMaximumY());
-
-                const Real32 MinX = Min(A.x, B.x);
-                const Real32 MinY = Min(A.y, B.y);
-                const Real32 MaxX = Max(A.x, B.x);
-                const Real32 MaxY = Max(A.y, B.y);
+                const ImVec2 Corner[4] =
+                {
+                    Lens.Project(Placement(0, 0, AABB.GetMinimumX(), AABB.GetMinimumY())),
+                    Lens.Project(Placement(0, 0, AABB.GetMaximumX(), AABB.GetMinimumY())),
+                    Lens.Project(Placement(0, 0, AABB.GetMaximumX(), AABB.GetMaximumY())),
+                    Lens.Project(Placement(0, 0, AABB.GetMinimumX(), AABB.GetMaximumY())),
+                };
 
                 constexpr UInt32 Color = IM_COL32(255, 170, 40, 235);
                 constexpr Real32 Thick = 2.0f;
-                const Real32     Arm   = Min(24.0f, Min(MaxX - MinX, MaxY - MinY) * 0.35f);
 
                 const Ptr<ImDrawList> List = ImGui::GetWindowDrawList();
-                List->AddLine(ImVec2(MinX, MinY), ImVec2(MinX + Arm, MinY), Color, Thick);
-                List->AddLine(ImVec2(MinX, MinY), ImVec2(MinX, MinY + Arm), Color, Thick);
-                List->AddLine(ImVec2(MaxX, MinY), ImVec2(MaxX - Arm, MinY), Color, Thick);
-                List->AddLine(ImVec2(MaxX, MinY), ImVec2(MaxX, MinY + Arm), Color, Thick);
-                List->AddLine(ImVec2(MaxX, MaxY), ImVec2(MaxX - Arm, MaxY), Color, Thick);
-                List->AddLine(ImVec2(MaxX, MaxY), ImVec2(MaxX, MaxY - Arm), Color, Thick);
-                List->AddLine(ImVec2(MinX, MaxY), ImVec2(MinX + Arm, MaxY), Color, Thick);
-                List->AddLine(ImVec2(MinX, MaxY), ImVec2(MinX, MaxY - Arm), Color, Thick);
+
+                // At each corner, draw a short arm toward each of its two neighbours along the quad edges.
+                const auto DrawArm = [&](ImVec2 From, ImVec2 To)
+                {
+                    const Real32 Length = Sqrt((To.x - From.x) * (To.x - From.x) + (To.y - From.y) * (To.y - From.y));
+                    const Real32 Reach  = Length > 0.0001f ? Min(24.0f, Length * 0.35f) / Length : 0.0f;
+
+                    List->AddLine(From, ImVec2(From.x + (To.x - From.x) * Reach, From.y + (To.y - From.y) * Reach), Color, Thick);
+                };
+
+                for (UInt32 Index = 0; Index < 4; ++Index)
+                {
+                    DrawArm(Corner[Index], Corner[(Index + 1) % 4]);
+                    DrawArm(Corner[Index], Corner[(Index + 3) % 4]);
+                }
             };
 
             const auto DrawSelected = [&](Scene::Entity Actor)
             {
-                if (Actor.IsValid() && Actor.Has<Tileon::Bound>())
+                IntRect Bounds = IntRect::Zero();
+
+                if (Actor.IsValid() && CollectBounds(Actor, Bounds, false))
                 {
-                    DrawBrackets(Actor.Get<Tileon::Bound>().GetRect());
+                    DrawBrackets(Bounds);
                 }
             };
 
@@ -568,7 +611,6 @@ namespace Tileon::Editor::View
                     mMarquee       = true;
                     mMarqueeMoved  = false;
                     mMarqueeScreen = Composer.GetMousePos();
-                    mMarqueeWorld  = Cursor;
                 }
 
                 if (mMarquee && ImGui::IsMouseDown(ImGuiMouseButton_Left))
@@ -597,12 +639,11 @@ namespace Tileon::Editor::View
 
                     if (mMarqueeMoved)
                     {
-                        const SInt32 MinX = static_cast<SInt32>(Floor(Min(mMarqueeWorld.GetAbsoluteX(), Cursor.GetAbsoluteX())));
-                        const SInt32 MinY = static_cast<SInt32>(Floor(Min(mMarqueeWorld.GetAbsoluteY(), Cursor.GetAbsoluteY())));
-                        const SInt32 MaxX = static_cast<SInt32>(Floor(Max(mMarqueeWorld.GetAbsoluteX(), Cursor.GetAbsoluteX()))) + 1;
-                        const SInt32 MaxY = static_cast<SInt32>(Floor(Max(mMarqueeWorld.GetAbsoluteY(), Cursor.GetAbsoluteY()))) + 1;
+                        const ImVec2 Release = Composer.GetMousePos();
+                        const ImVec2 Lower(Min(mMarqueeScreen.x, Release.x), Min(mMarqueeScreen.y, Release.y));
+                        const ImVec2 Upper(Max(mMarqueeScreen.x, Release.x), Max(mMarqueeScreen.y, Release.y));
 
-                        mWorkshop.SelectWithin(IntRect(MinX, MinY, MaxX, MaxY), Shift);
+                        mWorkshop.SelectWithin(Lens, Lower, Upper, Shift);
                     }
                     else if (Shift)
                     {
@@ -623,17 +664,6 @@ namespace Tileon::Editor::View
 
                 // Footprint preview: show exactly which cells the stamp covers before it is committed.
                 {
-                    const Real32 RangeX = Director.GetViewport().GetX() * Director.GetDensity();
-                    const Real32 RangeY = Director.GetViewport().GetY() * Director.GetDensity();
-
-                    const auto ToScreen = [&](Real32 X, Real32 Y)
-                    {
-                        const Vector2 Pixel = Director.GetScreenCoordinates(Placement(0, 0, X, Y));
-                        return ImVec2(
-                            ViewportOrigin.x + (Pixel.GetX() / RangeX) * ViewportSize.x,
-                            ViewportOrigin.y + (Pixel.GetY() / RangeY) * ViewportSize.y);
-                    };
-
                     IntRect Footprint = IntRect::Zero();
 
                     if (mWorkshop.GetBrush() == Workshop::Brush::Bucket)
@@ -652,14 +682,14 @@ namespace Tileon::Editor::View
                         Footprint = IntRect(TileX, TileY, TileX + Span.GetX(), TileY + Span.GetY());
                     }
 
-                    const ImVec2 A = ToScreen(Footprint.GetMinimumX(), Footprint.GetMinimumY());
-                    const ImVec2 B = ToScreen(Footprint.GetMaximumX(), Footprint.GetMaximumY());
-                    const ImVec2 Lower(Min(A.x, B.x), Min(A.y, B.y));
-                    const ImVec2 Upper(Max(A.x, B.x), Max(A.y, B.y));
+                    const ImVec2 Corner0 = Lens.Project(Placement(0, 0, Footprint.GetMinimumX(), Footprint.GetMinimumY()));
+                    const ImVec2 Corner1 = Lens.Project(Placement(0, 0, Footprint.GetMaximumX(), Footprint.GetMinimumY()));
+                    const ImVec2 Corner2 = Lens.Project(Placement(0, 0, Footprint.GetMaximumX(), Footprint.GetMaximumY()));
+                    const ImVec2 Corner3 = Lens.Project(Placement(0, 0, Footprint.GetMinimumX(), Footprint.GetMaximumY()));
 
                     const Ptr<ImDrawList> List = ImGui::GetWindowDrawList();
-                    List->AddRectFilled(Lower, Upper, IM_COL32(120, 200, 255, 45));
-                    List->AddRect(Lower, Upper, IM_COL32(120, 200, 255, 220), 0.0f, 0, 1.5f);
+                    List->AddQuadFilled(Corner0, Corner1, Corner2, Corner3, IM_COL32(120, 200, 255, 45));
+                    List->AddQuad(Corner0, Corner1, Corner2, Corner3, IM_COL32(120, 200, 255, 220), 1.5f);
                 }
 
                 // Pencil paints a continuous stroke while held; Bucket fills once per click.

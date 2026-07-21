@@ -30,6 +30,7 @@ namespace Tileon::Editor
           mMode             { Mode::Tile },
           mLevel            { Level::Base },
           mBrush            { Brush::Pencil },
+          mSeamless         { true },
           mSelectionPrimary { 0 },
           mClipboardCount   { 0 }
     {
@@ -405,12 +406,35 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Workshop::SelectWithin(IntRect Area, Bool Additive)
+    void Workshop::SelectWithin(ConstRef<Lens> Lens, ImVec2 Minimum, ImVec2 Maximum, Bool Additive)
     {
         if (!Additive)
         {
             mSelection.Clear();
         }
+
+        const Placement Corner[4] =
+        {
+            Lens.Unproject(Minimum),
+            Lens.Unproject(ImVec2(Maximum.x, Minimum.y)),
+            Lens.Unproject(Maximum),
+            Lens.Unproject(ImVec2(Minimum.x, Maximum.y)),
+        };
+
+        Real64 MinX = Corner[0].GetAbsoluteX(), MinY = Corner[0].GetAbsoluteY();
+        Real64 MaxX = MinX, MaxY = MinY;
+
+        for (UInt32 Index = 1; Index < 4; ++Index)
+        {
+            MinX = Min(MinX, Corner[Index].GetAbsoluteX());
+            MinY = Min(MinY, Corner[Index].GetAbsoluteY());
+            MaxX = Max(MaxX, Corner[Index].GetAbsoluteX());
+            MaxY = Max(MaxY, Corner[Index].GetAbsoluteY());
+        }
+
+        const IntRect Area(
+            static_cast<SInt32>(Floor(MinX)),     static_cast<SInt32>(Floor(MinY)),
+            static_cast<SInt32>(Floor(MaxX)) + 1, static_cast<SInt32>(Floor(MaxY)) + 1);
 
         UInt64 Primary = mSelectionPrimary;
 
@@ -421,13 +445,19 @@ namespace Tileon::Editor
                 return;
             }
 
-            // Cells are coarse, so confirm the entity's own bound actually overlaps the marquee.
-            if (const ConstPtr<Bound> Volume = Actor.TryGet<const Tileon::Bound>())
+            const ConstPtr<Bound> Volume = Actor.TryGet<const Tileon::Bound>();
+
+            if (!Volume)
             {
-                if (!Volume->GetRect().Test(Area))
-                {
-                    return;
-                }
+                return;
+            }
+
+            const IntVector2 Centre = Volume->GetRect().GetCenter();
+            const ImVec2     Screen = Lens.Project(Placement(0, 0, static_cast<Real32>(Centre.GetX()), static_cast<Real32>(Centre.GetY())));
+
+            if (Screen.x < Minimum.x || Screen.x > Maximum.x || Screen.y < Minimum.y || Screen.y > Maximum.y)
+            {
+                return;
             }
 
             const Scene::Entity Root = Scene::Entity::ResolveRecursively(Actor, Scene::Hierarchy::Fixed);
@@ -648,15 +678,15 @@ namespace Tileon::Editor
 
         if (Operation.Command == Command::Add)
         {
-            // Align the atlas to the world grid, not to where the stamp began. A cell's sub-tile is then a pure
-            // function of its global position, so a terrain tiles seamlessly and overlapping strokes stay
-            // consistent instead of each stamp restarting the pattern and overwriting the last one's weight.
             const SInt32 SpanX = Operation.Span.GetX();
             const SInt32 SpanY = Operation.Span.GetY();
 
-            const IntVector2 Offset(
-                ((GlobalClipMinX % SpanX) + SpanX) % SpanX,
-                ((GlobalClipMinY % SpanY) + SpanY) % SpanY);
+            // Seamless: the atlas index follows the world grid, so a cell's sub-tile depends only on its position and
+            // a terrain tiles seamlessly across overlapping strokes.
+            const IntVector2 Offset = mSeamless
+                ? IntVector2(((GlobalClipMinX % SpanX) + SpanX) % SpanX, ((GlobalClipMinY % SpanY) + SpanY) % SpanY)
+                : IntVector2((GlobalClipMinX - Operation.Area.GetMinimumX()) % SpanX,
+                             (GlobalClipMinY - Operation.Area.GetMinimumY()) % SpanY);
 
             Region->Fill(LocalArea, Operation.Layer, Operation.Terrain, Operation.Span, Offset);
         }
