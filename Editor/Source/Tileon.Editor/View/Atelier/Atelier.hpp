@@ -94,5 +94,7 @@ namespace Tileon::Editor::View
         Bool             mMarqueeMoved;
         ImVec2           mMarqueeScreen;
         Placement        mMarqueeWorld;
+        SInt32           mPaintTileX;
+        SInt32           mPaintTileY;
     };
 }

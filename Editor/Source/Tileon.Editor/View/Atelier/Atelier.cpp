@@ -27,7 +27,9 @@ namespace Tileon::Editor::View
           mGizmo        { Context },
           mTarget       { Renderer::Target::Albedo },
           mMarquee      { false },
-          mMarqueeMoved { false }
+          mMarqueeMoved { false },
+          mPaintTileX   { INT32_MIN },
+          mPaintTileY   { INT32_MIN }
     {
     }
 
@@ -557,7 +559,7 @@ namespace Tileon::Editor::View
                 // Paste the clipboard's group so its anchor lands on the cursor.
                 if (ImGui::GetIO().KeyCtrl && Composer.IsKeyPressed(ImGuiKey_V))
                 {
-                    mWorkshop.PasteAt(Cursor);
+                    mWorkshop.Paste(Cursor);
                 }
 
                 // A press starts either a marquee or a plain click; the drag distance decides which on release.
@@ -612,23 +614,95 @@ namespace Tileon::Editor::View
                     }
                 }
             }
+            else if (mWorkshop.GetMode() == Workshop::Mode::Tile)
+            {
+                mWorkshop.ClearPreview();
+
+                const UInt32    Selection = GetContext().GetInteger("Selection.Tile", 0);
+                const Placement Cursor    = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
+
+                // Footprint preview: show exactly which cells the stamp covers before it is committed.
+                {
+                    const Real32 RangeX = Director.GetViewport().GetX() * Director.GetDensity();
+                    const Real32 RangeY = Director.GetViewport().GetY() * Director.GetDensity();
+
+                    const auto ToScreen = [&](Real32 X, Real32 Y)
+                    {
+                        const Vector2 Pixel = Director.GetScreenCoordinates(Placement(0, 0, X, Y));
+                        return ImVec2(
+                            ViewportOrigin.x + (Pixel.GetX() / RangeX) * ViewportSize.x,
+                            ViewportOrigin.y + (Pixel.GetY() / RangeY) * ViewportSize.y);
+                    };
+
+                    IntRect Footprint = IntRect::Zero();
+
+                    if (mWorkshop.GetBrush() == Workshop::Brush::Bucket)
+                    {
+                        Footprint = IntRect(
+                            Cursor.GetBaseX(), Cursor.GetBaseY(),
+                            Cursor.GetBaseX() + Tileon::Region::kTilesPerX,
+                            Cursor.GetBaseY() + Tileon::Region::kTilesPerY);
+                    }
+                    else
+                    {
+                        const IntVector2 Span  = Selection ? mContext.GetTileset().GetMotif(Selection).GetSpan() : IntVector2::One();
+                        const SInt32     TileX = static_cast<SInt32>(Floor(Cursor.GetAbsoluteX()));
+                        const SInt32     TileY = static_cast<SInt32>(Floor(Cursor.GetAbsoluteY()));
+
+                        Footprint = IntRect(TileX, TileY, TileX + Span.GetX(), TileY + Span.GetY());
+                    }
+
+                    const ImVec2 A = ToScreen(Footprint.GetMinimumX(), Footprint.GetMinimumY());
+                    const ImVec2 B = ToScreen(Footprint.GetMaximumX(), Footprint.GetMaximumY());
+                    const ImVec2 Lower(Min(A.x, B.x), Min(A.y, B.y));
+                    const ImVec2 Upper(Max(A.x, B.x), Max(A.y, B.y));
+
+                    const Ptr<ImDrawList> List = ImGui::GetWindowDrawList();
+                    List->AddRectFilled(Lower, Upper, IM_COL32(120, 200, 255, 45));
+                    List->AddRect(Lower, Upper, IM_COL32(120, 200, 255, 220), 0.0f, 0, 1.5f);
+                }
+
+                // Pencil paints a continuous stroke while held; Bucket fills once per click.
+                const Bool   Continuous = (mWorkshop.GetBrush() == Workshop::Brush::Pencil);
+                const SInt32 TileX      = static_cast<SInt32>(Floor(Cursor.GetAbsoluteX()));
+                const SInt32 TileY      = static_cast<SInt32>(Floor(Cursor.GetAbsoluteY()));
+                const Bool   NewTile    = (TileX != mPaintTileX) || (TileY != mPaintTileY);
+
+                const Bool LeftClick  = Composer.IsMouseClicked(ImGuiMouseButton_Left);
+                const Bool RightClick = Composer.IsMouseClicked(ImGuiMouseButton_Right);
+                const Bool LeftHeld   = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+                const Bool RightHeld  = ImGui::IsMouseDown(ImGuiMouseButton_Right);
+
+                const Bool Erase = RightClick || (Continuous && RightHeld && NewTile);
+                const Bool Paint = (LeftClick || (Continuous && LeftHeld && NewTile)) && Selection != 0;
+
+                if (Erase)
+                {
+                    mWorkshop.Execute(Workshop::Command::Remove, Cursor, Selection);
+                }
+                else if (Paint)
+                {
+                    mWorkshop.Execute(Workshop::Command::Add, Cursor, Selection);
+                }
+
+                if (LeftHeld || RightHeld)
+                {
+                    mPaintTileX = TileX;
+                    mPaintTileY = TileY;
+                }
+            }
             else
             {
                 const Bool IsLeftButton  = Composer.IsMouseClicked(ImGuiMouseButton_Left);
                 const Bool IsRightButton = Composer.IsMouseClicked(ImGuiMouseButton_Right);
 
-                // Get the currently selected object from the context, which depends on the active editing mode.
-                const UInt32 Selection  = GetContext().GetInteger(
-                    (mWorkshop.GetMode() == Workshop::Mode::Tile)
-                        ? "Selection.Tile"_Text
-                        : "Selection.Archetype"_Text, 0);
-
-                const Placement Cursor = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
+                const UInt32    Selection = GetContext().GetInteger("Selection.Archetype", 0);
+                const Placement Cursor    = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
 
                 // Show the pending entity under the cursor before it is committed by a click.
                 mWorkshop.UpdatePreview(Cursor, Selection);
 
-                // Handle left-click for adding and right-click for removing tiles.
+                // Handle left-click for adding and right-click for removing entities.
                 if (IsRightButton || (IsLeftButton && Selection != 0))
                 {
                     const Workshop::Command Command = IsLeftButton

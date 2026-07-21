@@ -155,16 +155,8 @@ namespace Tileon::Editor
 
     void Workshop::ExecuteOnTiles(Command Command, Placement Placement, UInt32 Object)
     {
-        Ref<Tileset> Tileset = mContext.GetTileset();
-
         // Gets the tileset entry for the specified object ID and retrieves its column and row span.
-        IntVector2 Span = IntVector2::One();
-
-        if (Object)
-        {
-            ConstRef<Motif> Motif = Tileset.GetMotif(Object);
-            Span = Motif.GetSpan();
-        }
+        const IntVector2 Span  = Object ? mContext.GetTileset().GetMotif(Object).GetSpan() : IntVector2::One();
 
         // Apply the command based on the current brush type and the placement of the cursor in the world.
         switch (mBrush)
@@ -656,9 +648,15 @@ namespace Tileon::Editor
 
         if (Operation.Command == Command::Add)
         {
+            // Align the atlas to the world grid, not to where the stamp began. A cell's sub-tile is then a pure
+            // function of its global position, so a terrain tiles seamlessly and overlapping strokes stay
+            // consistent instead of each stamp restarting the pattern and overwriting the last one's weight.
+            const SInt32 SpanX = Operation.Span.GetX();
+            const SInt32 SpanY = Operation.Span.GetY();
+
             const IntVector2 Offset(
-                (GlobalClipMinX - Operation.Area.GetMinimumX()) % Operation.Span.GetX(),
-                (GlobalClipMinY - Operation.Area.GetMinimumY()) % Operation.Span.GetY());
+                ((GlobalClipMinX % SpanX) + SpanX) % SpanX,
+                ((GlobalClipMinY % SpanY) + SpanY) % SpanY);
 
             Region->Fill(LocalArea, Operation.Layer, Operation.Terrain, Operation.Span, Offset);
         }
