@@ -12,6 +12,7 @@
 
 #include "Gizmo.hpp"
 #include "Tileon.World/Component/State/Lifecycle.hpp"
+#include <Zyphryon.Math/Matrix3x2.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -88,19 +89,20 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Gizmo::Draw(Ref<UI::Composer> Composer, Scene::Entity Actor, ImVec2 Origin, ImVec2 Size)
+    Bool Gizmo::Draw(Ref<UI::Composer> Composer, ConstRef<Bag<UInt64>> Selection, Scene::Entity Primary, ImVec2 Origin, ImVec2 Size)
     {
-        // Always manipulate the group as a whole: whether the selection is the instance root or one of its parts,
+        // The handles anchor on the primary: whether the selection is the instance root or one of its parts,
         // transform the root, whose Pose cascades down to every part through World::ComputeWorldspace.
-        Actor = Actor.IsValid() ? Scene::Entity::ResolveRecursively(Actor, Scene::Hierarchy::Fixed) : Actor;
+        Primary = Primary.IsValid() ? Scene::Entity::ResolveRecursively(Primary, Scene::Hierarchy::Fixed) : Primary;
 
-        if (!Actor.IsValid() || !Actor.Has<Pose>())
+        if (!Primary.IsValid() || !Primary.Has<Pose>())
         {
             mHandle = Handle::None;
+            mSnapshots.Clear();
             return false;
         }
 
-        const ImVec2 Anchor = ToScreen(GetOrigin(Actor), Origin, Size);
+        const ImVec2 Anchor = ToScreen(GetOrigin(Primary), Origin, Size);
 
         Handle Hovered = Handle::None;
 
@@ -123,11 +125,13 @@ namespace Tileon::Editor
             {
                 mHandle  = Hovered;
                 mGrab    = ToWorld(Composer.GetMousePos(), Origin, Size);
-                mStart   = GetOrigin(Actor);
-                mOrigin  = Actor.Get<const Pose>();
+                mStart   = GetOrigin(Primary);
+                mOrigin  = Primary.Get<const Pose>();
                 mReach   = Max(Distance(Composer.GetMousePos(), Anchor), 1.0f);
                 mBearing = ImVec2(
                     (Composer.GetMousePos().x - Anchor.x) / mReach, (Composer.GetMousePos().y - Anchor.y) / mReach);
+
+                CaptureSnapshots(Selection, Primary);
             }
             return Hovered != Handle::None;
         }
@@ -135,6 +139,7 @@ namespace Tileon::Editor
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
         {
             mHandle = Handle::None;
+            mSnapshots.Clear();
             return true;
         }
 
@@ -143,70 +148,144 @@ namespace Tileon::Editor
             static_cast<Real32>(Cursor.GetAbsoluteX() - mGrab.GetAbsoluteX()),
             static_cast<Real32>(Cursor.GetAbsoluteY() - mGrab.GetAbsoluteY()));
 
-        Pose Target = mOrigin;
+        // Everything turns and scales about the primary's origin, which is where the handles are drawn.
+        const Real32 PivotX = static_cast<Real32>(mStart.GetAbsoluteX());
+        const Real32 PivotY = static_cast<Real32>(mStart.GetAbsoluteY());
 
-        switch (mMode)
-        {
-        case Mode::Move:
-        {
-            const Vector2 Step(
-                (mHandle == Handle::AxisY) ? 0.0f : Delta.GetX(),
-                (mHandle == Handle::AxisX) ? 0.0f : Delta.GetY());
+        // Rotate shares one angle across the group; scale shares one uniform factor.
+        const Real32 Before = Angle::FromCartesian(
+            static_cast<Real32>(mGrab.GetAbsoluteX()  - mStart.GetAbsoluteX()),
+            static_cast<Real32>(mGrab.GetAbsoluteY()  - mStart.GetAbsoluteY())).GetRadians();
+        const Real32 After  = Angle::FromCartesian(
+            static_cast<Real32>(Cursor.GetAbsoluteX() - mStart.GetAbsoluteX()),
+            static_cast<Real32>(Cursor.GetAbsoluteY() - mStart.GetAbsoluteY())).GetRadians();
 
-            if (const ConstPtr<Region> Region = GetRegion(Actor))
+        // Reuse the engine's rotation matrix so an orbit always turns the same way the sprite itself does.
+        const Angle     Spin    = Angle::FromRadians(After - Before);
+        const Matrix3x2 Spinner = Matrix3x2::FromRotation(Spin);
+
+        const ImVec2 ScaleOffset(Composer.GetMousePos().x - Anchor.x, Composer.GetMousePos().y - Anchor.y);
+        const Real32 Factor = (ScaleOffset.x * mBearing.x + ScaleOffset.y * mBearing.y) / mReach;
+
+        for (ConstRef<Snapshot> Snapshot : mSnapshots)
+        {
+            Vector2 Base;
+
+            if (const ConstPtr<Region> Region = GetRegion(Snapshot.Actor))
             {
-                const Real64 TargetX = mStart.GetAbsoluteX() + Step.GetX();
-                const Real64 TargetY = mStart.GetAbsoluteY() + Step.GetY();
-
-                Target.SetTranslation(Vector2(
-                    static_cast<Real32>(TargetX - Region->GetX() * Tileon::Region::kTilesPerX),
-                    static_cast<Real32>(TargetY - Region->GetY() * Tileon::Region::kTilesPerY)));
+                Base = Vector2(
+                    static_cast<Real32>(Region->GetX() * Tileon::Region::kTilesPerX),
+                    static_cast<Real32>(Region->GetY() * Tileon::Region::kTilesPerY));
             }
-            break;
-        }
-        case Mode::Rotate:
-        {
-            const Real32 Before = Angle::FromCartesian(
-                static_cast<Real32>(mGrab.GetAbsoluteX()  - mStart.GetAbsoluteX()),
-                static_cast<Real32>(mGrab.GetAbsoluteY()  - mStart.GetAbsoluteY())).GetRadians();
-            const Real32 After  = Angle::FromCartesian(
-                static_cast<Real32>(Cursor.GetAbsoluteX() - mStart.GetAbsoluteX()),
-                static_cast<Real32>(Cursor.GetAbsoluteY() - mStart.GetAbsoluteY())).GetRadians();
 
-            Target.SetRotation(mOrigin.GetRotation() + Angle::FromRadians(After - Before));
-            break;
-        }
-        case Mode::Scale:
-        {
-            if (mHandle == Handle::Uniform)
+            const Real32   StartX = static_cast<Real32>(Snapshot.Start.GetAbsoluteX());
+            const Real32   StartY = static_cast<Real32>(Snapshot.Start.GetAbsoluteY());
+            const Vector2  Offset(StartX - PivotX, StartY - PivotY);
+
+            Pose Target = Snapshot.Origin;
+
+            switch (mMode)
             {
-                const ImVec2 Offset(Composer.GetMousePos().x - Anchor.x, Composer.GetMousePos().y - Anchor.y);
-                const Real32 Reach = Offset.x * mBearing.x + Offset.y * mBearing.y;
-
-                const Vector2 Scale = mOrigin.GetScale() * (Reach / mReach);
-                Target.SetScale(Vector2(Max(Scale.GetX(), 0.01f), Max(Scale.GetY(), 0.01f)));
-            }
-            else
+            case Mode::Move:
             {
                 const Vector2 Step(
                     (mHandle == Handle::AxisY) ? 0.0f : Delta.GetX(),
                     (mHandle == Handle::AxisX) ? 0.0f : Delta.GetY());
 
-                const Vector2 Scale = mOrigin.GetScale() + Step;
-                Target.SetScale(Vector2(Max(Scale.GetX(), 0.01f), Max(Scale.GetY(), 0.01f)));
+                Target.SetTranslation(Vector2(StartX + Step.GetX() - Base.GetX(), StartY + Step.GetY() - Base.GetY()));
+                break;
             }
-            break;
-        }
-        }
+            case Mode::Rotate:
+            {
+                // Orbit the entity's origin about the pivot, and turn it by the same angle in place.
+                const Vector2 Rotated = Matrix3x2::Project(Spinner, Offset);
 
-        Actor.Set(Move(Target));
-        Actor.Add<Stale>();
+                Target.SetTranslation(Vector2(PivotX + Rotated.GetX() - Base.GetX(), PivotY + Rotated.GetY() - Base.GetY()));
+                Target.SetRotation(Snapshot.Origin.GetRotation() + Spin);
+                break;
+            }
+            case Mode::Scale:
+            {
+                if (mHandle == Handle::Uniform)
+                {
+                    // Scale each entity in place and push its origin out from the pivot by the same factor.
+                    const Vector2 Scale = Snapshot.Origin.GetScale() * Factor;
+                    Target.SetScale(Vector2(Max(Scale.GetX(), 0.01f), Max(Scale.GetY(), 0.01f)));
+                    Target.SetTranslation(Vector2(
+                        PivotX + Offset.GetX() * Factor - Base.GetX(),
+                        PivotY + Offset.GetY() * Factor - Base.GetY()));
+                }
+                else
+                {
+                    const Vector2 Step(
+                        (mHandle == Handle::AxisY) ? 0.0f : Delta.GetX(),
+                        (mHandle == Handle::AxisX) ? 0.0f : Delta.GetY());
 
-        if (const Scene::Entity Region = Actor.GetParent(); Region.IsValid())
-        {
-            Region.Add<Tileon::Persist>();
+                    const Vector2 Scale = Snapshot.Origin.GetScale() + Step;
+                    Target.SetScale(Vector2(Max(Scale.GetX(), 0.01f), Max(Scale.GetY(), 0.01f)));
+
+                    // An axis scale leaves the origin where it is; keep it pinned in absolute space.
+                    Target.SetTranslation(Vector2(StartX - Base.GetX(), StartY - Base.GetY()));
+                }
+                break;
+            }
+            }
+
+            Snapshot.Actor.Set(Move(Target));
+            Snapshot.Actor.Add<Stale>();
+
+            if (const Scene::Entity Region = Snapshot.Actor.GetParent(); Region.IsValid())
+            {
+                Region.Add<Tileon::Persist>();
+            }
         }
         return true;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Gizmo::CaptureSnapshots(ConstRef<Bag<UInt64>> Selection, Scene::Entity Primary)
+    {
+        mSnapshots.Clear();
+
+        Ref<Scene::Service> Scene = mContext.GetScene();
+
+        const auto Capture = [&](Scene::Entity Actor)
+        {
+            if (!Actor.IsValid())
+            {
+                return;
+            }
+            Actor = Scene::Entity::ResolveRecursively(Actor, Scene::Hierarchy::Fixed);
+
+            if (!Actor.Has<Pose>())
+            {
+                return;
+            }
+
+            // Resolving parts to their root can collapse several ids onto one entity, so guard against duplicates.
+            for (ConstRef<Snapshot> Existing : mSnapshots)
+            {
+                if (Existing.Actor.GetID() == Actor.GetID())
+                {
+                    return;
+                }
+            }
+            mSnapshots.Append(Snapshot { Actor, GetOrigin(Actor), Actor.Get<const Pose>() });
+        };
+
+        if (Selection.IsEmpty())
+        {
+            Capture(Primary);
+        }
+        else
+        {
+            for (const UInt64 ID : Selection)
+            {
+                Capture(Scene.GetEntity(ID));
+            }
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

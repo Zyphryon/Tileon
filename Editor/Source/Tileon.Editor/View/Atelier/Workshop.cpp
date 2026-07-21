@@ -11,7 +11,10 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Workshop.hpp"
+#include "Tileon.World/Component.hpp"
 #include "Tileon.World/Component/State/Lifecycle.hpp"
+#include <Zyphryon.Base/Marshal/Binary/Reader.hpp>
+#include <Zyphryon.Base/Marshal/Binary/Writer.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -23,10 +26,12 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Workshop::Workshop(Ref<Context> Context)
-        : mContext { Context },
-          mMode    { Mode::Tile },
-          mLevel   { Level::Base },
-          mBrush   { Brush::Pencil }
+        : mContext          { Context },
+          mMode             { Mode::Tile },
+          mLevel            { Level::Base },
+          mBrush            { Brush::Pencil },
+          mSelectionPrimary { 0 },
+          mClipboardCount   { 0 }
     {
     }
 
@@ -285,13 +290,311 @@ namespace Tileon::Editor
 
     void Workshop::SelectEntity(Placement Placement)
     {
-        Scene::Entity Instance = PickEntity(Placement);
+        SelectSingle(Placement);
+    }
 
-        if (Instance.IsValid())
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::SetPrimary(UInt64 Entity)
+    {
+        mSelectionPrimary = Entity;
+        mContext.SetInteger("Selection.Entity", static_cast<SInt64>(Entity));
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    Placement Workshop::OriginOf(Scene::Entity Actor) const
+    {
+        Vector2 Local = Vector2::Zero();
+
+        if (const ConstPtr<Pose> Component = Actor.TryGet<const Tileon::Pose>())
         {
-            Instance = Scene::Entity::ResolveRecursively(Instance, Scene::Hierarchy::Fixed);
+            Local = Component->GetTranslation();
         }
-        mContext.SetInteger("Selection.Entity", Instance.GetID());
+
+        SInt16 RegionX = 0;
+        SInt16 RegionY = 0;
+
+        if (const Scene::Entity Region = Actor.GetParent(Scene::Hierarchy::Open); Region.IsValid())
+        {
+            if (const ConstPtr<Tileon::Region> Component = Region.TryGet<const Tileon::Region>())
+            {
+                RegionX = Component->GetX();
+                RegionY = Component->GetY();
+            }
+        }
+        return Placement(RegionX, RegionY, Local.GetX(), Local.GetY());
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::ReconcileSelection()
+    {
+        const UInt64 Current = static_cast<UInt64>(mContext.GetInteger("Selection.Entity", 0));
+
+        if (Current != mSelectionPrimary)
+        {
+            mSelection.Clear();
+
+            if (Current)
+            {
+                mSelection.Insert(Current);
+            }
+            mSelectionPrimary = Current;
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::ClearSelection()
+    {
+        mSelection.Clear();
+        SetPrimary(0);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::SelectSingle(Placement Placement)
+    {
+        mSelection.Clear();
+
+        if (Scene::Entity Actor = PickEntity(Placement); Actor.IsValid())
+        {
+            Actor = Scene::Entity::ResolveRecursively(Actor, Scene::Hierarchy::Fixed);
+            mSelection.Insert(Actor.GetID());
+            SetPrimary(Actor.GetID());
+        }
+        else
+        {
+            SetPrimary(0);
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::SelectToggle(Placement Placement)
+    {
+        Scene::Entity Actor = PickEntity(Placement);
+
+        if (!Actor.IsValid())
+        {
+            return;
+        }
+        Actor = Scene::Entity::ResolveRecursively(Actor, Scene::Hierarchy::Fixed);
+
+        if (const UInt64 ID = Actor.GetID(); mSelection.Contains(ID))
+        {
+            mSelection.Erase(ID);
+
+            if (mSelectionPrimary == ID)
+            {
+                UInt64 Next = 0;
+                for (const UInt64 Remaining : mSelection)
+                {
+                    Next = Remaining;
+                    break;
+                }
+                SetPrimary(Next);
+            }
+        }
+        else
+        {
+            mSelection.Insert(ID);
+            SetPrimary(ID);
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::SelectWithin(IntRect Area, Bool Additive)
+    {
+        if (!Additive)
+        {
+            mSelection.Clear();
+        }
+
+        UInt64 Primary = mSelectionPrimary;
+
+        mContext.GetSupervisor().QueryEach(Area, [&](Scene::Entity Actor)
+        {
+            if (!Actor.IsValid() || Actor.Has<Unpickable>())
+            {
+                return;
+            }
+
+            // Cells are coarse, so confirm the entity's own bound actually overlaps the marquee.
+            if (const ConstPtr<Bound> Volume = Actor.TryGet<const Tileon::Bound>())
+            {
+                if (!Volume->GetRect().Test(Area))
+                {
+                    return;
+                }
+            }
+
+            const Scene::Entity Root = Scene::Entity::ResolveRecursively(Actor, Scene::Hierarchy::Fixed);
+            mSelection.Insert(Root.GetID());
+            Primary = Root.GetID();
+        });
+
+        SetPrimary(mSelection.IsEmpty() ? 0 : Primary);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::DeleteSelection()
+    {
+        Ref<Scene::Service> Scene = mContext.GetScene();
+
+        for (const UInt64 ID : mSelection)
+        {
+            Scene::Entity Actor = Scene.GetEntity(ID);
+
+            if (!Actor.IsValid())
+            {
+                continue;
+            }
+            Actor = Scene::Entity::ResolveRecursively(Actor, Scene::Hierarchy::Fixed);
+
+            if (const Scene::Entity Region = Actor.GetParent(Scene::Hierarchy::Open); Region.IsValid())
+            {
+                Region.Add<Persist>();
+            }
+            Actor.Add<Dispose>();
+        }
+        ClearSelection();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::CopySelection()
+    {
+        Ref<Scene::Service> Scene = mContext.GetScene();
+
+        struct Item final
+        {
+            Scene::Entity Root;
+            Placement     Origin;
+        };
+
+        Sequence<Item> Items;
+        Real64         SumX = 0.0;
+        Real64         SumY = 0.0;
+
+        for (const UInt64 ID : mSelection)
+        {
+            Scene::Entity Root = Scene.GetEntity(ID);
+
+            if (!Root.IsValid())
+            {
+                continue;
+            }
+            Root = Scene::Entity::ResolveRecursively(Root, Scene::Hierarchy::Fixed);
+
+            const Placement Origin = OriginOf(Root);
+            Items.Append(Item { Root, Origin });
+
+            SumX += Origin.GetAbsoluteX();
+            SumY += Origin.GetAbsoluteY();
+        }
+
+        if (Items.IsEmpty())
+        {
+            mClipboardCount = 0;
+            return;
+        }
+
+        // Anchor the clipboard on the group's centroid, so a paste re-centres the whole group on the cursor.
+        const Real64 AnchorX = SumX / Items.GetSize();
+        const Real64 AnchorY = SumY / Items.GetSize();
+
+        Writer Output;
+        Output.Write<UInt32>(static_cast<UInt32>(Items.GetSize()));
+
+        for (ConstRef<Item> Entry : Items)
+        {
+            Output.Write<Real64>(Entry.Origin.GetAbsoluteX() - AnchorX);
+            Output.Write<Real64>(Entry.Origin.GetAbsoluteY() - AnchorY);
+            Scene.SaveHierarchy(Output, Entry.Root);
+        }
+
+        mClipboard      = Output.Detach();
+        mClipboardCount = static_cast<UInt32>(Items.GetSize());
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::CutSelection()
+    {
+        CopySelection();
+        DeleteSelection();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Workshop::Paste(Placement Placement)
+    {
+        if (mClipboardCount == 0 || mClipboard == nullptr)
+        {
+            return;
+        }
+
+        Ref<Scene::Service> Scene      = mContext.GetScene();
+        Ref<Supervisor>     Supervisor = mContext.GetSupervisor();
+
+        Reader Input(mClipboard.GetData(), mClipboard.GetSize());
+        const UInt32 Count = Input.Read<UInt32>();
+
+        mSelection.Clear();
+        UInt64 Primary = 0;
+
+        for (UInt32 Element = 0; Element < Count; ++Element)
+        {
+            const Real64 OffsetX = Input.Read<Real64>();
+            const Real64 OffsetY = Input.Read<Real64>();
+
+            Scene::Entity Actor = Scene.LoadHierarchy(Input);
+
+            if (!Actor.IsValid())
+            {
+                continue;
+            }
+
+            const Tileon::Placement Target = Tileon::Placement::FromAbsolute(
+                Placement.GetAbsoluteX() + OffsetX, Placement.GetAbsoluteY() + OffsetY);
+
+            Scene::Entity Region = Supervisor.GetOrLoadRegion(Target.GetRegionX(), Target.GetRegionY(), true);
+
+            if (!Region.IsValid())
+            {
+                Actor.Add<Dispose>();
+                continue;
+            }
+
+            // The subtree kept its original scale and rotation; only the translation moves to the paste target.
+            Pose Transformation = Actor.TryGet<const Tileon::Pose>() ? Actor.Get<const Tileon::Pose>() : Pose();
+            Transformation.SetTranslation(Vector2(Target.GetOffsetX(), Target.GetOffsetY()));
+            Actor.Set(Move(Transformation));
+
+            Actor.Attach(Region, Scene::Hierarchy::Open);
+            Actor.Add<Stale>();
+            Actor.Add<Persist>();
+            Region.Add<Persist>();
+
+            mSelection.Insert(Actor.GetID());
+            Primary = Actor.GetID();
+        }
+        SetPrimary(Primary);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

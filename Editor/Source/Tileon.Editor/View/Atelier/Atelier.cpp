@@ -22,10 +22,12 @@ namespace Tileon::Editor::View
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Atelier::Atelier(Ref<Context> Context)
-        : Activity  { Context, kTitle, true  },
-          mWorkshop { Context },
-          mGizmo    { Context },
-          mTarget   { Renderer::Target::Albedo }
+        : Activity      { Context, kTitle, true  },
+          mWorkshop     { Context },
+          mGizmo        { Context },
+          mTarget       { Renderer::Target::Albedo },
+          mMarquee      { false },
+          mMarqueeMoved { false }
     {
     }
 
@@ -368,59 +370,86 @@ namespace Tileon::Editor::View
         const ImVec2 ViewportOrigin = Composer.GetItemRectMin();
         const ImVec2 ViewportSize   = Composer.GetItemRectSize();
 
-        // Mark the selected entity with corner brackets, drawn as an overlay so it shows under every brush.
-        if (const UInt64 Selected = GetContext().GetInteger("Selection.Entity", 0))
+        // Keep the multi-selection set consistent with single-selection changes made in Hierarchy or Inspector.
+        mWorkshop.ReconcileSelection();
+
+        // Mark every selected entity with corner brackets, drawn as an overlay so they show under any brush.
         {
-            const Scene::Entity Actor = GetContext().GetScene().GetEntity(Selected);
+            const Real32 RangeX = Director.GetViewport().GetX() * Director.GetDensity();
+            const Real32 RangeY = Director.GetViewport().GetY() * Director.GetDensity();
 
-            if (Actor.IsValid())
+            const auto ToScreen = [&](Real32 X, Real32 Y)
             {
-                if (Actor.Has<Tileon::Bound>())
+                const Vector2 Pixel = Director.GetScreenCoordinates(Placement(0, 0, X, Y));
+                return ImVec2(
+                    ViewportOrigin.x + (Pixel.GetX() / RangeX) * ViewportSize.x,
+                    ViewportOrigin.y + (Pixel.GetY() / RangeY) * ViewportSize.y);
+            };
+
+            const auto DrawBrackets = [&](IntRect AABB)
+            {
+                // The world is unrotated, so two opposite corners bound an axis-aligned screen rect.
+                const ImVec2 A = ToScreen(AABB.GetMinimumX(), AABB.GetMinimumY());
+                const ImVec2 B = ToScreen(AABB.GetMaximumX(), AABB.GetMaximumY());
+
+                const Real32 MinX = Min(A.x, B.x);
+                const Real32 MinY = Min(A.y, B.y);
+                const Real32 MaxX = Max(A.x, B.x);
+                const Real32 MaxY = Max(A.y, B.y);
+
+                constexpr UInt32 Color = IM_COL32(255, 170, 40, 235);
+                constexpr Real32 Thick = 2.0f;
+                const Real32     Arm   = Min(24.0f, Min(MaxX - MinX, MaxY - MinY) * 0.35f);
+
+                const Ptr<ImDrawList> List = ImGui::GetWindowDrawList();
+                List->AddLine(ImVec2(MinX, MinY), ImVec2(MinX + Arm, MinY), Color, Thick);
+                List->AddLine(ImVec2(MinX, MinY), ImVec2(MinX, MinY + Arm), Color, Thick);
+                List->AddLine(ImVec2(MaxX, MinY), ImVec2(MaxX - Arm, MinY), Color, Thick);
+                List->AddLine(ImVec2(MaxX, MinY), ImVec2(MaxX, MinY + Arm), Color, Thick);
+                List->AddLine(ImVec2(MaxX, MaxY), ImVec2(MaxX - Arm, MaxY), Color, Thick);
+                List->AddLine(ImVec2(MaxX, MaxY), ImVec2(MaxX, MaxY - Arm), Color, Thick);
+                List->AddLine(ImVec2(MinX, MaxY), ImVec2(MinX + Arm, MaxY), Color, Thick);
+                List->AddLine(ImVec2(MinX, MaxY), ImVec2(MinX, MaxY - Arm), Color, Thick);
+            };
+
+            const auto DrawSelected = [&](Scene::Entity Actor)
+            {
+                if (Actor.IsValid() && Actor.Has<Tileon::Bound>())
                 {
-                    const IntRect AABB   = Actor.Get<Tileon::Bound>().GetRect();
-                    const Real32  RangeX = Director.GetViewport().GetX() * Director.GetDensity();
-                    const Real32  RangeY = Director.GetViewport().GetY() * Director.GetDensity();
-
-                    const auto ToScreen = [&](Real32 X, Real32 Y)
-                    {
-                        const Vector2 Pixel = Director.GetScreenCoordinates(Placement(0, 0, X, Y));
-                        return ImVec2(
-                            ViewportOrigin.x + (Pixel.GetX() / RangeX) * ViewportSize.x,
-                            ViewportOrigin.y + (Pixel.GetY() / RangeY) * ViewportSize.y);
-                    };
-
-                    // The world is unrotated, so two opposite corners bound an axis-aligned screen rect.
-                    const ImVec2 A = ToScreen(AABB.GetMinimumX(), AABB.GetMinimumY());
-                    const ImVec2 B = ToScreen(AABB.GetMaximumX(), AABB.GetMaximumY());
-
-                    const Real32 MinX = Min(A.x, B.x);
-                    const Real32 MinY = Min(A.y, B.y);
-                    const Real32 MaxX = Max(A.x, B.x);
-                    const Real32 MaxY = Max(A.y, B.y);
-
-                    constexpr UInt32 Color = IM_COL32(255, 170, 40, 235);
-                    constexpr Real32 Thick = 2.0f;
-                    const Real32     Arm   = Min(24.0f, Min(MaxX - MinX, MaxY - MinY) * 0.35f);
-
-                    const Ptr<ImDrawList> List = ImGui::GetWindowDrawList();
-                    List->AddLine(ImVec2(MinX, MinY), ImVec2(MinX + Arm, MinY), Color, Thick);
-                    List->AddLine(ImVec2(MinX, MinY), ImVec2(MinX, MinY + Arm), Color, Thick);
-                    List->AddLine(ImVec2(MaxX, MinY), ImVec2(MaxX - Arm, MinY), Color, Thick);
-                    List->AddLine(ImVec2(MaxX, MinY), ImVec2(MaxX, MinY + Arm), Color, Thick);
-                    List->AddLine(ImVec2(MaxX, MaxY), ImVec2(MaxX - Arm, MaxY), Color, Thick);
-                    List->AddLine(ImVec2(MaxX, MaxY), ImVec2(MaxX, MaxY - Arm), Color, Thick);
-                    List->AddLine(ImVec2(MinX, MaxY), ImVec2(MinX + Arm, MaxY), Color, Thick);
-                    List->AddLine(ImVec2(MinX, MaxY), ImVec2(MinX, MaxY - Arm), Color, Thick);
+                    DrawBrackets(Actor.Get<Tileon::Bound>().GetRect());
                 }
+            };
 
-                if (ImGui::IsWindowFocused())
+            if (ConstRef<Bag<UInt64>> Selection = mWorkshop.GetSelection(); !Selection.IsEmpty())
+            {
+                for (const UInt64 ID : Selection)
                 {
-                    if (Composer.IsKeyPressed(ImGuiKey_Delete))
-                    {
-                        Actor.Add<Dispose>();
-                        Actor.Add<Persist>();
-                    }
+                    DrawSelected(GetContext().GetScene().GetEntity(ID));
                 }
+            }
+            else if (const UInt64 Selected = GetContext().GetInteger("Selection.Entity", 0))
+            {
+                DrawSelected(GetContext().GetScene().GetEntity(Selected));
+            }
+        }
+
+        // Clipboard and delete shortcuts act on the whole selection whenever the viewport holds focus.
+        if (ImGui::IsWindowFocused())
+        {
+            const Bool Control = ImGui::GetIO().KeyCtrl;
+
+            if (Control && Composer.IsKeyPressed(ImGuiKey_C))
+            {
+                mWorkshop.CopySelection();
+            }
+            else if (Control && Composer.IsKeyPressed(ImGuiKey_X))
+            {
+                mWorkshop.CutSelection();
+            }
+
+            if (Composer.IsKeyPressed(ImGuiKey_Delete))
+            {
+                mWorkshop.DeleteSelection();
             }
         }
 
@@ -447,7 +476,11 @@ namespace Tileon::Editor::View
             const UInt64        Selection = GetContext().GetInteger("Selection.Entity", 0);
             const Scene::Entity Actor     = GetContext().GetScene().GetEntity(Selection);
 
-            Manipulating = mGizmo.Draw(Composer, Actor, ViewportOrigin, ViewportSize);
+            // A marquee drag must own the cursor outright, so the handles stand down while one is in progress.
+            if (!mMarquee)
+            {
+                Manipulating = mGizmo.Draw(Composer, mWorkshop.GetSelection(), Actor, ViewportOrigin, ViewportSize);
+            }
         }
 
         // Handle interactions with the viewport, such as hovering and clicking to manipulate the scene.
@@ -514,6 +547,71 @@ namespace Tileon::Editor::View
                     Director.SetPosition(Placement::Normalize(Director.GetPosition() + NewPlacement - OldPlacement));
                 }
             }
+            else if (mWorkshop.GetBrush() == Workshop::Brush::Select)
+            {
+                mWorkshop.ClearPreview();
+
+                const Placement Cursor = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
+                const Bool      Shift  = ImGui::GetIO().KeyShift;
+
+                // Paste the clipboard's group so its anchor lands on the cursor.
+                if (ImGui::GetIO().KeyCtrl && Composer.IsKeyPressed(ImGuiKey_V))
+                {
+                    mWorkshop.PasteAt(Cursor);
+                }
+
+                // A press starts either a marquee or a plain click; the drag distance decides which on release.
+                if (Composer.IsMouseClicked(ImGuiMouseButton_Left))
+                {
+                    mMarquee       = true;
+                    mMarqueeMoved  = false;
+                    mMarqueeScreen = Composer.GetMousePos();
+                    mMarqueeWorld  = Cursor;
+                }
+
+                if (mMarquee && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+                {
+                    const ImVec2 Now = Composer.GetMousePos();
+
+                    if (Abs(Now.x - mMarqueeScreen.x) + Abs(Now.y - mMarqueeScreen.y) > 4.0f)
+                    {
+                        mMarqueeMoved = true;
+                    }
+
+                    if (mMarqueeMoved)
+                    {
+                        const ImVec2 Lower(Min(mMarqueeScreen.x, Now.x), Min(mMarqueeScreen.y, Now.y));
+                        const ImVec2 Upper(Max(mMarqueeScreen.x, Now.x), Max(mMarqueeScreen.y, Now.y));
+
+                        const Ptr<ImDrawList> List = ImGui::GetWindowDrawList();
+                        List->AddRectFilled(Lower, Upper, IM_COL32(255, 170, 40, 40));
+                        List->AddRect(Lower, Upper, IM_COL32(255, 170, 40, 200));
+                    }
+                }
+
+                if (mMarquee && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+                {
+                    mMarquee = false;
+
+                    if (mMarqueeMoved)
+                    {
+                        const SInt32 MinX = static_cast<SInt32>(Floor(Min(mMarqueeWorld.GetAbsoluteX(), Cursor.GetAbsoluteX())));
+                        const SInt32 MinY = static_cast<SInt32>(Floor(Min(mMarqueeWorld.GetAbsoluteY(), Cursor.GetAbsoluteY())));
+                        const SInt32 MaxX = static_cast<SInt32>(Floor(Max(mMarqueeWorld.GetAbsoluteX(), Cursor.GetAbsoluteX()))) + 1;
+                        const SInt32 MaxY = static_cast<SInt32>(Floor(Max(mMarqueeWorld.GetAbsoluteY(), Cursor.GetAbsoluteY()))) + 1;
+
+                        mWorkshop.SelectWithin(IntRect(MinX, MinY, MaxX, MaxY), Shift);
+                    }
+                    else if (Shift)
+                    {
+                        mWorkshop.SelectToggle(Cursor);
+                    }
+                    else
+                    {
+                        mWorkshop.SelectSingle(Cursor);
+                    }
+                }
+            }
             else
             {
                 const Bool IsLeftButton  = Composer.IsMouseClicked(ImGuiMouseButton_Left);
@@ -525,16 +623,13 @@ namespace Tileon::Editor::View
                         ? "Selection.Tile"_Text
                         : "Selection.Archetype"_Text, 0);
 
-                // The select brush picks whatever sits under the cursor, so it carries no object from the palette.
-                const Bool IsPicking = (mWorkshop.GetBrush() == Workshop::Brush::Select);
-
                 const Placement Cursor = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
 
                 // Show the pending entity under the cursor before it is committed by a click.
                 mWorkshop.UpdatePreview(Cursor, Selection);
 
                 // Handle left-click for adding and right-click for removing tiles.
-                if (IsRightButton || (IsLeftButton && (IsPicking || Selection != 0)))
+                if (IsRightButton || (IsLeftButton && Selection != 0))
                 {
                     const Workshop::Command Command = IsLeftButton
                         ? Workshop::Command::Add

@@ -14,6 +14,7 @@
 
 #include "Tileon.Editor/Context.hpp"
 #include "Tileon.Editor.UI/Composer.hpp"
+#include <Zyphryon.Base/Container/Bag.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -59,12 +60,16 @@ namespace Tileon::Editor
 
         /// \brief Draws the handles over the viewport and applies whatever the user drags.
         ///
-        /// \param Composer The UI composer used to render the handles.
-        /// \param Actor    The entity being manipulated.
-        /// \param Origin   The top-left corner of the viewport, in screen space.
-        /// \param Size     The size of the viewport, in screen space.
+        /// The handles sit on the primary entity's origin, which is the pivot the whole selection turns and
+        /// scales about; a drag transforms every selected entity together.
+        ///
+        /// \param Composer  The UI composer used to render the handles.
+        /// \param Selection The set of selected entities (instance-root ids) the drag transforms together.
+        /// \param Primary   The entity the handles anchor to, which is the pivot for the group.
+        /// \param Origin    The top-left corner of the viewport, in screen space.
+        /// \param Size      The size of the viewport, in screen space.
         /// \return `true` while the gizmo owns the cursor, which is when the viewport must not act on it.
-        Bool Draw(Ref<UI::Composer> Composer, Scene::Entity Actor, ImVec2 Origin, ImVec2 Size);
+        Bool Draw(Ref<UI::Composer> Composer, ConstRef<Bag<UInt64>> Selection, Scene::Entity Primary, ImVec2 Origin, ImVec2 Size);
 
     private:
 
@@ -94,6 +99,25 @@ namespace Tileon::Editor
 
         /// \brief The radius of the rotation ring, in screen pixels.
         static constexpr Real32 kRingRadius = 52.0f;
+
+        /// \brief The captured start state of one selected entity, taken when a drag begins.
+        struct Snapshot final
+        {
+            /// The entity this snapshot belongs to.
+            Scene::Entity Actor;
+
+            /// The entity's absolute origin at grab time, used as the orbit radius for rotate and scale.
+            Placement     Start;
+
+            /// The entity's pose at grab time, the basis every transform is applied relative to.
+            Pose          Origin;
+        };
+
+        /// \brief Captures the start state of every selected entity so a drag can transform them as a group.
+        ///
+        /// \param Selection The selected entity ids.
+        /// \param Primary   The pivot entity, always included even when the set is empty.
+        void CaptureSnapshots(ConstRef<Bag<UInt64>> Selection, Scene::Entity Primary);
 
         /// \brief Gets an entity's origin, which is the point everything here manipulates it about.
         ///
@@ -159,11 +183,12 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Handle       mHandle;
-        Placement    mGrab;
-        Placement    mStart;
-        Pose         mOrigin;
-        ImVec2       mBearing;
-        Real32       mReach;
+        Handle             mHandle;
+        Placement          mGrab;
+        Placement          mStart;
+        Pose               mOrigin;
+        ImVec2             mBearing;
+        Real32             mReach;
+        Sequence<Snapshot> mSnapshots;
     };
 }

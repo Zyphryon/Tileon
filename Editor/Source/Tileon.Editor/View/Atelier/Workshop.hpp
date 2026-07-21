@@ -13,6 +13,8 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Editor/Context.hpp"
+#include <Zyphryon.Base/Container/Bag.hpp>
+#include <Zyphryon.Base/Memory/Blob.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -160,6 +162,58 @@ namespace Tileon::Editor
             }
         }
 
+        /// \brief Gets the set of world entities currently selected, as instance-root ids.
+        ///
+        /// \return The current multi-selection.
+        ZY_INLINE ConstRef<Bag<UInt64>> GetSelection() const
+        {
+            return mSelection;
+        }
+
+        /// \brief Returns whether the clipboard holds a group that can be pasted.
+        ///
+        /// \return `true` if a copy or cut has populated the clipboard, `false` otherwise.
+        ZY_INLINE Bool HasClipboard() const
+        {
+            return mClipboardCount > 0;
+        }
+
+        /// \brief Mirrors external single-selection changes (Hierarchy, Inspector) into the multi-selection set.
+        void ReconcileSelection();
+
+        /// \brief Clears the entire selection.
+        void ClearSelection();
+
+        /// \brief Replaces the selection with whatever sits under the placement, or clears it when empty.
+        ///
+        /// \param Placement The placement in the world to pick from.
+        void SelectSingle(Placement Placement);
+
+        /// \brief Adds or removes whatever sits under the placement from the selection.
+        ///
+        /// \param Placement The placement in the world to pick from.
+        void SelectToggle(Placement Placement);
+
+        /// \brief Selects every pickable entity whose bound overlaps the given area.
+        ///
+        /// \param Area     The world-tile rectangle to select within.
+        /// \param Additive `true` to add to the current selection, `false` to replace it.
+        void SelectWithin(IntRect Area, Bool Additive);
+
+        /// \brief Destroys every selected entity and clears the selection.
+        void DeleteSelection();
+
+        /// \brief Serializes the selection into the clipboard, preserving intra-group offsets.
+        void CopySelection();
+
+        /// \brief Copies the selection into the clipboard, then deletes it.
+        void CutSelection();
+
+        /// \brief Instantiates the clipboard's group at the given placement and selects the result.
+        ///
+        /// \param Placement The placement the group's anchor should land on.
+        void Paste(Placement Placement);
+
     private:
 
         /// \brief Represents a tile operation to be applied to a region.
@@ -240,6 +294,17 @@ namespace Tileon::Editor
         /// \param Placement The placement in the world to select an entity from.
         void SelectEntity(Placement Placement);
 
+        /// \brief Records the selection primary in the shared context key, keeping single-selection views in sync.
+        ///
+        /// \param Entity The id to publish as the primary selected entity, or `0` for none.
+        void SetPrimary(UInt64 Entity);
+
+        /// \brief Gets the absolute placement of an entity's origin, from its pose and owning region.
+        ///
+        /// \param Actor The entity to locate.
+        /// \return The entity's absolute placement.
+        Placement OriginOf(Scene::Entity Actor) const;
+
         /// \brief Applies the specified command to a given area of tiles on a specific layer.
         ///
         /// \param Command The command to apply (e.g., add or remove).
@@ -266,5 +331,9 @@ namespace Tileon::Editor
         Brush            mBrush;
         Sequence<OpTile> mOperations;
         Scene::Entity    mPreview;
+        Bag<UInt64>      mSelection;
+        UInt64           mSelectionPrimary;
+        Blob             mClipboard;
+        UInt32           mClipboardCount;
     };
 }

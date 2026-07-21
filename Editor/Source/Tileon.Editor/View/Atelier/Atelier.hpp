@@ -86,5 +86,13 @@ namespace Tileon::Editor::View
         Workshop         mWorkshop;
         Gizmo            mGizmo;
         Renderer::Target mTarget;
+
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        Bool             mMarquee;
+        Bool             mMarqueeMoved;
+        ImVec2           mMarqueeScreen;
+        Placement        mMarqueeWorld;
     };
 }
