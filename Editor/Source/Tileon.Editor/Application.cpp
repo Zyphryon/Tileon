@@ -11,14 +11,14 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Application.hpp"
-#include "View/Archetypes/Archetypes.hpp"
-#include "View/Atelier/Atelier.hpp"
-#include "View/Foundry/Foundry.hpp"
-#include "View/Hierarchy/Hierarchy.hpp"
-#include "View/Inspector/Inspector.hpp"
-#include "View/Palette/Palette.hpp"
-#include "View/Universe/Universe.hpp"
-#include "Tileon.Editor.UI/Theme.hpp"
+#include "Panel/Archetypes/Archetypes.hpp"
+#include "Panel/Atelier/Atelier.hpp"
+#include "Panel/Foundry/Foundry.hpp"
+#include "Panel/Hierarchy/Hierarchy.hpp"
+#include "Panel/Inspector/Inspector.hpp"
+#include "Panel/Palette/Palette.hpp"
+#include "Panel/Universe/Universe.hpp"
+#include "Tileon.Editor/UI/Theme.hpp"
 #include "Tileon_Editor.Modules.hpp"
 #include <Zyphryon.Content/Mount/Disk.hpp>
 #include <Zyphryon.Platform/Service.hpp>
@@ -164,10 +164,10 @@ namespace Tileon::Editor
                 case State::Idle:
                     switch (mBootstrap.Draw(Composer))
                     {
-                    case View::Bootstrap::Result::Done:
+                    case Panel::Bootstrap::Result::Done:
                         Launch(Move(mBootstrap.GetProject()));
                         break;
-                    case View::Bootstrap::Result::Exit:
+                    case Panel::Bootstrap::Result::Exit:
                         Quit();
                         break;
                     default:
@@ -217,13 +217,13 @@ namespace Tileon::Editor
         mContext = Unique<Context>::Create(* this, Move(Project));
 
         // Add editor activities to the list of activities, which will be rendered in the interface.
-        mActivities.Append(Retainer<View::Foundry>::Create(* mContext));
-        mActivities.Append(Retainer<View::Archetypes>::Create(* mContext));
-        mActivities.Append(Retainer<View::Inspector>::Create(* mContext));
-        mActivities.Append(Retainer<View::Hierarchy>::Create(* mContext));
-        mActivities.Append(Retainer<View::Palette>::Create(* mContext));
-        mActivities.Append(Retainer<View::Universe>::Create(* mContext));
-        mActivities.Append(Retainer<View::Atelier>::Create(* mContext));
+        mActivities.Append(Retainer<Panel::Foundry>::Create(* mContext));
+        mActivities.Append(Retainer<Panel::Archetypes>::Create(* mContext));
+        mActivities.Append(Retainer<Panel::Inspector>::Create(* mContext));
+        mActivities.Append(Retainer<Panel::Hierarchy>::Create(* mContext));
+        mActivities.Append(Retainer<Panel::Palette>::Create(* mContext));
+        mActivities.Append(Retainer<Panel::Universe>::Create(* mContext));
+        mActivities.Append(Retainer<Panel::Atelier>::Create(* mContext));
 
         // Signal that we are waiting for the content service to finish loading all queued assets.
         mState = State::Loading;
@@ -353,12 +353,12 @@ namespace Tileon::Editor
     void Application::DrawGame()
     {
         // Render the game view to an off-screen buffer, which will be displayed in the atelier activity's viewport.
-        const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(View::Atelier::kTitle.GetData());
+        const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(Panel::Atelier::kTitle.GetData());
 
         if (Parent && Parent->Active)
         {
             const UInt32 ViewportID   = Parent->GetID("##viewport");
-            const Text   ViewportName = String<64>::Print<"{0}/##viewport_{1:08X}">(View::Atelier::kTitle, ViewportID);
+            const Text   ViewportName = String<64>::Print<"{0}/##viewport_{1:08X}">(Panel::Atelier::kTitle, ViewportID);
 
             if (const ConstPtr<ImGuiWindow> Child = ImGui::FindWindowByName(ViewportName.GetData()); Child)
             {

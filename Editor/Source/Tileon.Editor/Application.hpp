@@ -13,7 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Activity.hpp"
-#include "View/Bootstrap/Bootstrap.hpp"
+#include "Panel/Bootstrap/Bootstrap.hpp"
 #include <ImGuiSystem.hpp>
 #include <Zyphryon.Engine/Kernel.hpp>
 
@@ -77,7 +77,7 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         State                        mState;
-        View::Bootstrap              mBootstrap;
+        Panel::Bootstrap             mBootstrap;
         Unique<Context>              mContext;
         Plugin::ImGuiSystem          mFrontend;
         Sequence<Retainer<Activity>> mActivities;

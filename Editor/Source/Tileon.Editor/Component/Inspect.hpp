@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Editor.UI/Widget/Selector.hpp"
+#include "Tileon.Editor/UI/Widget/Selector.hpp"
 #include "Tileon.Render/Component.hpp"
 #include "Tileon.World/Component.hpp"
 
