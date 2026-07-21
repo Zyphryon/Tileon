@@ -47,7 +47,6 @@ namespace Tileon
             Geometry,       ///< The geometry phase, where the scene's geometry is rendered to the G-buffer.
             Light,          ///< The lighting phase, where lighting calculations are performed using the G-buffer data.
             Composite,      ///< The composition phase, where the final image is composed by combining previous phases.
-            Debug,          ///< The debug phase, where diagnostic information is rendered.
         };
 
         /// \brief Represents the diagnostic overlays the pipeline can draw over the composed scene.
@@ -106,7 +105,7 @@ namespace Tileon
         /// \param Enable `true` to set the overlay, `false` to clear it.
         ZY_INLINE void SetProperty(Debug Mask, Bool Enable)
         {
-            mRenderer.GetPass<Stage::Debug>(Enum::Cast(Phase::Debug)).SetProperty(Mask, Enable);
+            mDebug->SetProperty(Mask, Enable);
         }
 
         /// \brief Checks if a specific diagnostic overlay is enabled.
@@ -115,7 +114,7 @@ namespace Tileon
         /// \return `true` if the overlay is enabled, `false` otherwise.
         ZY_INLINE Bool HasProperty(Debug Mask) const
         {
-            return mRenderer.GetPass<Stage::Debug>(Enum::Cast(Phase::Debug)).HasProperty(Mask);
+            return mDebug->HasProperty(Mask);
         }
 
     private:
@@ -136,9 +135,10 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Render::Renderer mRenderer;
-        Tileset          mTileset;
-        Target           mOutput;
-        Bool             mImmediate;
+        Render::Renderer  mRenderer;
+        Tileset           mTileset;
+        Ptr<Stage::Debug> mDebug;
+        Target            mOutput;
+        Bool              mImmediate;
     };
 }

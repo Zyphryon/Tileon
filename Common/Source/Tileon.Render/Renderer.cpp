@@ -29,6 +29,7 @@ namespace Tileon
         : Locator    { Host },
           mRenderer  { Host },
           mTileset   { Host },
+          mDebug     { nullptr },
           mOutput    { Target::Final },
           mImmediate { Immediate }
     {
@@ -74,7 +75,7 @@ namespace Tileon
         // Hand the frame's director to the stages that resolve their draws from it.
         mRenderer.GetPass<Stage::Geometry>(Enum::Cast(Phase::Geometry)).SetDirector(Director);
         mRenderer.GetPass<Stage::Light>(Enum::Cast(Phase::Light)).SetDirector(Director);
-        mRenderer.GetPass<Stage::Debug>(Enum::Cast(Phase::Debug)).SetDirector(Director);
+        mDebug->SetDirector(Director);
 
         mRenderer.Run(Global.GetStream());
     }
@@ -98,7 +99,7 @@ namespace Tileon
             Producer = Phase::Light;
             break;
         default:
-            Producer = Phase::Debug;
+            Producer = Phase::Composite;
             break;
         }
 
@@ -106,6 +107,7 @@ namespace Tileon
         {
             mRenderer.GetPass(Enum::Cast(Stage)).SetActive(Enum::Cast(Stage) <= Enum::Cast(Producer));
         }
+        mOutput = Type;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -135,8 +137,8 @@ namespace Tileon
         Composite.AddColor({ .Target = Immediate ? nullptr : AddressOf(Final), .Load = Graphic::Action::Discard });
 
         // Debug: overlays diagnostics onto the composed image, preserving whatever the composite stage resolved.
-        Ref<Stage::Debug> Debug = mRenderer.AddPass<Stage::Debug>(Host);
-        Debug.AddColor({ .Target = Immediate ? nullptr : AddressOf(Final), .Load = Graphic::Action::Load });
+        Composite.SetContinuation(Unique<Stage::Debug>::Create(Host));
+        mDebug = static_cast<Ptr<Stage::Debug>>(Composite.GetContinuation());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
