@@ -193,7 +193,7 @@ namespace Tileon::Editor
     void Application::OnTerminate()
     {
         SyncConfig(mConfig, * this);
-        SaveConfig(mConfig, Filesystem::GetDataFolder("Tileon", "Editor") + "Config.json");
+        SaveConfig(mConfig, Filesystem::GetDataFolder("Tileon", "Editor") + "/Config.json");
 
         if (mContext)
         {
@@ -454,7 +454,9 @@ int main([[maybe_unused]] int Argc, [[maybe_unused]] Ptr<Char> Argv[])
 #endif
 
     // Load the persisted editor configuration before the engine spins up.
-    Tileon::Editor::LoadConfig(Config, Filesystem::GetDataFolder("Tileon", "Editor") + "Config.json");
+    const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor") + "/Config.json";
+    Filesystem::Make(Path);
+    Tileon::Editor::LoadConfig(Config, Path);
 
     // Run the engine.
     const Unique<Tileon::Editor::Application> Application = Unique<Tileon::Editor::Application>::Create();
