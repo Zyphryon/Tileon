@@ -452,8 +452,8 @@ namespace Tileon::Editor
                 return;
             }
 
-            const IntVector2 Centre = Volume->GetRect().GetCenter();
-            const ImVec2     Screen = Lens.Project(Placement(0, 0, static_cast<Real32>(Centre.GetX()), static_cast<Real32>(Centre.GetY())));
+            const IntVector2 Center = Volume->GetRect().GetCenter();
+            const ImVec2     Screen = Lens.Project(Placement(0, 0, static_cast<Real32>(Center.GetX()), static_cast<Real32>(Center.GetY())));
 
             if (Screen.x < Minimum.x || Screen.x > Maximum.x || Screen.y < Minimum.y || Screen.y > Maximum.y)
             {
@@ -534,7 +534,7 @@ namespace Tileon::Editor
             return;
         }
 
-        // Anchor the clipboard on the group's centroid, so a paste re-centres the whole group on the cursor.
+        // Anchor the clipboard on the group's centroid, so a paste re-centers the whole group on the cursor.
         const Real64 AnchorX = SumX / Items.GetSize();
         const Real64 AnchorY = SumY / Items.GetSize();
 

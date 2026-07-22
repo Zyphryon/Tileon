@@ -119,6 +119,14 @@ namespace Tileon::Editor
 
     private:
 
+        /// \brief Restores the persisted editor session for the current project, including the camera position.
+        void Load();
+
+        /// \brief Persists the editor session for the current project, including the camera position.
+        void Save();
+
+    private:
+
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 

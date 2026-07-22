@@ -116,8 +116,6 @@ namespace Tileon::Editor
         UI::Theme::Initialize();
 
         // TODO: Manage ImGUI configuration file manually
-        // TODO: Serialize the last project open.
-
         return true;
     }
 
@@ -454,9 +452,9 @@ int main([[maybe_unused]] int Argc, [[maybe_unused]] Ptr<Char> Argv[])
 #endif
 
     // Load the persisted editor configuration before the engine spins up.
-    const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor") + "/Config.json";
+    const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor");
     Filesystem::Make(Path);
-    Tileon::Editor::LoadConfig(Config, Path);
+    Tileon::Editor::LoadConfig(Config, Path + "/Config.json");
 
     // Run the engine.
     const Unique<Tileon::Editor::Application> Application = Unique<Tileon::Editor::Application>::Create();

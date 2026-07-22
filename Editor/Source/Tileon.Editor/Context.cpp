@@ -29,6 +29,7 @@ namespace Tileon::Editor
     {
         mController.Init(320, 200, Project.GetDensity());
         mController.Load();
+        Load();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -36,6 +37,38 @@ namespace Tileon::Editor
 
     void Context::Teardown()
     {
+        Save();
         mController.Teardown();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Context::Load()
+    {
+        Blob File;
+
+        if (Filesystem::Read(Filesystem::Path(mProject.GetFolder()) + "/Session.json", File) == Filesystem::Result::Success)
+        {
+            Session::Load(Text(File.GetData<Char>(), File.GetSize()));
+        }
+
+        const Real64 X = GetReal("Camera.X", 0.0);
+        const Real64 Y = GetReal("Camera.Y", 0.0);
+        mController.GetDirector().SetPosition(Placement::FromAbsolute(X, Y));
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Context::Save()
+    {
+        const Placement Camera = mController.GetDirector().GetPosition();
+        SetReal("Camera.X", Camera.GetAbsoluteX());
+        SetReal("Camera.Y", Camera.GetAbsoluteY());
+
+        const Str Data = Session::Save();
+        Filesystem::Write(Filesystem::Path(mProject.GetFolder()) + "/Session.json",
+            ConstSpan(reinterpret_cast<ConstPtr<Byte>>(Data.GetData()), Data.GetSize()));
     }
 }

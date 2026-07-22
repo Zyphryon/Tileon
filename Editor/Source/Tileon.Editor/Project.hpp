@@ -57,6 +57,14 @@ namespace Tileon::Editor
             return mPath;
         }
 
+        /// \brief Gets the directory that contains the project file.
+        ///
+        /// \return The project's folder, i.e. the file path with the file name stripped.
+        ZY_INLINE Text GetFolder() const
+        {
+            return StrBeforeLast(mPath, '/');
+        }
+
         /// \brief Sets the display name of the project.
         ///
         /// \param Name The display name to assign to the project.

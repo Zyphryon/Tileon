@@ -318,13 +318,13 @@ namespace Tileon::Stage
         const Real32 VCoordPerTile = Crop.GetHeight() / Span.GetY();
 
         const Real32 OffsetX = (Weight % Span.GetX()) * UCoordPerTile;
-        const Real32 OffsetY = (Weight / Span.GetX()) * VCoordPerTile;
+        const Real32 OffsetY = (Span.GetY() - Size.GetY() - (Weight / Span.GetX())) * VCoordPerTile;
 
         const Rect Displacement(
             Crop.GetX() + OffsetX,
-            Crop.GetY() + OffsetY + Size.GetY() * VCoordPerTile,
+            Crop.GetY() + OffsetY,
             Crop.GetX() + OffsetX + Size.GetX() * UCoordPerTile,
-            Crop.GetY() + OffsetY);
+            Crop.GetY() + OffsetY + Size.GetY() * VCoordPerTile);
 
         const Render::Sprite Command(Glyph.Material, static_cast<Vector2>(Size), Glyph.Tint, Displacement);
         mCanvas.DrawSprite(Command, Matrix3x2::FromTranslation(Position.GetXY()), Position.GetZ());

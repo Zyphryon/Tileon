@@ -136,14 +136,14 @@ namespace Tileon::Editor::Panel
         Composer.Tooltip("Reset zoom");
         Composer.SameLine();
 
-        // Camera position read-out that doubles as a "go to": shows the view centre in absolute world tiles and
-        // re centres the camera when a new coordinate is committed (Enter).
+        // Camera position read-out that doubles as a "go to": shows the view center in absolute world tiles and
+        // re centers the camera when a new coordinate is committed (Enter).
         {
             Ref<Director>   Director = GetContext().GetDirector();
-            const Placement Centre   = Director.GetPosition();
+            const Placement Center   = Director.GetPosition();
 
-            Real32 CameraX = static_cast<Real32>(Centre.GetAbsoluteX());
-            Real32 CameraY = static_cast<Real32>(Centre.GetAbsoluteY());
+            Real32 CameraX = static_cast<Real32>(Center.GetAbsoluteX());
+            Real32 CameraY = static_cast<Real32>(Center.GetAbsoluteY());
 
             Bool GoTo = false;
 
@@ -398,7 +398,7 @@ namespace Tileon::Editor::Panel
         Composer.SeparatorEx(ImGuiSeparatorFlags_Vertical);
         Composer.SameLine();
 
-        // Snap placement to tile centres, so entities line up on the grid instead of landing at the exact cursor.
+        // Snap placement to tile centers, so entities line up on the grid instead of landing at the exact cursor.
         const Bool Aligned = mWorkshop.IsAligned();
 
         if (Aligned)
@@ -413,8 +413,8 @@ namespace Tileon::Editor::Panel
         }
 
         Composer.Tooltip(Aligned
-            ? "Snap to tile centre"_Text
-            : "Free placement (hold Shift to centre)"_Text);
+            ? "Snap to tile center"_Text
+            : "Free placement (hold Shift to center)"_Text);
 
         if (Aligned)
         {
@@ -782,14 +782,14 @@ namespace Tileon::Editor::Panel
                                     Row    = (CellY - Footprint.GetMinimumY()) % SpanY;
                                 }
 
-                                const Real32 U0 = Glyph.Crop.GetMinimumX() + Column * CellU;
-                                const Real32 V0 = Glyph.Crop.GetMinimumY() + Row    * CellV;
+                                const Real32 U0 = Glyph.Crop.GetMinimumX() + Column            * CellU;
+                                const Real32 V0 = Glyph.Crop.GetMinimumY() + (SpanY - 1 - Row) * CellV;
 
                                 List->AddImageQuad(Albedo->GetHandle(),
-                                    Project(CellX, CellY), Project(CellX + 1, CellY),
-                                    Project(CellX + 1, CellY + 1), Project(CellX, CellY + 1),
-                                    ImVec2(U0, V0), ImVec2(U0 + CellU, V0),
-                                    ImVec2(U0 + CellU, V0 + CellV), ImVec2(U0, V0 + CellV),
+                                    Project(CellX,     CellY),     Project(CellX + 1, CellY),
+                                    Project(CellX + 1, CellY + 1), Project(CellX,     CellY + 1),
+                                    ImVec2(U0, V0 + CellV), ImVec2(U0 + CellU, V0 + CellV),
+                                    ImVec2(U0 + CellU, V0), ImVec2(U0, V0),
                                     Preview);
                             }
                         }
@@ -841,7 +841,7 @@ namespace Tileon::Editor::Panel
 
                 Placement Cursor = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
 
-                // Snap to the centre of the hovered tile when the toggle is on, or momentarily while Shift is held.
+                // Snap to the center of the hovered tile when the toggle is on, or momentarily while Shift is held.
                 if (mWorkshop.IsAligned() || ImGui::GetIO().KeyShift)
                 {
                     Cursor = Placement::FromAbsolute(

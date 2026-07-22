@@ -364,7 +364,7 @@ namespace Tileon::Editor
 
         Handle Hovered = Handle::None;
 
-        // The centre scales both axes by the same factor, so it is the one handle that leaves proportions alone.
+        // The center scales both axes by the same factor, so it is the one handle that leaves proportions alone.
         if (Distance(Cursor, Anchor) <= kPickRadius * 1.6f)
         {
             Hovered = Handle::Uniform;
