@@ -713,9 +713,12 @@ namespace Tileon::Editor::Panel
 
                 // Footprint preview: show exactly which cells the stamp covers before it is committed.
                 {
-                    IntRect Footprint = IntRect::Zero();
+                    const Bool       IsBucket = (mWorkshop.GetBrush() == Workshop::Brush::Bucket);
+                    const IntVector2 Span     = Selection ? mContext.GetTileset().GetMotif(Selection).GetSpan() : IntVector2::One();
 
-                    if (mWorkshop.GetBrush() == Workshop::Brush::Bucket)
+                    IntRect Footprint;
+
+                    if (IsBucket)
                     {
                         Footprint = IntRect(
                             Cursor.GetBaseX(), Cursor.GetBaseY(),
@@ -724,38 +727,72 @@ namespace Tileon::Editor::Panel
                     }
                     else
                     {
-                        const IntVector2 Span  = Selection ? mContext.GetTileset().GetMotif(Selection).GetSpan() : IntVector2::One();
-                        const SInt32     TileX = static_cast<SInt32>(Floor(Cursor.GetAbsoluteX()));
-                        const SInt32     TileY = static_cast<SInt32>(Floor(Cursor.GetAbsoluteY()));
+                        const SInt32 TileX = static_cast<SInt32>(Floor(Cursor.GetAbsoluteX()));
+                        const SInt32 TileY = static_cast<SInt32>(Floor(Cursor.GetAbsoluteY()));
 
                         Footprint = IntRect(TileX, TileY, TileX + Span.GetX(), TileY + Span.GetY());
                     }
 
-                    const ImVec2 Corner0 = Lens.Project(Placement(0, 0, Footprint.GetMinimumX(), Footprint.GetMinimumY()));
-                    const ImVec2 Corner1 = Lens.Project(Placement(0, 0, Footprint.GetMaximumX(), Footprint.GetMinimumY()));
-                    const ImVec2 Corner2 = Lens.Project(Placement(0, 0, Footprint.GetMaximumX(), Footprint.GetMaximumY()));
-                    const ImVec2 Corner3 = Lens.Project(Placement(0, 0, Footprint.GetMinimumX(), Footprint.GetMaximumY()));
+                    const auto Project = [&](SInt32 X, SInt32 Y)
+                    {
+                        return Lens.Project(Placement(0, 0, X, Y));
+                    };
+
+                    const ImVec2 Corner0 = Project(Footprint.GetMinimumX(), Footprint.GetMinimumY());
+                    const ImVec2 Corner1 = Project(Footprint.GetMaximumX(), Footprint.GetMinimumY());
+                    const ImVec2 Corner2 = Project(Footprint.GetMaximumX(), Footprint.GetMaximumY());
+                    const ImVec2 Corner3 = Project(Footprint.GetMinimumX(), Footprint.GetMaximumY());
 
                     const Ptr<ImDrawList> List = ImGui::GetWindowDrawList();
 
                     ConstRef<Tileset::Glyph> Glyph = mContext.GetTileset().GetGlyph(Selection);
 
-                    if (Selection != 0 && mWorkshop.GetBrush() != Workshop::Brush::Bucket
-                        && Glyph.Material
-                        && Glyph.Material->GetImage(Graphic::TextureSlot::Albedo))
+                    if (Selection != 0 && !IsBucket && Glyph.Material && Glyph.Material->GetImage(Graphic::TextureSlot::Albedo))
                     {
                         ConstRetainer<Graphic::Image> Albedo = Glyph.Material->GetImage(Graphic::TextureSlot::Albedo);
-
-                        const ImVec2 UV0(Glyph.Crop.GetMinimumX(), Glyph.Crop.GetMinimumY());
-                        const ImVec2 UV1(Glyph.Crop.GetMaximumX(), Glyph.Crop.GetMinimumY());
-                        const ImVec2 UV2(Glyph.Crop.GetMaximumX(), Glyph.Crop.GetMaximumY());
-                        const ImVec2 UV3(Glyph.Crop.GetMinimumX(), Glyph.Crop.GetMaximumY());
 
                         const UInt32 Base    = Glyph.Tint.ToRGBA8();
                         const UInt32 Alpha   = static_cast<UInt32>(((Base >> 24) & 0xFF) * 0.7f) << 24;
                         const UInt32 Preview = (Base & 0x00FFFFFF) | Alpha;
 
-                        List->AddImageQuad(Albedo->GetHandle(), Corner0, Corner1, Corner2, Corner3, UV0, UV1, UV2, UV3, Preview);
+                        const SInt32 SpanX = Max(Span.GetX(), 1);
+                        const SInt32 SpanY = Max(Span.GetY(), 1);
+
+                        // Atlas region of one sub-tile within the motif.
+                        const Real32 CellU = Glyph.Crop.GetWidth()  / SpanX;
+                        const Real32 CellV = Glyph.Crop.GetHeight() / SpanY;
+
+                        // Draw the motif cell-by-cell so each cell shows the exact sub-tile the paint will store.
+                        for (SInt32 CellY = Footprint.GetMinimumY(); CellY < Footprint.GetMaximumY(); ++CellY)
+                        {
+                            for (SInt32 CellX = Footprint.GetMinimumX(); CellX < Footprint.GetMaximumX(); ++CellX)
+                            {
+                                SInt32 Column;
+                                SInt32 Row;
+
+                                if (mWorkshop.IsSeamless())
+                                {
+                                    Column = ((CellX % SpanX) + SpanX) % SpanX;
+                                    Row    = ((CellY % SpanY) + SpanY) % SpanY;
+                                }
+                                else
+                                {
+
+                                    Column = (CellX - Footprint.GetMinimumX()) % SpanX;
+                                    Row    = (CellY - Footprint.GetMinimumY()) % SpanY;
+                                }
+
+                                const Real32 U0 = Glyph.Crop.GetMinimumX() + Column * CellU;
+                                const Real32 V0 = Glyph.Crop.GetMinimumY() + Row    * CellV;
+
+                                List->AddImageQuad(Albedo->GetHandle(),
+                                    Project(CellX, CellY), Project(CellX + 1, CellY),
+                                    Project(CellX + 1, CellY + 1), Project(CellX, CellY + 1),
+                                    ImVec2(U0, V0), ImVec2(U0 + CellU, V0),
+                                    ImVec2(U0 + CellU, V0 + CellV), ImVec2(U0, V0 + CellV),
+                                    Preview);
+                            }
+                        }
                     }
                     else
                     {
