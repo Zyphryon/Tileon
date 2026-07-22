@@ -36,6 +36,17 @@ namespace Tileon::Editor::Panel
 
     void Foundry::OnDraw(Ref<UI::Composer> Composer)
     {
+        // Adopt a terrain requested from another panel (Palette right-click), scroll it into view, and pull focus.
+        if (const SInt64 Request = GetContext().GetInteger("Selection.Tile.Target", 0); Request != 0)
+        {
+            mSelection = static_cast<UInt16>(Request);
+            mScroll    = static_cast<UInt16>(Request);
+            mPreviewer.Reset();
+
+            GetContext().SetInteger("Selection.Tile.Target", 0);
+            ImGui::SetNextWindowFocus();
+        }
+
         Composer.SetNextWindowSize(1160.0f, 680.0f, ImGuiCond_FirstUseEver);
         Composer.SetNextWindowSizeConstraints(900.0f, 500.0f, 1800.0f, 1400.0f);
 

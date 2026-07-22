@@ -335,6 +335,20 @@ namespace Tileon::Editor
             Layout.Attach("Scene",     Center);
         });
 
+        // Honour a pending navigation request from another panel.
+        if (const Text Target = mContext->GetString("Navigate.Panel"); !Target.IsEmpty())
+        {
+            for (ConstRetainer<Activity> Activity : mActivities)
+            {
+                if (Activity->GetTitle() == Target)
+                {
+                    Activity->SetVisible(true);
+                    break;
+                }
+            }
+            mContext->SetString("Navigate.Panel", Text::Empty());
+        }
+
         // Draw each visible activity, allowing them to render their respective user interfaces.
         for (ConstRetainer<Activity> Activity : mActivities)
         {

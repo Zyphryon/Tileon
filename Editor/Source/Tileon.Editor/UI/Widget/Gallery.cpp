@@ -25,7 +25,8 @@ namespace Tileon::Editor::UI
         : mActive     { false },
           mMode       { Mode::Grid },
           mSize       { 64.0f },
-          mSelection  { 0 }
+          mSelection  { 0 },
+          mActivated  { -1 }
     {
     }
 
@@ -102,6 +103,9 @@ namespace Tileon::Editor::UI
 
     void Gallery::Begin(Ref<Composer> Composer)
     {
+        // Right-click activation is a per-frame, one-shot signal, so clear it before the items are drawn.
+        mActivated = -1;
+
         if (mMode == Mode::Grid)
         {
             const ImVec2 Available = Composer.GetContentRegionAvail();
@@ -138,7 +142,16 @@ namespace Tileon::Editor::UI
         {
             const Text Label = String<128>::Print<"{0}##{1}">(Name, ID);
 
-            if (Composer.Selectable(Label, WasSelected))
+            const Bool Chosen = Composer.Selectable(Label, WasSelected);
+
+            // A right-click both selects the item and flags it for opening in its dedicated editor.
+            if (Composer.IsItemClicked(ImGuiMouseButton_Right))
+            {
+                mSelection = ID;
+                mActivated = ID;
+            }
+
+            if (Chosen)
             {
                 mSelection = ID;
                 return true;
@@ -163,6 +176,13 @@ namespace Tileon::Editor::UI
         if (IsClicked)
         {
             mSelection = ID;
+        }
+
+        // A right-click both selects the item and flags it for opening in its dedicated editor.
+        if (Composer.IsItemClicked(ImGuiMouseButton_Right))
+        {
+            mSelection = ID;
+            mActivated = ID;
         }
 
         // Background highlight for selected or hovered state.

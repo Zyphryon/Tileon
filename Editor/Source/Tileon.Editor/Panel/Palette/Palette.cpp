@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Palette.hpp"
+#include "Tileon.Editor/Panel/Atelier/Workshop.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -24,7 +25,8 @@ namespace Tileon::Editor::Panel
     Palette::Palette(Ref<Context> Context)
         : Activity    { Context, "Palette", true },
           mRepository { Context.GetRepository() },
-          mTileset    { Context.GetTileset() }
+          mTileset    { Context.GetTileset() },
+          mMode       { -1 }
     {
     }
 
@@ -38,22 +40,37 @@ namespace Tileon::Editor::Panel
 
         if (Composer.Begin(GetTitle(), mVisible))
         {
+            const Workshop::Mode Mode     = GetContext().GetEnum("Workshop.Mode", Workshop::Mode::Tile);
+            const Bool           External = (static_cast<SInt32>(Mode) != mMode);
+
             if (Composer.BeginTabBar("##palette_tabs"))
             {
-                if (Composer.BeginTabItem("Terrain"))
+                const ImGuiTabItemFlags TerrainFlags =
+                    (External && Mode == Workshop::Mode::Tile) ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None;
+
+                if (Composer.BeginTabItem("Terrain", TerrainFlags))
                 {
+                    GetContext().SetEnum("Workshop.Mode", Workshop::Mode::Tile);
+
                     DrawTerrainTab(Composer);
                     Composer.EndTabItem();
                 }
 
-                if (Composer.BeginTabItem("Entity"))
+                const ImGuiTabItemFlags EntityFlags =
+                    (External && Mode == Workshop::Mode::Entity) ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None;
+
+                if (Composer.BeginTabItem("Entity", EntityFlags))
                 {
+                    GetContext().SetEnum("Workshop.Mode", Workshop::Mode::Entity);
+
                     DrawEntityTab(Composer);
                     Composer.EndTabItem();
                 }
 
                 Composer.EndTabBar();
             }
+
+            mMode = static_cast<SInt32>(GetContext().GetEnum("Workshop.Mode", Workshop::Mode::Tile));
         }
         Composer.End();
     }
@@ -131,6 +148,14 @@ namespace Tileon::Editor::Panel
             }
         });
         mTerrains.End(Composer);
+
+        // Right-clicking a terrain jumps to the Foundry with it selected, keeping the palette and editor in sync.
+        if (const SInt64 Target = mTerrains.GetActivated(); Target >= 0)
+        {
+            GetContext().SetString("Navigate.Panel", "Foundry");
+            GetContext().SetInteger("Selection.Tile", Target);
+            GetContext().SetInteger("Selection.Tile.Target", Target);
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -181,6 +206,14 @@ namespace Tileon::Editor::Panel
             }
         });
         mEntities.End(Composer);
+
+        // Right-clicking an entity jumps to the Archetypes editor with it selected, keeping palette and editor in sync.
+        if (const SInt64 Target = mEntities.GetActivated(); Target >= 0)
+        {
+            GetContext().SetString("Navigate.Panel", "Archetypes");
+            GetContext().SetInteger("Selection.Archetype", Target);
+            GetContext().SetInteger("Selection.Archetype.Target", Target);
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

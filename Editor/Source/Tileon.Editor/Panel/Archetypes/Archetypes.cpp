@@ -64,6 +64,17 @@ namespace Tileon::Editor::Panel
 
     void Archetypes::OnDraw(Ref<UI::Composer> Composer)
     {
+        // Adopt an archetype requested from another panel (Palette right-click), scroll it into view, and pull focus.
+        if (const SInt64 Request = GetContext().GetInteger("Selection.Archetype.Target", 0); Request != 0)
+        {
+            mSelection = mRepository.GetArchetype(static_cast<UInt64>(Request));
+            mScroll    = mSelection;
+            mPreviewer.Reset();
+
+            GetContext().SetInteger("Selection.Archetype.Target", 0);
+            ImGui::SetNextWindowFocus();
+        }
+
         Composer.SetNextWindowSize(1100.0f, 620.0f, ImGuiCond_FirstUseEver);
         Composer.SetNextWindowSizeConstraints(560.0f, 360.0f, 1800.0f, 1400.0f);
 

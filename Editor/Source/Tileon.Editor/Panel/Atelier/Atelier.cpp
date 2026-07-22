@@ -150,15 +150,17 @@ namespace Tileon::Editor::Panel
             Composer.Label("X");
             Composer.SameLine();
             Composer.SetNextItemWidth(72.0f);
-            GoTo |= Composer.InputFloat("##camera_x", CameraX, 0.0f, 0.0f, "%.1f", ImGuiInputTextFlags_EnterReturnsTrue);
-            Composer.Tooltip("Camera X — press Enter to jump");
+            Composer.InputFloat("##camera_x", CameraX, 0.0f, 0.0f, "%.1f", ImGuiInputTextFlags_EnterReturnsTrue);
+            GoTo |= Composer.IsItemDeactivatedAfterEdit();
+            Composer.Tooltip("Camera X — press Enter or leave the field to jump");
             Composer.SameLine();
 
             Composer.Label("Y");
             Composer.SameLine();
             Composer.SetNextItemWidth(72.0f);
-            GoTo |= Composer.InputFloat("##camera_y", CameraY, 0.0f, 0.0f, "%.1f", ImGuiInputTextFlags_EnterReturnsTrue);
-            Composer.Tooltip("Camera Y — press Enter to jump");
+            Composer.InputFloat("##camera_y", CameraY, 0.0f, 0.0f, "%.1f", ImGuiInputTextFlags_EnterReturnsTrue);
+            GoTo |= Composer.IsItemDeactivatedAfterEdit();
+            Composer.Tooltip("Camera Y — press Enter or leave the field to jump");
             Composer.SameLine();
 
             if (GoTo)
@@ -392,6 +394,33 @@ namespace Tileon::Editor::Panel
 
         DrawBrushButton(Composer, Workshop::Brush::Pencil, ICON_FA_BRUSH,         "Place entity");
         Composer.SameLine();
+
+        Composer.SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        Composer.SameLine();
+
+        // Snap placement to tile centres, so entities line up on the grid instead of landing at the exact cursor.
+        const Bool Aligned = mWorkshop.IsAligned();
+
+        if (Aligned)
+        {
+            Composer.PushStyleColor(ImGuiCol_Button,        Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
+            Composer.PushStyleColor(ImGuiCol_ButtonHovered, Composer.GetStyleColorVec4(ImGuiCol_ButtonActive));
+        }
+
+        if (Composer.Button(ICON_FA_CROSSHAIRS "##center", 32.0f))
+        {
+            mWorkshop.SetAligned(!Aligned);
+        }
+
+        Composer.Tooltip(Aligned
+            ? "Snap to tile centre"_Text
+            : "Free placement (hold Shift to centre)"_Text);
+
+        if (Aligned)
+        {
+            Composer.PopStyleColor(2);
+        }
+        Composer.SameLine();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -571,25 +600,45 @@ namespace Tileon::Editor::Panel
                 }
             }
 
-            // Handle mouse dragging for panning the camera when the hand brush is selected.
-            if (mWorkshop.GetBrush() == Workshop::Brush::Hand)
+            // Converts this frame's cursor pixel delta into a world-space shift of the camera.
+            const auto PanByCursorDelta = [&]()
+            {
+                const ImVec2 Delta = Composer.GetMouseDelta();
+                const ImVec2 Size  = Composer.GetItemRectSize();
+
+                const Real32 ScaleX = Director.GetViewport().GetX() * Director.GetDensity() / Size.x;
+                const Real32 ScaleY = Director.GetViewport().GetY() * Director.GetDensity() / Size.y;
+
+                const Vector2 OldPosition(AbsoluteX * ScaleX, AbsoluteY* ScaleY);
+                const Vector2 NewPosition((AbsoluteX - Delta.x) * ScaleX, (AbsoluteY - Delta.y) * ScaleY);
+
+                const Placement OldPlacement = Director.GetWorldCoordinates(OldPosition);
+                const Placement NewPlacement = Director.GetWorldCoordinates(NewPosition);
+                Director.SetPosition(Placement::Normalize(Director.GetPosition() + NewPlacement - OldPlacement));
+            };
+
+            // Hold Space (or drag with the middle mouse) to pan the view with any brush active, so the camera can
+            // be repositioned mid-paint without switching to the hand tool.
+            const Bool SpacePan = !ImGui::GetIO().WantTextInput && ImGui::IsKeyDown(ImGuiKey_Space);
+            const Bool Panning  = Composer.IsMouseDragging(ImGuiMouseButton_Middle) || (SpacePan && ImGui::IsMouseDown(ImGuiMouseButton_Left));
+
+            // Hint the pan affordance so holding Space is discoverable.
+            if (SpacePan)
+            {
+                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            }
+
+            if (Panning)
+            {
+                PanByCursorDelta();
+            }
+            else if (mWorkshop.GetBrush() == Workshop::Brush::Hand)
             {
                 mWorkshop.ClearPreview();
 
                 if (Composer.IsMouseDragging(ImGuiMouseButton_Left))
                 {
-                    const ImVec2 Delta = Composer.GetMouseDelta();
-                    const ImVec2 Size  = Composer.GetItemRectSize();
-
-                    const Real32 ScaleX = Director.GetViewport().GetX() * Director.GetDensity() / Size.x;
-                    const Real32 ScaleY = Director.GetViewport().GetY() * Director.GetDensity() / Size.y;
-
-                    const Vector2 OldPosition(AbsoluteX * ScaleX, AbsoluteY* ScaleY);
-                    const Vector2 NewPosition((AbsoluteX - Delta.x) * ScaleX, (AbsoluteY - Delta.y) * ScaleY);
-
-                    const Placement OldPlacement = Director.GetWorldCoordinates(OldPosition);
-                    const Placement NewPlacement = Director.GetWorldCoordinates(NewPosition);
-                    Director.SetPosition(Placement::Normalize(Director.GetPosition() + NewPlacement - OldPlacement));
+                    PanByCursorDelta();
                 }
             }
             else if (mWorkshop.GetBrush() == Workshop::Brush::Select)
@@ -688,7 +737,32 @@ namespace Tileon::Editor::Panel
                     const ImVec2 Corner3 = Lens.Project(Placement(0, 0, Footprint.GetMinimumX(), Footprint.GetMaximumY()));
 
                     const Ptr<ImDrawList> List = ImGui::GetWindowDrawList();
-                    List->AddQuadFilled(Corner0, Corner1, Corner2, Corner3, IM_COL32(120, 200, 255, 45));
+
+                    ConstRef<Tileset::Glyph> Glyph = mContext.GetTileset().GetGlyph(Selection);
+
+                    if (Selection != 0 && mWorkshop.GetBrush() != Workshop::Brush::Bucket
+                        && Glyph.Material
+                        && Glyph.Material->GetImage(Graphic::TextureSlot::Albedo))
+                    {
+                        ConstRetainer<Graphic::Image> Albedo = Glyph.Material->GetImage(Graphic::TextureSlot::Albedo);
+
+                        const ImVec2 UV0(Glyph.Crop.GetMinimumX(), Glyph.Crop.GetMinimumY());
+                        const ImVec2 UV1(Glyph.Crop.GetMaximumX(), Glyph.Crop.GetMinimumY());
+                        const ImVec2 UV2(Glyph.Crop.GetMaximumX(), Glyph.Crop.GetMaximumY());
+                        const ImVec2 UV3(Glyph.Crop.GetMinimumX(), Glyph.Crop.GetMaximumY());
+
+                        const UInt32 Base    = Glyph.Tint.ToRGBA8();
+                        const UInt32 Alpha   = static_cast<UInt32>(((Base >> 24) & 0xFF) * 0.7f) << 24;
+                        const UInt32 Preview = (Base & 0x00FFFFFF) | Alpha;
+
+                        List->AddImageQuad(Albedo->GetHandle(), Corner0, Corner1, Corner2, Corner3, UV0, UV1, UV2, UV3, Preview);
+                    }
+                    else
+                    {
+                        List->AddQuadFilled(Corner0, Corner1, Corner2, Corner3, IM_COL32(120, 200, 255, 45));
+                    }
+
+                    // Outline always, so the footprint boundary stays legible over any art.
                     List->AddQuad(Corner0, Corner1, Corner2, Corner3, IM_COL32(120, 200, 255, 220), 1.5f);
                 }
 
@@ -726,8 +800,17 @@ namespace Tileon::Editor::Panel
                 const Bool IsLeftButton  = Composer.IsMouseClicked(ImGuiMouseButton_Left);
                 const Bool IsRightButton = Composer.IsMouseClicked(ImGuiMouseButton_Right);
 
-                const UInt32    Selection = GetContext().GetInteger("Selection.Archetype", 0);
-                const Placement Cursor    = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
+                const UInt32 Selection = GetContext().GetInteger("Selection.Archetype", 0);
+
+                Placement Cursor = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
+
+                // Snap to the centre of the hovered tile when the toggle is on, or momentarily while Shift is held.
+                if (mWorkshop.IsAligned() || ImGui::GetIO().KeyShift)
+                {
+                    Cursor = Placement::FromAbsolute(
+                        Floor(Cursor.GetAbsoluteX()) + 0.5,
+                        Floor(Cursor.GetAbsoluteY()) + 0.5);
+                }
 
                 // Show the pending entity under the cursor before it is committed by a click.
                 mWorkshop.UpdatePreview(Cursor, Selection);

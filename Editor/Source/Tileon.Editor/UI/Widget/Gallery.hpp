@@ -147,6 +147,16 @@ namespace Tileon::Editor::UI
             return mSelection;
         }
 
+        /// \brief Gets the item the user asked to open this frame by right-clicking it.
+        ///
+        /// The value is reset every \ref Begin, so callers read it once after \ref End.
+        ///
+        /// \return The identifier of the right-clicked item, or `-1` if none was activated this frame.
+        ZY_INLINE SInt64 GetActivated() const
+        {
+            return mActivated;
+        }
+
     private:
 
         /// \brief Checks if an item with the specified name matches the current filter string.
@@ -165,6 +175,7 @@ namespace Tileon::Editor::UI
         Real32  mSize;
         Str     mFilter;
         UInt32  mSelection;
+        SInt64  mActivated;
     };
 }
 

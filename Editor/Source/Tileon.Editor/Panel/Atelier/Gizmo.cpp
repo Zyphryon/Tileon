@@ -166,7 +166,7 @@ namespace Tileon::Editor
         const Matrix3x2 Spinner = Matrix3x2::FromRotation(Spin);
 
         const ImVec2 ScaleOffset(Composer.GetMousePos().x - Anchor.x, Composer.GetMousePos().y - Anchor.y);
-        const Real32 Factor = (ScaleOffset.x * mBearing.x + ScaleOffset.y * mBearing.y) / mReach;
+        const Real32 Factor = Max((ScaleOffset.x * mBearing.x + ScaleOffset.y * mBearing.y) / mReach, 0.01f);
 
         for (ConstRef<Snapshot> Snapshot : mSnapshots)
         {

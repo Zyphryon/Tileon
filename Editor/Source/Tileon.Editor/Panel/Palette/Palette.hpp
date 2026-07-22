@@ -110,5 +110,6 @@ namespace Tileon::Editor::Panel
 
         UI::Gallery     mTerrains;
         UI::Gallery     mEntities;
+        SInt32          mMode;
     };
 }

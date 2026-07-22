@@ -641,6 +641,11 @@ namespace Tileon::Editor::UI
             return ImGui::IsItemHovered(Flags);
         }
 
+        ZY_INLINE Bool IsItemDeactivatedAfterEdit() const
+        {
+            return ImGui::IsItemDeactivatedAfterEdit();
+        }
+
         ZY_INLINE Bool IsKeyPressed(ImGuiKey Key, Bool Repeat = false) const
         {
             return ImGui::IsKeyPressed(Key, Repeat);

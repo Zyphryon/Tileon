@@ -37,6 +37,7 @@ namespace Tileon::Editor::Panel
     Bootstrap::Bootstrap()
         : mState { State::Menu }
     {
+        LoadRecent();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -130,6 +131,34 @@ namespace Tileon::Editor::Panel
         if (Composer.Button(ICON_FA_FOLDER_OPEN "   Open Project", Width, kHeight))
         {
             OpenFileDialog();
+        }
+
+        // Recent projects, most-recently opened first.
+        if (!mRecent.IsEmpty())
+        {
+            Composer.Spacing();
+            Composer.Header("Recent");
+            Composer.Spacing();
+
+            SInt32 Clicked = -1;
+
+            for (UInt32 Index = 0; Index < mRecent.GetSize(); ++Index)
+            {
+                ConstRef<Str> Path  = mRecent[Index];
+                const Text    Label = StrAfterLast(Path, '/');
+
+                if (Composer.Selectable(String<288>::Print<"{0}##recent_{1}">(Label, Index), false))
+                {
+                    Clicked = static_cast<SInt32>(Index);
+                }
+                Composer.Tooltip(Path);
+            }
+
+            if (Clicked >= 0)
+            {
+                const Str Path = mRecent[Clicked];
+                OpenRecent(Path);
+            }
         }
 
         Composer.SetCursorPosY(Composer.GetWindowBottom(2));
@@ -273,6 +302,8 @@ namespace Tileon::Editor::Panel
 
                 if (mProject.Load(Parser))
                 {
+                    PushRecent(mProject.GetPath());
+
                     mState = State::Done;
                 }
             }
@@ -289,6 +320,8 @@ namespace Tileon::Editor::Panel
                 const Str Data = JsonDocument::Dump(Parser);
                 Filesystem::Write(mProject.GetPath(),
                     ConstSpan(reinterpret_cast<ConstPtr<Byte>>(Data.GetData()), Data.GetSize()));
+
+                PushRecent(mProject.GetPath());
 
                 mState = State::Done;
             }
@@ -322,6 +355,115 @@ namespace Tileon::Editor::Panel
             return true;
         }
         return false;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Bootstrap::OpenRecent(Text Path)
+    {
+        mProject.SetPath(Str(Path));
+
+        Blob File;
+
+        if (Filesystem::Read(mProject.GetPath(), File) == Filesystem::Result::Success)
+        {
+            JsonValue Parser = JsonDocument::Parse(Text(File.GetData<Char>(), File.GetSize()));
+
+            if (mProject.Load(Parser))
+            {
+                PushRecent(mProject.GetPath());
+
+                mState = State::Done;
+                return;
+            }
+        }
+
+        // The file is gone or unreadable, so drop it from the list to stop it reappearing.
+        mRecent.RemoveIf([&](ConstRef<Str> Existing)
+        {
+            return Existing == Path;
+        });
+        SaveRecent();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Bootstrap::LoadRecent()
+    {
+        mRecent.Clear();
+
+        Blob File;
+
+        if (Filesystem::Read(Filesystem::GetDataFolder("Tileon", "Editor") + "Recent.json", File) != Filesystem::Result::Success)
+        {
+            return;
+        }
+
+        JsonValue Document = JsonDocument::Parse(Text(File.GetData<Char>(), File.GetSize()));
+
+        if (!Document.IsObject())
+        {
+            return;
+        }
+
+        const JsonObject Root(Document);
+        const JsonArray  Items = Root.GetArray("Recent");
+
+        if (Items.IsNull())
+        {
+            return;
+        }
+
+        for (UInt Index = 0; Index < Items.GetSize() && mRecent.GetSize() < kMaxRecent; ++Index)
+        {
+            if (const Text Path = Items.GetString(Index); !Path.IsEmpty())
+            {
+                mRecent.Append(Str(Path));
+            }
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Bootstrap::SaveRecent()
+    {
+        JsonValue Document;
+        Document.SetObject();
+
+        JsonObject Root(Document);
+        JsonArray  Items = Root.SetArray("Recent");
+
+        for (ConstRef<Str> Path : mRecent)
+        {
+            Items.AddString(Path);
+        }
+
+        const Str Data = JsonDocument::Dump(Document);
+        Filesystem::Write(Filesystem::GetDataFolder("Tileon", "Editor") + "Recent.json",
+            ConstSpan(reinterpret_cast<ConstPtr<Byte>>(Data.GetData()), Data.GetSize()));
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Bootstrap::PushRecent(Text Path)
+    {
+        // Move the path to the front (most recent), de-duplicating any earlier appearance.
+        mRecent.RemoveIf([&](ConstRef<Str> Existing)
+        {
+            return Existing == Path;
+        });
+        mRecent.Insert(0, Str(Path));
+
+        // Drop the oldest entries once the cap is exceeded.
+        while (mRecent.GetSize() > kMaxRecent)
+        {
+            mRecent.RemoveLast();
+        }
+        SaveRecent();
     }
 }
 

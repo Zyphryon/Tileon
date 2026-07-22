@@ -15,6 +15,7 @@
 #include "Tileon.Editor/Project.hpp"
 #include "Tileon.Editor/UI/Composer.hpp"
 #include "Tileon.Editor/UI/Widget/Picker.hpp"
+#include <Zyphryon.Base/Container/Sequence.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -56,6 +57,9 @@ namespace Tileon::Editor::Panel
 
     private:
 
+        /// \brief The maximum number of projects kept in the recent list.
+        static constexpr UInt32 kMaxRecent = 5;
+
         /// \brief Represents the current state of the bootstrap activity, determining which interface to display.
         enum class State : UInt8
         {
@@ -93,13 +97,32 @@ namespace Tileon::Editor::Panel
         /// \return `true` if the project directory was successfully prepared, otherwise `false`.
         Bool Scaffold(Text Path);
 
+        /// \brief Loads an existing project directly from a recent-list entry, launching it on success.
+        ///
+        /// A missing or unreadable file is dropped from the recent list so it stops appearing.
+        ///
+        /// \param Path The full path of the project file to open.
+        void OpenRecent(Text Path);
+
+        /// \brief Loads the recent-projects list from disk.
+        void LoadRecent();
+
+        /// \brief Saves the recent-projects list to disk.
+        void SaveRecent();
+
+        /// \brief Promotes a project path to the front of the recent list, capped to \ref kMaxRecent entries.
+        ///
+        /// \param Path The project path that was just opened.
+        void PushRecent(Text Path);
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        State      mState;
-        Project    mProject;
-        UI::Picker mPicker;
+        State         mState;
+        Project       mProject;
+        UI::Picker    mPicker;
+        Sequence<Str> mRecent;
     };
 }

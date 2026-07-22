@@ -27,10 +27,10 @@ namespace Tileon::Editor
 
     Workshop::Workshop(Ref<Context> Context)
         : mContext          { Context },
-          mMode             { Mode::Tile },
           mLevel            { Level::Base },
           mBrush            { Brush::Pencil },
           mSeamless         { true },
+          mAligned          { false },
           mSelectionPrimary { 0 },
           mClipboardCount   { 0 }
     {
@@ -64,7 +64,7 @@ namespace Tileon::Editor
 
     void Workshop::Execute(Command Command, Placement Placement, UInt32 Object)
     {
-        switch (mMode)
+        switch (GetMode())
         {
         case Mode::Tile:
             ExecuteOnTiles(Command, Placement, Object);
@@ -80,7 +80,7 @@ namespace Tileon::Editor
 
     void Workshop::UpdatePreview(Placement Placement, UInt32 Object)
     {
-        if (mMode != Mode::Entity || mBrush != Brush::Pencil || Object == 0)
+        if (GetMode() != Mode::Entity || mBrush != Brush::Pencil || Object == 0)
         {
             ClearPreview();
             return;

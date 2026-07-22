@@ -72,7 +72,7 @@ namespace Tileon::Editor
         /// \param Mode The mode to set.
         ZY_INLINE void SetMode(Mode Mode)
         {
-            mMode = Mode;
+            mContext.SetEnum("Workshop.Mode", Mode);
         }
 
         /// \brief Gets the current editing mode.
@@ -80,7 +80,7 @@ namespace Tileon::Editor
         /// \return The current editing mode.
         ZY_INLINE Mode GetMode() const
         {
-            return mMode;
+            return mContext.GetEnum("Workshop.Mode", Mode::Tile);
         }
 
         /// \brief Sets the current level.
@@ -132,6 +132,22 @@ namespace Tileon::Editor
         ZY_INLINE Bool IsSeamless() const
         {
             return mSeamless;
+        }
+
+        /// \brief Sets whether placed entities snap to the centre of the tile under the cursor.
+        ///
+        /// \param Aligned `true` to place entities at tile centres, `false` to place at the exact cursor.
+        ZY_INLINE void SetAligned(Bool Aligned)
+        {
+            mAligned = Aligned;
+        }
+
+        /// \brief Gets whether placed entities snap to the centre of the tile under the cursor.
+        ///
+        /// \return `true` when placing at tile centres, `false` when placing at the exact cursor.
+        ZY_INLINE Bool IsAligned() const
+        {
+            return mAligned;
         }
 
         /// \brief Executes an editing command at the specified placement in the world.
@@ -347,10 +363,10 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         Ref<Context>     mContext;
-        Mode             mMode;
         Level            mLevel;
         Brush            mBrush;
         Bool             mSeamless;
+        Bool             mAligned;
         Sequence<OpTile> mOperations;
         Scene::Entity    mPreview;
         Bag<UInt64>      mSelection;
