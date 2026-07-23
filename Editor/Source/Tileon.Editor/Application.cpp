@@ -20,6 +20,7 @@
 #include "Panel/Universe/Universe.hpp"
 #include "Tileon.Editor/UI/Theme.hpp"
 #include "Tileon_Editor.Modules.hpp"
+#include "Tileon_Editor.Embedded.hpp"
 #include <Zyphryon.Content/Mount/Disk.hpp>
 #include <Zyphryon.Platform/Service.hpp>
 
@@ -108,7 +109,7 @@ namespace Tileon::Editor
     {
         // Adds the main disk content mount for the editor, which allows loading assets from the local file system.
         ConstRetainer<Content::Service> Content = GetService<Content::Service>();
-        Content->AddMount("Editor",    Retainer<Content::Disk>::Create("Editor"));
+        ZyRegisterEmbedded(* Content);
         Content->AddMount("Resources", Retainer<Content::Disk>::Create("Editor"));
 
         // Initialize ImGui plugin and the UI theme system, which sets up the rendering the user interface.

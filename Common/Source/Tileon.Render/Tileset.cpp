@@ -51,7 +51,10 @@ namespace Tileon
 
     void Tileset::Preload()
     {
-        mRegistry.ForEach(Capture<& Tileset::Refresh>(this));
+        mRegistry.ForEach([this](Ref<Motif> Motif)
+        {
+            Refresh(Motif);
+        });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
