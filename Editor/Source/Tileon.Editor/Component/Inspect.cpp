@@ -785,7 +785,7 @@ namespace Tileon::Editor
 
     Bool Inspect(Ref<UI::Composer> Composer, Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Emphasis> Component)
     {
-        ConstRef<Render::TextEffect> Effect = Component.GetEffect();
+        ConstRef<Render::FontEffect> Effect = Component.GetEffect();
 
         Color  OutsetColor     = Effect.GetOutsetColor();
         Real32 OutsetOffset    = Effect.GetOutsetOffset();
@@ -811,7 +811,7 @@ namespace Tileon::Editor
 
         if (Dirty)
         {
-            Component.SetEffect(Render::TextEffect(
+            Component.SetEffect(Render::FontEffect(
                 OutsetColor, OutsetOffset, OutsetWidth, OutsetBias, OutsetBlur, InsetRoundness, InsetThreshold));
         }
         return Dirty;

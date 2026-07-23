@@ -88,10 +88,15 @@ namespace Tileon::Stage
                 const IntColor8 Color = Tint ? (* Tint) : IntColor8::White();
                 const Real32    Depth = Depth::Midground(Frustum, Transform.GetOrigin(), Transform.GetWorldspace());
 
-                const Render::TextStyle Stype(Typeface.GetFont(), Typeface.GetSize(), Color, Label.GetSpacing());
-
-                mCanvas.DrawText(Stype, Label.GetContent(), Transform.Rebase(Origin), Depth,
-                    Emphasis ? Emphasis->GetEffect() : Render::TextEffect());
+                mCanvas.DrawText(
+                    Typeface.GetFont(),
+                    Typeface.GetSize(),
+                    Label.GetSpacing(),
+                    Label.GetContent(),
+                    Transform.Rebase(Origin),
+                    Depth,
+                    Color,
+                    Emphasis ? Emphasis->GetEffect() : Render::FontEffect());
             });
 
             // Draw tile regions, culling against the view frustum to minimize overdraw.
