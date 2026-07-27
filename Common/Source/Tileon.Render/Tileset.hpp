@@ -14,7 +14,7 @@
 
 #include "Motif.hpp"
 #include <Zyphryon.Content/Service.hpp>
-#include <Zyphryon.Graphic/Material.hpp>
+#include <Zyphryon.Graphic/Resource/Material.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]

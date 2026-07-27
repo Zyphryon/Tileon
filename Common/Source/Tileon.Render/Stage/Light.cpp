@@ -57,14 +57,17 @@ namespace Tileon::Stage
         // Apply the environment settings for the current frame.
         mQrDrawSkylight.Run<const Skylight>([&](ConstRef<Skylight> Environment)
         {
-            const Color SunColor    = Math::Color::FromColor8(Environment.GetSunTint());
-            const Color SkyColor    = Math::Color::FromColor8(Environment.GetSkyTint());
-            const Color GroundColor = Math::Color::FromColor8(Environment.GetGroundTint());
+            // Premultiplies a tint by the brightness, leaving the alpha channel free to carry custom data.
+            const auto Premultiply = [Brightness = Environment.GetBrightness()](IntColor8 Tint, Real32 Alpha)
+            {
+                const Color Value = Math::Color::FromColor8(Tint);
+                return Color(Value.GetRed() * Brightness, Value.GetGreen() * Brightness, Value.GetBlue() * Brightness, Alpha);
+            };
 
             Graphic::Transient<GpuSkylightLayout> Data =  Graphics.AllocateTransientUniforms<GpuSkylightLayout>(1);
-            Data[0].SunColor    = SunColor.WithIntensity(Environment.GetBrightness(), Environment.GetSunDirection().GetX());
-            Data[0].SkyColor    = SkyColor.WithIntensity(Environment.GetBrightness(), Environment.GetSunDirection().GetY());
-            Data[0].GroundColor = GroundColor.WithIntensity(Environment.GetBrightness(), 0.0f);
+            Data[0].SunColor    = Premultiply(Environment.GetSunTint(),    Environment.GetSunDirection().GetX());
+            Data[0].SkyColor    = Premultiply(Environment.GetSkyTint(),    Environment.GetSunDirection().GetY());
+            Data[0].GroundColor = Premultiply(Environment.GetGroundTint(), 0.0f);
             Encoder.SetPass(Data.GetStream());
 
             constexpr Graphic::Invocation Invocation = {

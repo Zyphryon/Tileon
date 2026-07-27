@@ -66,8 +66,13 @@ namespace Tileon::Stage
                 const IntColor8 Color  = Tint ? (* Tint) : IntColor8::White();
                 const Real32    Depth = Depth::Midground(Frustum, Transform.GetOrigin(), Transform.GetWorldspace());
 
-                const Render::Sprite Command(Appearance.GetMaterial(), Extent.GetSize(), Color, Appearance.GetSource());
-                mCanvas.DrawSprite(Command, Transform.Rebase(Origin), Depth);
+                mCanvas.DrawSprite(
+                    Appearance.GetMaterial(),
+                    Extent.GetSize(),
+                    Appearance.GetSource(),
+                    Transform.Rebase(Origin),
+                    Depth,
+                    Color);
             });
 
             // Draw text entities.
@@ -331,7 +336,12 @@ namespace Tileon::Stage
             Crop.GetX() + OffsetX + Size.GetX() * UCoordPerTile,
             Crop.GetY() + OffsetY + Size.GetY() * VCoordPerTile);
 
-        const Render::Sprite Command(Glyph.Material, static_cast<Vector2>(Size), Glyph.Tint, Displacement);
-        mCanvas.DrawSprite(Command, Matrix3x2::FromTranslation(Position.GetXY()), Position.GetZ());
+        mCanvas.DrawSprite(
+            Glyph.Material,
+            static_cast<Vector2>(Size),
+            Displacement,
+            Matrix3x2::FromTranslation(Position.GetXY()),
+            Position.GetZ(),
+            Glyph.Tint);
     }
 }

@@ -15,7 +15,7 @@
 #include "Tileon.World/Placement.hpp"
 #include <Zyphryon.Math/Animation/Tween.hpp>
 #include <Zyphryon.Math/Geometry/Rect.hpp>
-#include <Zyphryon.Graphic/Camera.hpp>
+#include <Zyphryon.Render/Camera.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -250,7 +250,7 @@ namespace Tileon
             const Graphic::Viewport Viewport(0, 0, mViewport.GetX(), mViewport.GetY());
 
             const Vector2 Tile(Pixel.GetX() / mDensity, Pixel.GetY() / mDensity);
-            const Vector2 Local = mCamera.GetWorldCoordinates<Graphic::Camera::Origin::Northwest>(Tile, Viewport);
+            const Vector2 Local = mCamera.GetWorldCoordinates<Render::Camera::Origin::Northwest>(Tile, Viewport);
 
             return Placement::Clamp(Placement(mPosition.GetRegionX(), mPosition.GetRegionY(), Local.GetX(), Local.GetY()));
         }
@@ -267,7 +267,7 @@ namespace Tileon
                 static_cast<Real32>(World.GetAbsoluteX() - mPosition.GetBaseX()),
                 static_cast<Real32>(World.GetAbsoluteY() - mPosition.GetBaseY()));
 
-            const Vector2 Tile = mCamera.GetScreenCoordinates<Graphic::Camera::Origin::Northwest>(Local, Viewport);
+            const Vector2 Tile = mCamera.GetScreenCoordinates<Render::Camera::Origin::Northwest>(Local, Viewport);
             return Tile * mDensity;
         }
 
@@ -289,7 +289,7 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Graphic::Camera  mCamera;
+        Render::Camera   mCamera;
         Real32           mZoom;
         Vector2          mViewport;
         Mode             mMode;
