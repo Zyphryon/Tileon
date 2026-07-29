@@ -49,7 +49,7 @@ namespace Tileon::Stage
         mCanvas.Begin();
         {
             // Draw sprite entities.
-            mCanvas.SetTechnique(Render::Canvas::Type::Sprite, mTechniques[Enum::Cast(Kind::SpriteOpaqueWithNormal)]);
+            mCanvas.SetTechnique(Canvas::Type::Sprite, mTechniques[Enum::Cast(Kind::SpriteOpaqueWithNormal)]);
             mQrDrawSprites.Run<const Transform, const Extent, const Bound, const Appearance, ConstPtr<IntColor8>>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
@@ -109,7 +109,7 @@ namespace Tileon::Stage
             const Bool   Refreshed  = (mGeneration != Generation);
             mGeneration = Generation;
 
-            mCanvas.SetTechnique(Render::Canvas::Type::Sprite, mTechniques[Enum::Cast(Kind::SpriteOpaque)]);
+            mCanvas.SetTechnique(Canvas::Type::Sprite, mTechniques[Enum::Cast(Kind::SpriteOpaque)]);
             mQrDrawRegions.Run<const Region, Mosaic>([&](ConstRef<Region> Region, Ref<Mosaic> Mosaic)
             {
                 if (Refreshed)
