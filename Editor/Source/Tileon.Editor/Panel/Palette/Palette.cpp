@@ -51,7 +51,10 @@ namespace Tileon::Editor::Panel
 
                 if (Composer.BeginTabItem("Terrain", TerrainFlags))
                 {
-                    GetContext().SetEnum("Workshop.Mode", Workshop::Mode::Tile);
+                    if (Mode != Workshop::Mode::Tile)
+                    {
+                        GetContext().SetEnum("Workshop.Mode", Workshop::Mode::Tile);
+                    }
 
                     DrawTerrainTab(Composer);
                     Composer.EndTabItem();
@@ -62,7 +65,10 @@ namespace Tileon::Editor::Panel
 
                 if (Composer.BeginTabItem("Entity", EntityFlags))
                 {
-                    GetContext().SetEnum("Workshop.Mode", Workshop::Mode::Entity);
+                    if (Mode != Workshop::Mode::Entity)
+                    {
+                        GetContext().SetEnum("Workshop.Mode", Workshop::Mode::Entity);
+                    }
 
                     DrawEntityTab(Composer);
                     Composer.EndTabItem();
