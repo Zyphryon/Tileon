@@ -64,7 +64,7 @@ namespace Tileon::Stage
                 return Color(Value.GetRed() * Brightness, Value.GetGreen() * Brightness, Value.GetBlue() * Brightness, Alpha);
             };
 
-            Graphic::Transient<GpuSkylightLayout> Data =  Graphics.AllocateTransientUniforms<GpuSkylightLayout>(1);
+            Graphic::Transient<GpuSkylightLayout> Data =  Graphics.AllocateInFlightUniforms<GpuSkylightLayout>(1);
             Data[0].SunColor    = Premultiply(Environment.GetSunTint(),    Environment.GetSunDirection().GetX());
             Data[0].SkyColor    = Premultiply(Environment.GetSkyTint(),    Environment.GetSunDirection().GetY());
             Data[0].GroundColor = Premultiply(Environment.GetGroundTint(), 0.0f);
@@ -128,7 +128,7 @@ namespace Tileon::Stage
         if (const ConstSpan<GpuGlowlightLayout> Data = mGlowlightData; !Data.IsEmpty())
         {
             Graphic::Transient<GpuGlowlightLayout> Instances
-                = Graphics.AllocateTransientVertices<GpuGlowlightLayout>(Data.GetSize());
+                = Graphics.AllocateInFlightVertices<GpuGlowlightLayout>(Data.GetSize());
             Instances.Copy(Data);
 
             const Graphic::Invocation Invocation = {
@@ -144,7 +144,7 @@ namespace Tileon::Stage
         if (const ConstSpan<GpuSpotlightLayout> Data = mSpotlightData; !Data.IsEmpty())
         {
             Graphic::Transient<GpuSpotlightLayout> Instances
-                = Graphics.AllocateTransientVertices<GpuSpotlightLayout>(Data.GetSize());
+                = Graphics.AllocateInFlightVertices<GpuSpotlightLayout>(Data.GetSize());
             Instances.Copy(Data);
 
             const Graphic::Invocation Invocation = {

@@ -23,14 +23,14 @@
   },
   "Signature": {
     "Uniforms": [
-      { "Slot": "Global",   "Name": "Camera", "Type": "Float4", "Count": 4 },
-      { "Slot": "Instance", "Name": "Light",  "Type": "Float4", "Count": 4 }
+      { "Frequency": "Frame",    "Name": "Camera", "Type": "Float4", "Count": 4 },
+      { "Frequency": "Instance", "Name": "Light",  "Type": "Float4", "Count": 4 }
     ],
     "Textures": [
-      { "Slot": 0, "Name": "Normal" }
+      { "Name": "Normal", "Frequency": "Pass" }
     ],
     "Samplers": [
-      { "Slot": 0, "AddressModeU": "Clamp", "AddressModeV": "Clamp", "Filter": "LinearMipLinear" }
+      { "Name": "Normal", "Frequency": "Pass", "AddressModeU": "Clamp", "AddressModeV": "Clamp", "Filter": "LinearMipLinear" }
     ]
   },
   "Program": {

@@ -14,12 +14,12 @@
   },
   "Signature": {
     "Textures": [
-      "Albedo",
-      "Radiance"
+      { "Name": "Albedo",   "Frequency": "Pass" },
+      { "Name": "Radiance", "Frequency": "Pass" }
     ],
     "Samplers": [
-      { "Slot": 0, "AddressModeU": "Clamp", "AddressModeV": "Clamp", "Filter": "LinearMipLinear" },
-      { "Slot": 1, "AddressModeU": "Clamp", "AddressModeV": "Clamp", "Filter": "LinearMipLinear" }
+      { "Name": "Albedo",   "Frequency": "Pass", "AddressModeU": "Clamp", "AddressModeV": "Clamp", "Filter": "LinearMipLinear" },
+      { "Name": "Radiance", "Frequency": "Pass", "AddressModeU": "Clamp", "AddressModeV": "Clamp", "Filter": "LinearMipLinear" }
     ]
   },
   "Program": {

@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Foundry.hpp"
+#include "Tileon.Render/Texture.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -316,7 +317,7 @@ namespace Tileon::Editor::Panel
 
             if (Glyph.Material)
             {
-                ConstRetainer<Graphic::Image> Albedo = Glyph.Material->GetImage(Graphic::TextureSlot::Albedo);
+                ConstRetainer<Graphic::Image> Albedo = Glyph.Material->GetImage(GetTextureHash(TextureSlot::Albedo));
                 TextureWidth  = Albedo ? static_cast<Real32>(Albedo->GetWidth())  : 1.0f;
                 TextureHeight = Albedo ? static_cast<Real32>(Albedo->GetHeight()) : 1.0f;
             }
@@ -424,7 +425,7 @@ namespace Tileon::Editor::Panel
     {
         if (Composer.BeginTabBar("##right_tabs"))
         {
-            if (ConstRetainer<Graphic::Image> Albedo = Glyph.Material->GetImage(Graphic::TextureSlot::Albedo))
+            if (ConstRetainer<Graphic::Image> Albedo = Glyph.Material->GetImage(GetTextureHash(TextureSlot::Albedo)))
             {
                 if (Composer.BeginTabItem("Preview"))
                 {
@@ -437,9 +438,9 @@ namespace Tileon::Editor::Panel
                 }
             }
 
-            for (const Graphic::TextureSlot Semantic : Enum::GetValues<Graphic::TextureSlot>())
+            for (const TextureSlot Semantic : Enum::GetValues<TextureSlot>())
             {
-                if (ConstRetainer<Graphic::Image> Texture = Glyph.Material->GetImage(Semantic))
+                if (ConstRetainer<Graphic::Image> Texture = Glyph.Material->GetImage(GetTextureHash(Semantic)))
                 {
                     if (Composer.BeginTabItem(Enum::GetName(Semantic)))
                     {

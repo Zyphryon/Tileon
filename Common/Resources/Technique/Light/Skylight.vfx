@@ -19,15 +19,15 @@
   },
   "Signature": {
     "Uniforms": [
-      { "Slot": "Pass", "Name": "SunColor",    "Type": "Float4" },
-	  { "Slot": "Pass", "Name": "SkyColor",    "Type": "Float4" },
-	  { "Slot": "Pass", "Name": "GroundColor", "Type": "Float4" }
+      { "Frequency": "Pass", "Name": "SunColor",    "Type": "Float4" },
+      { "Frequency": "Pass", "Name": "SkyColor",    "Type": "Float4" },
+      { "Frequency": "Pass", "Name": "GroundColor", "Type": "Float4" }
     ],
     "Textures": [
-      { "Slot": 0, "Name": "Normal" }
+      { "Name": "Normal", "Frequency": "Pass" }
     ],
     "Samplers": [
-      { "Slot": 0, "AddressModeU": "Clamp", "AddressModeV": "Clamp", "Filter": "LinearMipLinear" }
+      { "Name": "Normal", "Frequency": "Pass", "AddressModeU": "Clamp", "AddressModeV": "Clamp", "Filter": "LinearMipLinear" }
     ]
   },
   "Program": {

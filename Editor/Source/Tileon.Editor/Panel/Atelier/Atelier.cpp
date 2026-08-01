@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Atelier.hpp"
+#include "Tileon.Render/Texture.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -434,7 +435,8 @@ namespace Tileon::Editor::Panel
         // Draw the current frame rendered by the renderer to the interface.
         const Graphic::Object Texture = Renderer.GetTarget(mTarget);
 
-        if (GetContext().GetGraphic().GetDescription().Capabilities.IsOriginBottomLeft)
+        // OpenGL samples from the bottom-left, so its render target arrives flipped relative to Direct3D's.
+        if (GetContext().GetGraphic().GetDescription().Language == Graphic::ShaderLanguage::GLSL)
         {
             Composer.Image(Texture, Composer.GetContentRegionAvail(), ImVec4(0, 1, 1, 0));
         }
@@ -747,9 +749,9 @@ namespace Tileon::Editor::Panel
 
                     ConstRef<Tileset::Glyph> Glyph = mContext.GetTileset().GetGlyph(Selection);
 
-                    if (Selection != 0 && !IsBucket && Glyph.Material && Glyph.Material->GetImage(Graphic::TextureSlot::Albedo))
+                    if (Selection != 0 && !IsBucket && Glyph.Material && Glyph.Material->GetImage(GetTextureHash(TextureSlot::Albedo)))
                     {
-                        ConstRetainer<Graphic::Image> Albedo = Glyph.Material->GetImage(Graphic::TextureSlot::Albedo);
+                        ConstRetainer<Graphic::Image> Albedo = Glyph.Material->GetImage(GetTextureHash(TextureSlot::Albedo));
 
                         const UInt32 Base    = Glyph.Tint.ToRGBA8();
                         const UInt32 Alpha   = static_cast<UInt32>(((Base >> 24) & 0xFF) * 0.7f) << 24;

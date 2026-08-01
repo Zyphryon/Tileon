@@ -12,6 +12,7 @@
 
 #include "Palette.hpp"
 #include "Tileon.Editor/Panel/Atelier/Workshop.hpp"
+#include "Tileon.Render/Texture.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -128,9 +129,9 @@ namespace Tileon::Editor::Panel
             Bool WasSelected;
 
             // Draw the terrain item in the gallery, using its material thumbnail if available.
-            if (Glyph.Material && Glyph.Material->GetImage(Graphic::TextureSlot::Albedo))
+            if (Glyph.Material && Glyph.Material->GetImage(GetTextureHash(TextureSlot::Albedo)))
             {
-                const Graphic::Object Thumbnail = Glyph.Material->GetImage(Graphic::TextureSlot::Albedo)->GetHandle();
+                const Graphic::Object Thumbnail = Glyph.Material->GetImage(GetTextureHash(TextureSlot::Albedo))->GetHandle();
 
                 WasSelected = mTerrains.DrawItem(Composer,
                     Terrain.GetID(),
@@ -186,7 +187,7 @@ namespace Tileon::Editor::Panel
 
                 if (Material && Material->HasCompleted())
                 {
-                    if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(Graphic::TextureSlot::Albedo))
+                    if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureHash(TextureSlot::Albedo)))
                     {
                         Thumbnail = Albedo->GetHandle();
                         Crop      = Visual->GetSource();

@@ -26,8 +26,12 @@
     },
     "Signature": {
         "Textures": [
-            "Albedo",
-            "Normal"
+            { "Name": "Albedo" },
+            { "Name": "Normal" }
+        ],
+        "Samplers": [
+            { "Name": "Albedo" },
+            { "Name": "Normal" }
         ]
     },
     "Program": {

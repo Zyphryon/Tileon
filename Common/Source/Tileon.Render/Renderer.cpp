@@ -69,7 +69,7 @@ namespace Tileon
         Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
 
         // Build the frame-global uniform (the director's view-projection) the renderer binds for every stage.
-        Graphic::Transient<Matrix4x4> Global = Graphics.AllocateTransientUniforms<Matrix4x4>(1);
+        Graphic::Transient<Matrix4x4> Global = Graphics.AllocateInFlightUniforms<Matrix4x4>(1);
         Global[0] = Director.GetViewProjection();
 
         // Hand the frame's director to the stages that resolve their draws from it.

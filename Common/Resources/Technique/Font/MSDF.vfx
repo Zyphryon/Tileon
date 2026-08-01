@@ -26,15 +26,15 @@
     },
     "Signature": {
         "Textures": [
-            "Albedo"
+            { "Name": "Albedo" }
         ],
         "Samplers": [
-            { "Slot": "Albedo", "Filter": "Linear" }
+            { "Name": "Albedo", "Filter": "Linear" }
         ],
         "Uniforms":
         [
-            { "Slot": "Global",   "Name": "Camera", "Type": "Float4", "Count": 4 },
-            { "Slot": "Material", "Name": "Range",  "Type": "Float2" }
+            { "Frequency": "Frame",    "Name": "Camera", "Type": "Float4", "Count": 4 },
+            { "Frequency": "Material", "Name": "Range",  "Type": "Float2" }
         ]
     },
     "Program": {

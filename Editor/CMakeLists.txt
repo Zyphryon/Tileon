@@ -60,6 +60,6 @@ TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE ${PROJECT_INCLUDE})
 ## Properties
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-ZyApplyCompileOptions(${PROJECT_NAME})
+ZyApplyOptions(${PROJECT_NAME})
 ZyApplyModules(${PROJECT_NAME})
-ZyApplyEmbedded(${PROJECT_NAME})
+ZyApplyResources(${PROJECT_NAME})

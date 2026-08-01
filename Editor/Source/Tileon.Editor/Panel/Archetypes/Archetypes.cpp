@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Archetypes.hpp"
+#include "Tileon.Render/Texture.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -370,7 +371,7 @@ namespace Tileon::Editor::Panel
 
         if (Composer.BeginTabBar("##preview_tabs"))
         {
-            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(Graphic::TextureSlot::Albedo))
+            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureHash(TextureSlot::Albedo)))
             {
                 if (Composer.BeginTabItem("Preview"))
                 {
@@ -385,9 +386,9 @@ namespace Tileon::Editor::Panel
                 }
             }
 
-            for (const Graphic::TextureSlot Semantic : Enum::GetValues<Graphic::TextureSlot>())
+            for (const TextureSlot Semantic : Enum::GetValues<TextureSlot>())
             {
-                if (ConstRetainer<Graphic::Image> Texture = Material->GetImage(Semantic))
+                if (ConstRetainer<Graphic::Image> Texture = Material->GetImage(GetTextureHash(Semantic)))
                 {
                     if (Composer.BeginTabItem(Enum::GetName(Semantic)))
                     {

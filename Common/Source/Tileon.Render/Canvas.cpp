@@ -203,7 +203,7 @@ namespace Tileon
     {
         for (Ref<GlyphEffectPalette> Palette : mEffectPalettes)
         {
-            Graphic::Transient<Render::FontEffect> Slice = mService->AllocateTransientUniforms<Render::FontEffect>(kMaxEffectsPerBatch);
+            Graphic::Transient<Render::FontEffect> Slice = mService->AllocateInFlightUniforms<Render::FontEffect>(kMaxEffectsPerBatch);
             Slice.Copy<Render::FontEffect>(Palette.Effects);
 
             Palette.Stream = Slice.GetStream();
@@ -248,7 +248,7 @@ namespace Tileon
         Ref<SpriteCommand> First = mSprites[Commands.GetFront().Entry.Slot];
 
         // Gather each sprite's per-instance layout into a single transient instance stream.
-        Graphic::Transient<SpriteLayout> Instances = mService->AllocateTransientVertices<SpriteLayout>(Commands.GetSize());
+        Graphic::Transient<SpriteLayout> Instances = mService->AllocateInFlightVertices<SpriteLayout>(Commands.GetSize());
 
         for (UInt32 Element = 0; Element < Commands.GetSize(); ++Element)
         {
@@ -273,7 +273,7 @@ namespace Tileon
         Ref<GlyphCommand> First = mGlyphs[Commands.GetFront().Entry.Slot];
 
         // Gather each glyph's per-instance layout into a single transient instance stream.
-        Graphic::Transient<GlyphLayout> Instances = mService->AllocateTransientVertices<GlyphLayout>(Commands.GetSize());
+        Graphic::Transient<GlyphLayout> Instances = mService->AllocateInFlightVertices<GlyphLayout>(Commands.GetSize());
 
         for (UInt32 Element = 0; Element < Commands.GetSize(); ++Element)
         {

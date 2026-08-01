@@ -13,7 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.World/Placement.hpp"
-#include <Zyphryon.Math/Animation/Tween.hpp>
+#include <Zyphryon.Math/Motion/Tween.hpp>
 #include <Zyphryon.Math/Geometry/Rect.hpp>
 #include <Zyphryon.Render/Camera.hpp>
 

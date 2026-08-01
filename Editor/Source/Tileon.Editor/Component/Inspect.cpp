@@ -12,6 +12,7 @@
 
 #include "Inspect.hpp"
 #include "Tileon.Editor/Context.hpp"
+#include "Tileon.Render/Texture.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -302,7 +303,7 @@ namespace Tileon::Editor
             return;
         }
 
-        ConstRetainer<Graphic::Image> Albedo = Material->GetImage(Graphic::TextureSlot::Albedo);
+        ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureHash(TextureSlot::Albedo));
 
         if (!Albedo)
         {
@@ -581,7 +582,7 @@ namespace Tileon::Editor
 
         if (Material && Material->HasCompleted())
         {
-            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(Graphic::TextureSlot::Albedo))
+            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureHash(TextureSlot::Albedo)))
             {
                 ScaleX = Albedo->GetWidth();
                 ScaleY = Albedo->GetHeight();
