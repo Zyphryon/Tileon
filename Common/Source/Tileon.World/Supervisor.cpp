@@ -417,7 +417,7 @@ namespace Tileon
 
         if (Result == Filesystem::Result::Success && File)
         {
-            GetService<Job::Service>().SubmitOnMain([this, Actor, File = Move(File)]
+            GetService<Job::Service>().Submit(Job::Lane::Main, [this, Actor, File = Move(File)]
             {
                 Reader Input(File.GetData(), File.GetSize());
                 GetService<Scene::Service>().LoadHierarchy(Input, Actor);
@@ -425,14 +425,14 @@ namespace Tileon
         }
         else if (CreateIfMissing)
         {
-            GetService<Job::Service>().SubmitOnMain([Actor, RegionX, RegionY]
+            GetService<Job::Service>().Submit(Job::Lane::Main, [Actor, RegionX, RegionY]
             {
                 Actor.Emplace<Region>(RegionX, RegionY);
             });
         }
         else
         {
-            GetService<Job::Service>().SubmitOnMain([Actor]
+            GetService<Job::Service>().Submit(Job::Lane::Main, [Actor]
             {
                 Actor.Destruct();
             });

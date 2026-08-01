@@ -47,21 +47,21 @@ namespace Tileon
 
         Content.Read(kManifestUri, [this](Filesystem::Result Result, Blob Data)
         {
-            GetService<Job::Service>().SubmitOnMain([this, Result, Data = Move(Data)] mutable
+            GetService<Job::Service>().Submit(Job::Lane::Main, [this, Result, Data = Move(Data)] mutable
             {
                 LoadManifest(Result, Move(Data));
             });
         });
         Content.Read(kArchetypeUri, [this](Filesystem::Result Result, Blob Data)
         {
-            GetService<Job::Service>().SubmitOnMain([this, Result, Data = Move(Data)] mutable
+            GetService<Job::Service>().Submit(Job::Lane::Main, [this, Result, Data = Move(Data)] mutable
             {
                 LoadArchetypeDatabase(Result, Move(Data));
             });
         });
         Content.Read(kTerrainUri, [this](Filesystem::Result Result, Blob Data)
         {
-            GetService<Job::Service>().SubmitOnMain([this, Result, Data = Move(Data)] mutable
+            GetService<Job::Service>().Submit(Job::Lane::Main, [this, Result, Data = Move(Data)] mutable
             {
                 LoadTerrainDatabase(Result, Move(Data));
             });
