@@ -136,7 +136,7 @@ namespace Tileon
         ///
         /// \param Other The other placement to add.
         /// \return A new normalized placement representing the sum.
-        ZY_INLINE constexpr Placement operator+(Placement Other) const
+        ZY_INLINE Placement operator+(Placement Other) const
         {
             return FromAbsolute(
                 GetAbsoluteX() + Other.GetAbsoluteX(),
@@ -147,7 +147,7 @@ namespace Tileon
         ///
         /// \param Other The other placement to subtract.
         /// \return A new normalized placement representing the difference.
-        ZY_INLINE constexpr Placement operator-(Placement Other) const
+        ZY_INLINE Placement operator-(Placement Other) const
         {
             return FromAbsolute(
                 GetAbsoluteX() - Other.GetAbsoluteX(),
@@ -158,7 +158,7 @@ namespace Tileon
         ///
         /// \param Other The other placement to add.
         /// \return A reference to this placement after addition.
-        ZY_INLINE constexpr Ref<Placement> operator+=(Placement Other)
+        ZY_INLINE Ref<Placement> operator+=(Placement Other)
         {
             (* this) = (* this) + Other;
             return (*this);
@@ -168,7 +168,7 @@ namespace Tileon
         ///
         /// \param Other The other placement to subtract.
         /// \return A reference to this placement after subtraction.
-        ZY_INLINE constexpr Ref<Placement> operator-=(Placement Other)
+        ZY_INLINE Ref<Placement> operator-=(Placement Other)
         {
             (* this) = (* this) - Other;
             return (*this);
@@ -208,7 +208,7 @@ namespace Tileon
         ///
         /// \param AbsoluteX The absolute x-coordinate in the world, which will be used to determine the region and offset.
         /// \param AbsoluteY The absolute y-coordinate in the world, which will be used to determine the region and offset.
-        ZY_INLINE static constexpr Placement FromAbsolute(Real64 AbsoluteX, Real64 AbsoluteY)
+        ZY_INLINE static Placement FromAbsolute(Real64 AbsoluteX, Real64 AbsoluteY)
         {
             const SInt16 RegionX = static_cast<SInt16>(Floor(AbsoluteX / (Region::kTilesPerX)));
             const SInt16 RegionY = static_cast<SInt16>(Floor(AbsoluteY / (Region::kTilesPerY)));
@@ -221,7 +221,7 @@ namespace Tileon
         ///
         /// \param Input The placement to normalize.
         /// \return A new placement with normalized region coordinates and offset.
-        ZY_INLINE static constexpr Placement Normalize(Placement Input)
+        ZY_INLINE static Placement Normalize(Placement Input)
         {
             const SInt32 DeltaX = static_cast<SInt32>(Floor(Input.GetOffsetX() / Region::kTilesPerX));
             const SInt32 DeltaY = static_cast<SInt32>(Floor(Input.GetOffsetY() / Region::kTilesPerY));
@@ -237,7 +237,7 @@ namespace Tileon
         ///
         /// \param Input The placement to clamp.
         /// \return A placement clamped to the valid world extents.
-        ZY_INLINE static constexpr Placement Clamp(Placement Input)
+        ZY_INLINE static Placement Clamp(Placement Input)
         {
             return FromAbsolute(
                 Base::Clamp(Input.GetAbsoluteX(), static_cast<Real64>(kMinTileX), static_cast<Real64>(kMaxTileX)),
@@ -250,7 +250,7 @@ namespace Tileon
         /// \param End        The ending placement.
         /// \param Percentage The interpolation factor in [0, 1].
         /// \return A normalized placement interpolated between Start and End.
-        ZY_INLINE static constexpr Placement Lerp(Placement Start, Placement End, Real32 Percentage)
+        ZY_INLINE static Placement Lerp(Placement Start, Placement End, Real32 Percentage)
         {
             const Real64 OffsetX = End.GetAbsoluteX() - Start.GetAbsoluteX();
             const Real64 OffsetY = End.GetAbsoluteY() - Start.GetAbsoluteY();

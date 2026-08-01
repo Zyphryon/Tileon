@@ -241,15 +241,20 @@ namespace Tileon
                     else
                     {
                         IntRect AABB(INT32_MAX, INT32_MAX, INT32_MIN, INT32_MIN);
+                        Bool    Bounded = false;
 
                         ForEach([&](UInt64 ID)
                         {
                             const Scene::Entity Actor = Scene.GetEntity(ID);
                             ZY_ASSERT(Actor.IsValid(), "Loose cell contains a dangling entity id");
 
-                            AABB = IntRect::Union(AABB, Actor.Get<Bound>().GetRect());
+                            if (Actor.Has<Bound>())
+                            {
+                                AABB    = IntRect::Union(AABB, Actor.Get<Bound>().GetRect());
+                                Bounded = true;
+                            }
                         });
-                        Boundaries = AABB;
+                        Boundaries = Bounded ? AABB : IntRect::Zero();
                     }
                     Dirty = false;
                 }
