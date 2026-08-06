@@ -254,7 +254,9 @@ namespace Tileon::Editor
     {
         Ref<UI::Selector> Selector = Workspace.Selector;
 
-        const UInt64 Key = Composer.IsDisabled() ? 0 : HashCombine(Actor.GetID(), Label);
+        const UInt64 Key = Composer.IsDisabled()
+            ? 0
+            : Hash(String<128>::Print(Format::Pattern("{0}_{1}"), Label, Actor.GetID()));
 
         if (Str Selection; Selector.Consume(Key, Selection))
         {
