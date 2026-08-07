@@ -33,7 +33,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    static void LoadConfig(Ref<Engine::Config> Config, ConstRef<Filesystem::Path> Path)
+    static void LoadConfig(Ref<Runtime::Startup> Config, ConstRef<Filesystem::Path> Path)
     {
         Blob File;
 
@@ -59,7 +59,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    static void SyncConfig(Ref<Engine::Config> Config, Ref<Engine::Subsystem::Host> Host)
+    static void SyncConfig(Ref<Runtime::Startup> Config, Ref<Engine::Subsystem::Host> Host)
     {
         ConstRetainer<Platform::Service> Platform = Host.GetService<Platform::Service>();
 
@@ -77,7 +77,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    static void SaveConfig(Ref<Engine::Config> Config, ConstRef<Filesystem::Path> Path)
+    static void SaveConfig(Ref<Runtime::Startup> Config, ConstRef<Filesystem::Path> Path)
     {
         JsonValue Document;
         Document.SetObject();
@@ -100,6 +100,29 @@ namespace Tileon::Editor
     Application::Application()
         : mState { State::Idle }
     {
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Application::OnConfigure(Ref<Runtime::Startup> Startup)
+    {
+        Startup.SetWindowTitle("Tileon Editor (v0.1)");
+
+#if   defined(ZY_PLATFORM_WINDOWS)
+        Startup.SetGraphicsDriver("D3D11");
+#else
+        Startup.SetGraphicsDriver("GLES3");
+#endif
+
+#if   defined(ZY_PLATFORM_WEB)
+        Startup.SetWindowBorderless(true);
+#endif
+
+        // Load the persisted editor configuration before the engine spins up.
+        const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor");
+        Filesystem::Make(Path);
+        LoadConfig(Startup, Path + "/Config.json");
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -191,8 +214,8 @@ namespace Tileon::Editor
 
     void Application::OnTerminate()
     {
-        SyncConfig(mConfig, * this);
-        SaveConfig(mConfig, Filesystem::GetDataFolder("Tileon", "Editor") + "/Config.json");
+        SyncConfig(mStartup, * this);
+        SaveConfig(mStartup, Filesystem::GetDataFolder("Tileon", "Editor") + "/Config.json");
 
         if (mContext)
         {
@@ -437,28 +460,4 @@ namespace Tileon::Editor
 // [   MAIN   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-int main([[maybe_unused]] int Argc, [[maybe_unused]] Ptr<Char> Argv[])
-{
-    Engine::Config Config;
-    Config.SetWindowTitle("Tileon Editor (v0.1)");
-
-#if   defined(ZY_PLATFORM_WINDOWS)
-    Config.SetGraphicsDriver("D3D11");
-#else
-    Config.SetGraphicsDriver("GLES3");
-#endif
-
-#if   defined(ZY_PLATFORM_WEB)
-    Config.SetWindowBorderless(true);
-#endif
-
-    // Load the persisted editor configuration before the engine spins up.
-    const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor");
-    Filesystem::Make(Path);
-    Tileon::Editor::LoadConfig(Config, Path + "/Config.json");
-
-    // Run the engine.
-    const Unique<Tileon::Editor::Application> Application = Unique<Tileon::Editor::Application>::Create();
-    Application->Run(Move(Config), ZyRegisterModules());
-    return 0;
-}
+ZY_APPLICATION(Tileon::Editor::Application)

@@ -15,7 +15,7 @@
 #include "Tileon.Render/Director.hpp"
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Engine/Locator.hpp>
-#include <Zyphryon.Graphic/Resource/Technique.hpp>
+#include <Zyphryon.Graphic/Technique.hpp>
 #include <Zyphryon.Render/Pass.hpp>
 #include <Zyphryon.Scene/Service.hpp>
 

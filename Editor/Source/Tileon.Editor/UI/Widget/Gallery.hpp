@@ -13,7 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Editor/UI/Composer.hpp"
-#include <Zyphryon.Graphic/Resource/Image.hpp>
+#include <Zyphryon.Graphic/Image.hpp>
 #include <Zyphryon.Math/Geometry/Rect.hpp>
 #include <Zyphryon.Math/Color.hpp>
 

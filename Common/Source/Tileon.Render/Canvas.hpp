@@ -13,14 +13,14 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Zyphryon.Content/Service.hpp"
-#include "Zyphryon.Graphic/Resource/Material.hpp"
-#include "Zyphryon.Graphic/Resource/Technique.hpp"
+#include "Zyphryon.Graphic/Material.hpp"
+#include "Zyphryon.Graphic/Technique.hpp"
 #include "Zyphryon.Math/Color.hpp"
 #include "Zyphryon.Math/Geometry/Rect.hpp"
 #include "Zyphryon.Render/Collector.hpp"
 #include "Zyphryon.Render/Encoder.hpp"
-#include "Zyphryon.Render/Resource/Font.hpp"
-#include "Zyphryon.Render/Resource/FontEffect.hpp"
+#include "Zyphryon.Render/2D/Font.hpp"
+#include "Zyphryon.Render/2D/FontEffect.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]

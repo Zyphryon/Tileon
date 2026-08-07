@@ -15,7 +15,7 @@
 #include "Activity.hpp"
 #include "Panel/Bootstrap/Bootstrap.hpp"
 #include <ImGuiSystem.hpp>
-#include <Zyphryon.Engine/Kernel.hpp>
+#include <Zyphryon.Runtime/Kernel.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -24,7 +24,7 @@
 namespace Tileon::Editor
 {
     /// \brief Represents the main application kernel for the Tileon editor.
-    class Application final : public Engine::Kernel
+    class Application final : public Runtime::Kernel
     {
     public:
 
@@ -32,6 +32,9 @@ namespace Tileon::Editor
         Application();
 
     protected:
+
+        /// \see Kernel::OnConfigure(Ref<Runtime::Startup>)
+        void OnConfigure(Ref<Runtime::Startup> Startup) override;
 
         /// \see Kernel::OnInitialize()
         Bool OnInitialize() override;
