@@ -127,9 +127,12 @@ namespace Tileon::Editor
                 Toolkit::Composer::TextDisabled("Inherited from {0}", Archetype.GetAlias());
 
                 // The values on show belong to the archetype, so it is the archetype an inspector would be editing.
-                Toolkit::Composer::BeginDisabled();
-                Info->Inspect(Workspace, Archetype, Archetype.TryGet(Component));
-                Toolkit::Composer::EndDisabled();
+                if (Info->HasFields())
+                {
+                    Toolkit::Composer::BeginDisabled();
+                    Info->Inspect(Workspace, Archetype, Archetype.TryGet(Component));
+                    Toolkit::Composer::EndDisabled();
+                }
 
                 if (Toolkit::Composer::SmallButton("Override"))
                 {
