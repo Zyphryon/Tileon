@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Hierarchy.hpp"
+#include "Tileon.Editor/Component/Utility.hpp"
 #include "Tileon.World/Component/Lifecycle.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -43,11 +44,14 @@ namespace Tileon::Editor
 
             UInt32 Count = 0;
 
-            mRegions.Run<const Region>([&](Scene::Entity Actor, ConstRef<Region> Region)
+            GetContext().GetScene().Defer([&]
             {
-                DrawEntity(Actor);
+                mRegions.Run<const Region>([&](Scene::Entity Actor, ConstRef<Region> Region)
+                {
+                    DrawEntity(Actor);
 
-                ++Count;
+                    ++Count;
+                });
             });
 
             if (Count == 0)
@@ -125,17 +129,8 @@ namespace Tileon::Editor
 
         if (Toolkit::Composer::BeginPopupContextItem())
         {
-            if (Actor.GetParent(Scene::Hierarchy::Fixed).IsValid())
-            {
-                Toolkit::Composer::TextDisabled("Prefab part: name defined by its archetype");
-            }
-            else
-            {
-                Toolkit::Composer::InputText("##rename", Actor.GetAlias(), [Actor](Text Value)
-                {
-                    Actor.SetAlias(Value);
-                });
-            }
+            DrawEntityMenu(Actor);
+
             Toolkit::Composer::EndPopup();
         }
 
@@ -151,6 +146,58 @@ namespace Tileon::Editor
 
     // -=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=-
     // -=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=-
+
+    void Hierarchy::DrawEntityMenu(Scene::Entity Actor)
+    {
+        // A prefab part takes its name from its archetype, so only what was placed by hand can be renamed.
+        if (Actor.GetParent(Scene::Hierarchy::Fixed).IsValid())
+        {
+            Toolkit::Composer::TextDisabled("Prefab part: name defined by its archetype");
+        }
+        else
+        {
+            Toolkit::Composer::InputText("##rename", Actor.GetAlias(), [Actor](Text Value)
+            {
+                Actor.SetAlias(Value);
+
+                Touch(Actor);
+            });
+        }
+
+        Toolkit::Composer::Separator();
+
+        Placement Target;
+        Bool      Active = false;
+
+        if (const ConstPtr<Region> Placed = Actor.TryGet<const Region>())
+        {
+            Target = Placement::FromAbsolute(
+                Placed->GetX() * Region::kTilesPerX + Region::kTilesPerX * 0.5,
+                Placed->GetY() * Region::kTilesPerY + Region::kTilesPerY * 0.5);
+            Active = true;
+        }
+        else
+        {
+            if (const ConstPtr<Enclosure> Bounds = Actor.TryGet<const Enclosure>())
+            {
+                if (const IntBox Volume = Bounds->GetBox(); !Volume.IsAlmostZero())
+                {
+                    const IntVector2 Ground = Volume.GetCenter().GetXZ();
+
+                    Target = Placement::FromAbsolute(Ground.GetX(), Ground.GetY());
+                    Active = true;
+                }
+            }
+        }
+
+        if (Toolkit::Composer::MenuItem(ICON_FA_LOCATION_CROSSHAIRS "  Go to", { }, Active))
+        {
+            GetContext().GetDirector().SetPosition(Target);
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     void Hierarchy::DrawEmptyPanel(Text Message)
     {

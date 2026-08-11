@@ -40,6 +40,11 @@ namespace Tileon::Editor
         /// \param Actor    The entity to draw.
         void DrawEntity(Scene::Entity Actor);
 
+        /// \brief Draws the menu a row opens on right click.
+        ///
+        /// \param Actor The entity the row stands for.
+        void DrawEntityMenu(Scene::Entity Actor);
+
         /// \brief Draws a placeholder shown when no region is currently loaded.
         ///
         /// \param Message  The message to display.

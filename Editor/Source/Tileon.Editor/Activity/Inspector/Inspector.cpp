@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Inspector.hpp"
+#include "Tileon.Editor/Component/Utility.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -93,6 +94,8 @@ namespace Tileon::Editor
         Toolkit::Composer::InputText("##entity_alias", Actor.GetAlias(), [&](Text Value)
         {
             Actor.SetAlias(Value);
+
+            Touch(Actor);
         });
         Toolkit::Composer::Spacing();
 
@@ -100,7 +103,15 @@ namespace Tileon::Editor
 
         if (const Scene::Entity Archetype = Actor.GetArchetype(); Archetype.IsValid())
         {
-            Toolkit::Composer::Label("{0}", Archetype.GetAlias());
+            // The name is the way into what it names, the same jump the palette offers on right click.
+            if (Toolkit::Composer::Selectable(String<128>::Print<"{0}###archetype">(Archetype.GetAlias())))
+            {
+                GetContext().SetString("Navigate.Panel", "Archetypes");
+                GetContext().SetInteger("Selection.Archetype", Archetype.GetID());
+                GetContext().SetInteger("Selection.Archetype.Target", Archetype.GetID());
+            }
+
+            Toolkit::Composer::Tooltip("Open this archetype in the Archetypes panel");
         }
         else
         {
