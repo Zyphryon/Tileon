@@ -13,6 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Lens.hpp"
+#include "Tileon.Editor/Toolkit/Palette.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -70,11 +71,6 @@ namespace Tileon::Editor
 
     private:
 
-        static constexpr UInt32 kColorAxisX  = IM_COL32(220,  70,  70, 255);
-        static constexpr UInt32 kColorAxisY  = IM_COL32( 90, 200,  90, 255);
-        static constexpr UInt32 kColorAxisZ  = IM_COL32( 90, 160, 235, 255);
-        static constexpr UInt32 kColorPlane  = IM_COL32(200, 200, 200, 255);
-        static constexpr UInt32 kColorActive = IM_COL32(255, 205,  70, 255);
 
         /// \brief How far the elevation arrow is pushed aside, in screen pixels.
         static constexpr Real32 kLiftOffset  = 18.0f;

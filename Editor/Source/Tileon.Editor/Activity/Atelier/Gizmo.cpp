@@ -413,11 +413,11 @@ namespace Tileon::Editor
 
         const Handle Engaged = (mHandle == Handle::None) ? Hovered : mHandle;
 
-        DrawArrow(List, Anchor,   EndX, Engaged == Handle::AxisX ? kColorActive : kColorAxisX);
-        DrawArrow(List, Anchor,   EndZ, Engaged == Handle::AxisZ ? kColorActive : kColorAxisZ);
-        DrawArrow(List, LiftBase, EndY, Engaged == Handle::AxisY ? kColorActive : kColorAxisY);
+        DrawArrow(List, Anchor,   EndX, Engaged == Handle::AxisX ? Toolkit::Palette::kActive : Toolkit::Palette::kAxisX);
+        DrawArrow(List, Anchor,   EndZ, Engaged == Handle::AxisZ ? Toolkit::Palette::kActive : Toolkit::Palette::kAxisZ);
+        DrawArrow(List, LiftBase, EndY, Engaged == Handle::AxisY ? Toolkit::Palette::kActive : Toolkit::Palette::kAxisY);
 
-        List->AddCircleFilled(Anchor, kPickRadius, Engaged == Handle::Plane ? kColorActive : kColorPlane);
+        List->AddCircleFilled(Anchor, kPickRadius, Engaged == Handle::Plane ? Toolkit::Palette::kActive : Toolkit::Palette::kAxisFree);
         return Hovered;
     }
 
@@ -442,9 +442,9 @@ namespace Tileon::Editor
         // Ordered so the screen-plane roll is tested first, which is the one a billboard gets on its own.
         constexpr Entry kRings[] =
         {
-            { .Ring = Handle::RingZ, .First = Handle::AxisX, .Second = Handle::AxisY, .Color = kColorAxisZ },
-            { .Ring = Handle::RingY, .First = Handle::AxisX, .Second = Handle::AxisZ, .Color = kColorAxisY },
-            { .Ring = Handle::RingX, .First = Handle::AxisY, .Second = Handle::AxisZ, .Color = kColorAxisX },
+            { .Ring = Handle::RingZ, .First = Handle::AxisX, .Second = Handle::AxisY, .Color = Toolkit::Palette::kAxisZ },
+            { .Ring = Handle::RingY, .First = Handle::AxisX, .Second = Handle::AxisZ, .Color = Toolkit::Palette::kAxisY },
+            { .Ring = Handle::RingX, .First = Handle::AxisY, .Second = Handle::AxisZ, .Color = Toolkit::Palette::kAxisX },
         };
         constexpr UInt32 kSegments = 64;
 
@@ -494,7 +494,7 @@ namespace Tileon::Editor
             const Bool Active = (Engaged == kRings[Index].Ring);
 
             List->AddPolyline(
-                Points[Index], kSegments, Active ? kColorActive : kRings[Index].Color,
+                Points[Index], kSegments, Active ? Toolkit::Palette::kActive : kRings[Index].Color,
                 ImDrawFlags_Closed, Active ? 3.0f : 2.0f);
         }
 
@@ -508,8 +508,8 @@ namespace Tileon::Editor
                     Anchor.x + (Cursor.x - Anchor.x) / Reach * kRingRadius,
                     Anchor.y + (Cursor.y - Anchor.y) / Reach * kRingRadius);
 
-                List->AddCircleFilled(Knob, 5.0f, kColorActive);
-                List->AddLine(Anchor, Knob, kColorActive, 1.0f);
+                List->AddCircleFilled(Knob, 5.0f, Toolkit::Palette::kActive);
+                List->AddLine(Anchor, Knob, Toolkit::Palette::kActive, 1.0f);
             }
         }
         return Hovered;
@@ -555,19 +555,19 @@ namespace Tileon::Editor
 
         const auto DrawStub = [&](ImVec2 Base, ImVec2 End, Handle Which, UInt32 Tone)
         {
-            const UInt32 Color = (Engaged == Which) ? kColorActive : Tone;
+            const UInt32 Color = (Engaged == Which) ? Toolkit::Palette::kActive : Tone;
 
             List->AddLine(Base, End, Color, 2.0f);
             List->AddRectFilled(
                 ImVec2(End.x - kBoxExtent, End.y - kBoxExtent), ImVec2(End.x + kBoxExtent, End.y + kBoxExtent), Color);
         };
 
-        DrawStub(Anchor,   EndX, Handle::AxisX, kColorAxisX);
-        DrawStub(LiftBase, EndY, Handle::AxisY, kColorAxisY);
-        DrawStub(Anchor,   EndZ, Handle::AxisZ, kColorAxisZ);
+        DrawStub(Anchor,   EndX, Handle::AxisX, Toolkit::Palette::kAxisX);
+        DrawStub(LiftBase, EndY, Handle::AxisY, Toolkit::Palette::kAxisY);
+        DrawStub(Anchor,   EndZ, Handle::AxisZ, Toolkit::Palette::kAxisZ);
 
         // Drawn as a box rather than the move handle's circle, so the uniform grab reads as scaling at a glance.
-        const UInt32     Color  = (Engaged == Handle::Uniform) ? kColorActive : kColorPlane;
+        const UInt32     Color  = (Engaged == Handle::Uniform) ? Toolkit::Palette::kActive : Toolkit::Palette::kAxisFree;
         constexpr Real32 Extent = kPickRadius * 0.9f;
 
         List->AddRectFilled(

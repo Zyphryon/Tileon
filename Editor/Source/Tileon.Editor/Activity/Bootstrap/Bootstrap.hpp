@@ -14,6 +14,7 @@
 
 #include "Tileon.Editor/Project.hpp"
 #include "Tileon.Editor/Toolkit/Composer.hpp"
+#include "Tileon.Editor/Toolkit/Palette.hpp"
 #include "Tileon.Editor/Toolkit/Widget/Picker.hpp"
 #include <Zyphryon.Base/Container/Sequence.hpp>
 

@@ -94,8 +94,8 @@ namespace Tileon::Editor::Toolkit
 
         // Clear the background with a checkerboard pattern to indicate transparency.
         constexpr Real32 kTileSize = 16.0f;
-        constexpr ImU32  kColorA   = IM_COL32( 80,  80,  80, 255);
-        constexpr ImU32  kColorB   = IM_COL32(120, 120, 120, 255);
+        constexpr ImU32  kColorA   = Toolkit::Palette::kCheckerDark;
+        constexpr ImU32  kColorB   = Toolkit::Palette::kCheckerLite;
 
         const SInt32 NumCols = static_cast<SInt32>(Available.x / kTileSize) + 1;
         const SInt32 NumRows = static_cast<SInt32>(Available.y / kTileSize) + 1;
@@ -123,7 +123,7 @@ namespace Tileon::Editor::Toolkit
         // Draw a border around the image area.
         if (Size.GetX() > 0.0f && Size.GetY() > 0.0f)
         {
-            DrawList->AddRect(ImageTL, ImageBR, IM_COL32(255, 255, 255, 120), 0.0f, 0, 1.0f);
+            DrawList->AddRect(ImageTL, ImageBR, Toolkit::Palette::kMarkerFaint, 0.0f, 0, 1.0f);
         }
 
         // Draw the status bar in the bottom-right corner (zoom + pixel coords when hovered).
@@ -144,7 +144,7 @@ namespace Tileon::Editor::Toolkit
 
         const ImVec2 LabelSize = Toolkit::Composer::CalcTextSize(CoordLabel);
         const ImVec2 LabelPos(Origin.x + Available.x - LabelSize.x - 6.0f, Origin.y + Available.y - LabelSize.y - 6.0f);
-        DrawList->AddText(LabelPos, IM_COL32(255, 255, 255, 180), CoordLabel.GetData());
+        DrawList->AddText(LabelPos, Toolkit::Palette::kMarkerSoft, CoordLabel.GetData());
 
         DrawList->PopClipRect();
      }

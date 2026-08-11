@@ -13,6 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Editor/Activity.hpp"
+#include "Tileon.Editor/Toolkit/Palette.hpp"
 #include "Gizmo.hpp"
 #include "Lens.hpp"
 #include "Workshop.hpp"
@@ -96,6 +97,37 @@ namespace Tileon::Editor
         ///
         /// \param Lens The lens that projects world placements into the viewport.
         void DrawLightMarkers(ConstRef<Lens> Lens);
+
+        /// \brief Outlines a circle lying in world space, swept about a center by two spanning axes.
+        ///
+        /// \param Lens   The lens that projects world placements into the viewport.
+        /// \param Center The center of the circle, in absolute tiles.
+        /// \param AxisU  The first unit axis the circle is swept around.
+        /// \param AxisV  The second unit axis the circle is swept around.
+        /// \param Radius The radius of the circle, in tiles.
+        /// \param Color  The color to draw the circle in.
+        void DrawWorldRing(ConstRef<Lens> Lens, Vector3 Center, Vector3 AxisU, Vector3 AxisV, Real32 Radius, UInt32 Color);
+
+        /// \brief Outlines the cone a spotlight covers, from its apex out to its range.
+        ///
+        /// \param Lens      The lens that projects world placements into the viewport.
+        /// \param Transform The light's transform, whose X basis is the direction it aims along.
+        /// \param Light     The light whose cone is outlined.
+        void DrawSpotlightCone(ConstRef<Lens> Lens, ConstRef<Tileon::Transform> Transform, ConstRef<Tileon::Spotlight> Light);
+
+        /// \brief Outlines the sphere a glowlight reaches into, at its scaled radius.
+        ///
+        /// \param Lens      The lens that projects world placements into the viewport.
+        /// \param Transform The light's transform, whose scale sizes the reach.
+        /// \param Light     The light whose reach is outlined.
+        void DrawGlowlightArea(ConstRef<Lens> Lens, ConstRef<Tileon::Transform> Transform, ConstRef<Tileon::Glowlight> Light);
+
+        /// \brief Drops a dotted stem from an elevated point to the ground it stands on.
+        ///
+        /// \param Lens  The lens that projects world placements into the viewport.
+        /// \param World The elevated point, in absolute tiles.
+        /// \param Color The color to draw the stem and its ground ring in.
+        void DrawStem(ConstRef<Lens> Lens, Vector3 World, UInt32 Color);
 
     private:
 

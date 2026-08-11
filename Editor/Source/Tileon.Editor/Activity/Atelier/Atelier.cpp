@@ -65,11 +65,11 @@ namespace Tileon::Editor
         Ref<Scene::Service> Scene = Context.GetScene();
 
         mQrGlowlights = Scene.CreateQuery<
-            Scene::DSL::In<const Tileon::Transform, const Tileon::Glowlight>
+            Scene::DSL::With<Tileon::Glowlight>, Scene::DSL::In<const Tileon::Transform, ConstPtr<IntColor8>>
         >("Editor::Atelier::Glowlights", Scene::Cache::Auto);
 
         mQrSpotlights = Scene.CreateQuery<
-            Scene::DSL::In<const Tileon::Transform, const Tileon::Spotlight>
+            Scene::DSL::With<Tileon::Spotlight>, Scene::DSL::In<const Tileon::Transform, ConstPtr<IntColor8>>
         >("Editor::Atelier::Spotlights", Scene::Cache::Auto);
     }
 
@@ -357,7 +357,7 @@ namespace Tileon::Editor
             Corner(Upper.GetX(), Upper.GetZ(), Upper.GetY()), Corner(Lower.GetX(), Upper.GetZ(), Upper.GetY()),
         };
 
-        constexpr UInt32 kTint = IM_COL32(255, 200, 90, 210);
+        constexpr UInt32 kTint = Toolkit::Palette::kHint;
 
         const Ptr<ImDrawList> List = Toolkit::Composer::GetWindowDrawList();
 
@@ -587,39 +587,168 @@ namespace Tileon::Editor
             List->AddText(ImVec2(At.x - Size.x * 0.5f, At.y - Size.y * 0.5f), Color, Icon.GetData());
         };
 
-        const auto DrawStem = [&](ImVec2 At, Vector3 World, UInt32 Color)
+        const auto Shade = [](ConstPtr<IntColor8> Tint)
         {
-            const ImVec2 Foot = Lens.Project(Placement::FromAbsolute(World.GetX(), World.GetZ()), 0.0f);
-
-            if (Abs(Foot.y - At.y) > 1.0f)
-            {
-                List->AddLine(At, Foot, Color);
-            }
-
-            List->AddCircleFilled(Foot, 2.0f, Color);
+            return Tint ? IM_COL32(Tint->GetRed(), Tint->GetGreen(), Tint->GetBlue(), 235) : Toolkit::Palette::kMarker;
         };
 
-        constexpr UInt32 kGlow = IM_COL32(255, 225, 120, 235);
-        constexpr UInt32 kSpot = IM_COL32(160, 210, 255, 235);
-        constexpr UInt32 kFoot = IM_COL32(255, 255, 255, 110);
-
-        mQrGlowlights.Run([&](ConstRef<Tileon::Transform> Transform, ConstRef<Tileon::Glowlight>)
+        mQrGlowlights.Run([&](ConstRef<Tileon::Transform> Transform, ConstPtr<IntColor8> Tint)
         {
             const Vector3 World = Locate(Transform);
             const ImVec2  At    = Lens.Project(Placement::FromAbsolute(World.GetX(), World.GetZ()), World.GetY());
 
-            DrawStem(At, World, kFoot);
-            DrawIcon(At, ICON_FA_LIGHTBULB, kGlow);
+            DrawStem(Lens, World, Toolkit::Palette::kMarkerFaint);
+            DrawIcon(At, ICON_FA_LIGHTBULB, Shade(Tint));
         });
 
-        mQrSpotlights.Run([&](ConstRef<Tileon::Transform> Transform, ConstRef<Tileon::Spotlight>)
+        mQrSpotlights.Run([&](ConstRef<Tileon::Transform> Transform, ConstPtr<IntColor8> Tint)
         {
             const Vector3 World = Locate(Transform);
             const ImVec2  At    = Lens.Project(Placement::FromAbsolute(World.GetX(), World.GetZ()), World.GetY());
 
-            DrawStem(At, World, kFoot);
-            DrawIcon(At, ICON_FA_LIGHTBULB, kSpot);
+            DrawStem(Lens, World, Toolkit::Palette::kMarkerFaint);
+            DrawIcon(At, ICON_FA_FILTER, Shade(Tint));
         });
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Atelier::DrawWorldRing(ConstRef<Lens> Lens, Vector3 Center, Vector3 AxisU, Vector3 AxisV, Real32 Radius, UInt32 Color)
+    {
+        constexpr UInt32 kSegments = 24;
+
+        ImVec2 Ring[kSegments];
+
+        for (UInt32 Step = 0; Step < kSegments; ++Step)
+        {
+            const Real32  Theta = (2.0f * kPI<Real32> * Step) / kSegments;
+            const Vector3 Point = Center + (AxisU * Base::Cosine(Theta) + AxisV * Base::Sine(Theta)) * Radius;
+
+            Ring[Step] = Lens.Project(Placement::FromAbsolute(Point.GetX(), Point.GetZ()), Point.GetY());
+        }
+
+        Toolkit::Composer::GetWindowDrawList()->AddPolyline(Ring, kSegments, Color, ImDrawFlags_Closed, 1.5f);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Atelier::DrawSpotlightCone(ConstRef<Lens> Lens, ConstRef<Tileon::Transform> Transform, ConstRef<Tileon::Spotlight> Light)
+    {
+        constexpr UInt32 kColor = Toolkit::Palette::kSelectSoft;
+
+        const Vector3 Basis = Transform.GetWorldspace().GetBasisX();
+
+        // A basis with no length has no direction to aim along, the same guard the light's own pass applies.
+        if (Basis.GetLength() < 0.0001f)
+        {
+            return;
+        }
+
+        const Vector3 Aim   = Vector3::Normalize(Basis);
+        const Vector3 World = Transform.GetWorldspace().GetTranslation() + Vector3(Transform.GetOrigin());
+
+        // Any axis off the aim spans the end disc; the world's up serves unless the light points along it.
+        const Vector3 Guide = Abs(Aim.GetY()) > 0.99f ? Vector3(1.0f, 0.0f, 0.0f) : Vector3(0.0f, 1.0f, 0.0f);
+        const Vector3 Right = Vector3::Normalize(Vector3::Cross(Aim, Guide));
+        const Vector3 Up    = Vector3::Cross(Right, Aim);
+
+        const Vector3 Center = World + Aim * Light.GetRange();
+        const Real32  Radius = Light.GetRange() * Angle::Tangent(Light.GetOuterAngle());
+
+        DrawWorldRing(Lens, Center, Right, Up, Radius, kColor);
+
+        // Four edges carry the spread without the mush eight would make at a shallow tilt.
+        const Vector3 Rim[4] =
+        {
+            Center + Right * Radius, Center + Up * Radius, Center - Right * Radius, Center - Up * Radius,
+        };
+
+        const Ptr<ImDrawList> List = Toolkit::Composer::GetWindowDrawList();
+        const ImVec2          Apex = Lens.Project(Placement::FromAbsolute(World.GetX(), World.GetZ()), World.GetY());
+
+        for (UInt32 Edge = 0; Edge < 4; ++Edge)
+        {
+            const ImVec2 Tip = Lens.Project(Placement::FromAbsolute(Rim[Edge].GetX(), Rim[Edge].GetZ()), Rim[Edge].GetY());
+
+            List->AddLine(Apex, Tip, kColor, 1.5f);
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Atelier::DrawGlowlightArea(ConstRef<Lens> Lens, ConstRef<Tileon::Transform> Transform, ConstRef<Tileon::Glowlight> Light)
+    {
+        const Vector3 World = Transform.GetWorldspace().GetTranslation() + Vector3(Transform.GetOrigin());
+        const Vector3 Scale = Transform.GetWorldspace().GetScale();
+
+        const Real32 Radius = Light.GetRadius() * Max(Scale.GetX(), Max(Scale.GetY(), Scale.GetZ()));
+
+        constexpr Vector3 AxisX = Vector3::UnitX();
+        constexpr Vector3 AxisY = Vector3::UnitY();
+        constexpr Vector3 AxisZ = Vector3::UnitZ();
+
+        DrawWorldRing(Lens, World, AxisX, AxisZ, Radius, Toolkit::Palette::kSelectSoft);
+        DrawWorldRing(Lens, World, AxisX, AxisY, Radius, Toolkit::Palette::kSelectSoft);
+        DrawWorldRing(Lens, World, AxisY, AxisZ, Radius, Toolkit::Palette::kSelectSoft);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Atelier::DrawStem(ConstRef<Lens> Lens, Vector3 World, UInt32 Color)
+    {
+        constexpr Real32 kDash     = 2.0f;
+        constexpr Real32 kStride   = 5.0f;
+        constexpr Real32 kRadius   = 5.0f;
+        constexpr UInt32 kSegments = 20;
+
+        const Ptr<ImDrawList> List   = Toolkit::Composer::GetWindowDrawList();
+        const Placement       Ground = Placement::FromAbsolute(World.GetX(), World.GetZ());
+        const ImVec2          At     = Lens.Project(Ground, World.GetY());
+        const ImVec2          Foot   = Lens.Project(Ground, 0.0f);
+
+        const ImVec2 Span   = ImVec2(Foot.x - At.x, Foot.y - At.y);
+        const Real32 Length = Sqrt(Span.x * Span.x + Span.y * Span.y);
+
+        if (Length > kStride)
+        {
+            const ImVec2 Step(Span.x / Length, Span.y / Length);
+
+            for (Real32 Walk = 0.0f; Walk < Length; Walk += kStride)
+            {
+                const Real32 Tail = Min(Walk + kDash, Length);
+
+                List->AddLine(
+                    ImVec2(At.x + Step.x * Walk, At.y + Step.y * Walk),
+                    ImVec2(At.x + Step.x * Tail, At.y + Step.y * Tail), Color);
+            }
+        }
+
+        const ImVec2 AxisX = Lens.Direction(Vector3(1.0f, 0.0f, 0.0f));
+        const ImVec2 AxisZ = Lens.Direction(Vector3(0.0f, 0.0f, 1.0f));
+        const Real32 Reach = Max(
+            Sqrt(AxisX.x * AxisX.x + AxisX.y * AxisX.y),
+            Sqrt(AxisZ.x * AxisZ.x + AxisZ.y * AxisZ.y));
+        const Real32 Scale = kRadius / Max(Reach, 0.0001f);
+
+        ImVec2 Ring[kSegments];
+
+        for (UInt32 Step = 0; Step < kSegments; ++Step)
+        {
+            const Real32 Theta = (2.0f * kPI<Real32> * Step) / kSegments;
+            const Real32 Cos   = Base::Cosine(Theta);
+            const Real32 Sin   = Base::Sine(Theta);
+
+            Ring[Step] = ImVec2(
+                Foot.x + (AxisX.x * Cos + AxisZ.x * Sin) * Scale,
+                Foot.y + (AxisX.y * Cos + AxisZ.y * Sin) * Scale);
+        }
+
+        List->AddPolyline(Ring, kSegments, Color, ImDrawFlags_Closed, 1.0f);
+        List->AddCircleFilled(Foot, 1.5f, Color);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -666,7 +795,7 @@ namespace Tileon::Editor
                 Lens.Project(Placement(0, 0, AABB.GetMinimumX(), AABB.GetMaximumY())),
             };
 
-            constexpr UInt32 Color = IM_COL32(255, 170, 40, 235);
+            constexpr UInt32 Color = Toolkit::Palette::kSelect;
             constexpr Real32 Thick = 2.0f;
 
             const Ptr<ImDrawList> List = Toolkit::Composer::GetWindowDrawList();
@@ -689,11 +818,36 @@ namespace Tileon::Editor
 
         const auto DrawSelected = [&](Scene::Entity Actor)
         {
+            if (!Actor.IsValid())
+            {
+                return;
+            }
+
             IntRect Enclosure = IntRect::Zero();
 
-            if (Actor.IsValid() && CollectBounds(GetContext().GetDirector().GetProjection(), Actor, Enclosure, false))
+            if (CollectBounds(GetContext().GetDirector().GetProjection(), Actor, Enclosure, false))
             {
                 DrawBrackets(Enclosure);
+            }
+
+            if (const ConstPtr<Tileon::Transform> Transform = Actor.TryGet<const Tileon::Transform>())
+            {
+                const Vector3 World = Transform->GetWorldspace().GetTranslation() + Vector3(Transform->GetOrigin());
+
+                if (Abs(World.GetY()) > 0.0001f)
+                {
+                    DrawStem(Lens, World, Toolkit::Palette::kSelectSoft);
+                }
+
+                if (const ConstPtr<Tileon::Spotlight> Light = Actor.TryGet<const Tileon::Spotlight>())
+                {
+                    DrawSpotlightCone(Lens, * Transform, * Light);
+                }
+
+                if (const ConstPtr<Tileon::Glowlight> Light = Actor.TryGet<const Tileon::Glowlight>())
+                {
+                    DrawGlowlightArea(Lens, * Transform, * Light);
+                }
             }
         };
 
@@ -821,19 +975,10 @@ namespace Tileon::Editor
 
             // Alt and a drag swing the free view around, which is the whole reason it exists: a 3D shape read
             // straight on is a rectangle, and a few degrees of yaw is what tells its depth from its height.
-            const Perspective Viewing = GetContext().GetEnum("Atelier.Perspective", Perspective::Ortho);
-
-            if (Viewing == Perspective::Axonometric
-                && Toolkit::Composer::IsKeyDown(ImGuiMod_Alt)
-                && Toolkit::Composer::IsMouseDragging(ImGuiMouseButton_Left))
-            {
-                const ImVec2 Swing = Toolkit::Composer::GetMouseDelta();
-
-                mYaw  = Mod(mYaw + Swing.x * 0.4f, 360.0f);
-                mTilt = Clamp(mTilt - Swing.y * 0.004f, kMinTilt, kMaxTilt);
-
-                Director.SetProjection(Tileon::Projection::Axonometric(Angle::FromDegrees(mYaw), mTilt));
-            }
+            const Perspective Viewing  = GetContext().GetEnum("Atelier.Perspective", Perspective::Ortho);
+            const Bool        Swinging = Viewing == Perspective::Axonometric
+                                      && Toolkit::Composer::IsKeyDown(ImGuiMod_Alt)
+                                      && Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left);
 
             // Hold Space (or drag with the middle mouse) to pan the view with any brush active, so the camera can
             // be repositioned mid-paint without switching to the hand tool.
@@ -847,7 +992,20 @@ namespace Tileon::Editor
                 Toolkit::Composer::SetMouseCursor(ImGuiMouseCursor_Hand);
             }
 
-            if (Panning)
+            if (Swinging)
+            {
+                const ImVec2 Swing = Toolkit::Composer::GetMouseDelta();
+
+                mYaw  = Mod(mYaw + Swing.x * 0.4f, 360.0f);
+                mTilt = Clamp(mTilt - Swing.y * 0.004f, kMinTilt, kMaxTilt);
+
+                Director.SetProjection(Tileon::Projection::Axonometric(Angle::FromDegrees(mYaw), mTilt));
+
+                mWorkshop.ClearPreview();
+                mMarquee      = false;
+                mMarqueeMoved = false;
+            }
+            else if (Panning)
             {
                 PanByCursorDelta();
             }
@@ -902,8 +1060,8 @@ namespace Tileon::Editor
                         const ImVec2 Upper(Max(mMarqueeScreen.x, Now.x), Max(mMarqueeScreen.y, Now.y));
 
                         const Ptr<ImDrawList> List = Toolkit::Composer::GetWindowDrawList();
-                        List->AddRectFilled(Lower, Upper, IM_COL32(255, 170, 40, 40));
-                        List->AddRect(Lower, Upper, IM_COL32(255, 170, 40, 200));
+                        List->AddRectFilled(Lower, Upper, Toolkit::Palette::kSelectWash);
+                        List->AddRect(Lower, Upper, Toolkit::Palette::kSelect);
                     }
                 }
 
@@ -1014,11 +1172,11 @@ namespace Tileon::Editor
                     }
                     else
                     {
-                        List->AddQuadFilled(Corner0, Corner1, Corner2, Corner3, IM_COL32(120, 200, 255, 45));
+                        List->AddQuadFilled(Corner0, Corner1, Corner2, Corner3, Toolkit::Palette::kBrushWash);
                     }
 
                     // Outline always, so the footprint boundary stays legible over any art.
-                    List->AddQuad(Corner0, Corner1, Corner2, Corner3, IM_COL32(120, 200, 255, 220), 1.5f);
+                    List->AddQuad(Corner0, Corner1, Corner2, Corner3, Toolkit::Palette::kBrush, 1.5f);
                 }
 
                 // Pencil paints a continuous stroke while held; Bucket fills once per click.

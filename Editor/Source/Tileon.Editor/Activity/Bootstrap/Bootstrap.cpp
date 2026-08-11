@@ -51,7 +51,7 @@ namespace Tileon::Editor
         }
 
         // Draw a solid background to cover the entire display area.
-        Toolkit::Composer::GetBackgroundDrawList()->AddRectFilled(ImVec2(0, 0), Toolkit::Composer::GetDisplaySize(), IM_COL32(18, 18, 28, 255));
+        Toolkit::Composer::GetBackgroundDrawList()->AddRectFilled(ImVec2(0, 0), Toolkit::Composer::GetDisplaySize(), Toolkit::Palette::kBackdrop);
 
         switch (mState)
         {

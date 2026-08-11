@@ -194,7 +194,7 @@ namespace Tileon::Editor
         {
             const ImVec2 Mouse  = Toolkit::Composer::GetMousePos();
             const Real32 PlaneX = (Mouse.x - Center.x) / Radius;
-            const Real32 PlaneZ = (Mouse.y - Center.y) / Radius;
+            const Real32 PlaneZ = (Center.y - Mouse.y) / Radius;
 
             const Real32 Length = Sqrt(PlaneX * PlaneX + PlaneZ * PlaneZ);
             const Real32 Scale  = (Length > 1.0f) ? (1.0f / Length) : 1.0f;
@@ -207,20 +207,20 @@ namespace Tileon::Editor
         }
 
         const Vector3 Sun = Vector3::Normalize(Value.IsAlmostZero() ? Vector3(0.0f, 1.0f, 0.0f) : Value);
-        const ImVec2  Handle(Center.x + Sun.GetX() * Radius, Center.y + Sun.GetZ() * Radius);
+        const ImVec2  Handle(Center.x + Sun.GetX() * Radius, Center.y - Sun.GetZ() * Radius);
 
         const Ptr<ImDrawList> List = Toolkit::Composer::GetWindowDrawList();
 
-        List->AddCircleFilled(Center, Radius, IM_COL32(22, 26, 34, 255));
-        List->AddCircle(Center, Radius, IM_COL32(92, 102, 122, 255));
-        List->AddLine(ImVec2(Center.x - Radius, Center.y), ImVec2(Center.x + Radius, Center.y), IM_COL32(64, 72, 88, 255));
-        List->AddLine(ImVec2(Center.x, Center.y - Radius), ImVec2(Center.x, Center.y + Radius), IM_COL32(64, 72, 88, 255));
+        List->AddCircleFilled(Center, Radius, Toolkit::Palette::kFieldFace);
+        List->AddCircle(Center, Radius, Toolkit::Palette::kFieldEdge);
+        List->AddLine(ImVec2(Center.x - Radius, Center.y), ImVec2(Center.x + Radius, Center.y), Toolkit::Palette::kFieldGrid);
+        List->AddLine(ImVec2(Center.x, Center.y - Radius), ImVec2(Center.x, Center.y + Radius), Toolkit::Palette::kFieldGrid);
 
         const Bool Above = (Sun.GetY() >= 0.0f);
 
-        List->AddLine(Center, Handle, IM_COL32(255, 210, 120, 150));
-        List->AddCircleFilled(Handle, 5.0f, Above ? IM_COL32(255, 210, 120, 255) : IM_COL32(40, 44, 54, 255));
-        List->AddCircle(Handle, 5.0f, IM_COL32(255, 210, 120, 255));
+        List->AddLine(Center, Handle, Toolkit::Palette::kActiveSoft);
+        List->AddCircleFilled(Handle, 5.0f, Above ? Toolkit::Palette::kActive : Toolkit::Palette::kFieldHollow);
+        List->AddCircle(Handle, 5.0f, Toolkit::Palette::kActive);
 
         // The dial only steers the ground plane, so the axes sit beside it for the elevation and exact figures.
         Real32 X = Value.GetX();

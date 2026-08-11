@@ -13,6 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Editor/Toolkit/Widget/Selector.hpp"
+#include "Tileon.Editor/Toolkit/Palette.hpp"
 #include "Tileon.Render/Component.hpp"
 #include "Tileon.World/Component.hpp"
 
