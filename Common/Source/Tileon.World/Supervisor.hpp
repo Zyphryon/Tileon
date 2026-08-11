@@ -37,8 +37,14 @@ namespace Tileon
         /// \brief Extent of the cell hierarchy for loose spatial partitioning (in tiles).
         static constexpr UInt32 kHierarchyLooseExtent = 8;
 
+        /// \brief Bit shift value for converting world tile coordinates to loose cell coordinates.
+        static constexpr UInt32 kHierarchyLooseLog    = Base::Log(kHierarchyLooseExtent);
+
         /// \brief Extent of the cell hierarchy for tight spatial partitioning (in tiles).
         static constexpr UInt32 kHierarchyTightExtent = 4;
+
+        /// \brief Bit shift value for converting world tile coordinates to tight cell coordinates.
+        static constexpr UInt32 kHierarchyTightLog    = Base::Log(kHierarchyTightExtent);
 
     public:
 
@@ -525,7 +531,7 @@ namespace Tileon
         /// \return The tight cell coordinates.
         ZY_INLINE IntRect GetTightCoordinates(IntRect Volume)
         {
-            return IntRect::Intersection(Coordinate::GetCell<Base::Log(kHierarchyTightExtent)>(Volume), mTightBoundaries);
+            return IntRect::Intersection(Coordinate::GetCellRange<kHierarchyTightLog>(Volume), mTightBoundaries);
         }
 
         /// \brief Gets the loose cell a world position falls in, in world coordinates.
@@ -534,7 +540,7 @@ namespace Tileon
         /// \return The coordinates of the cell containing that position, clamped to what is loaded.
         ZY_INLINE IntVector2 GetLooseCoordinate(IntVector2 Center) const
         {
-            IntVector2 Loose = Center >> Base::Log(kHierarchyLooseExtent);
+            IntVector2 Loose = Center >> kHierarchyLooseLog;
             Loose.SetX(Clamp(Loose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
             Loose.SetY(Clamp(Loose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
             return Loose;

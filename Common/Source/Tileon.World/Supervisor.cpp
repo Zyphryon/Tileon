@@ -261,8 +261,8 @@ namespace Tileon
 
     void Supervisor::AdjustHierarchy(IntRect Boundaries)
     {
-        const IntRect NewLooseBoundaries = Coordinate::GetCell<Base::Log(kHierarchyLooseExtent)>(Boundaries);
-        const IntRect NewTightBoundaries = Coordinate::GetCell<Base::Log(kHierarchyTightExtent)>(Boundaries);
+        const IntRect NewLooseBoundaries = Coordinate::GetCell<kHierarchyLooseLog>(Boundaries);
+        const IntRect NewTightBoundaries = Coordinate::GetCell<kHierarchyTightLog>(Boundaries);
 
         Sequence<HierarchyLooseCell> NewLooseRegistry(NewLooseBoundaries.GetWidth() * NewLooseBoundaries.GetHeight());
         Sequence<HierarchyTightCell> NewTightRegistry(NewTightBoundaries.GetWidth() * NewTightBoundaries.GetHeight());
@@ -301,7 +301,7 @@ namespace Tileon
 
                 // Calculate which tight cells this loose cell belongs to
                 const IntRect TightCoords = IntRect::Intersection(
-                    Coordinate::GetCell<Base::Log(kHierarchyTightExtent)>(LooseCell.Boundaries.GetXZ()), NewTightBoundaries);
+                    Coordinate::GetCellRange<kHierarchyTightLog>(LooseCell.Boundaries.GetXZ()), NewTightBoundaries);
 
                 for (SInt32 TightY = TightCoords.GetMinimumY(); TightY < TightCoords.GetMaximumY(); ++TightY)
                 {

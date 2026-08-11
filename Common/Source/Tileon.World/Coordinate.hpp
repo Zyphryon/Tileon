@@ -92,6 +92,22 @@ namespace Tileon
             return IntRect(MinX, MinY, MaxX, MaxY);
         }
 
+        /// \brief Converts world coordinates to cell coordinates, taking the maximum as part of the area.
+        ///
+        /// \tparam ShiftX     The bit shift value for the x-axis, determining the size of the cell in world units.
+        /// \tparam ShiftY     The bit shift value for the y-axis, determining the size of the cell in world units.
+        /// \param Coordinates The rectangle representing the world coordinates to convert.
+        /// \return A rect representing the cell coordinates corresponding to the given world coordinates
+        template<SInt32 ShiftX, SInt32 ShiftY = ShiftX>
+        ZY_INLINE static constexpr IntRect GetCellRange(IntRect Coordinates)
+        {
+            const SInt32 MinX = Coordinates.GetMinimumX() >> ShiftX;
+            const SInt32 MinY = Coordinates.GetMinimumY() >> ShiftY;
+            const SInt32 MaxX = (Coordinates.GetMaximumX() >> ShiftX) + 1;
+            const SInt32 MaxY = (Coordinates.GetMaximumY() >> ShiftY) + 1;
+            return IntRect(MinX, MinY, MaxX, MaxY);
+        }
+
         /// \brief Converts world coordinates to region cell coordinates.
         ///
         /// \param Coordinates The rectangle representing the world coordinates to convert.
