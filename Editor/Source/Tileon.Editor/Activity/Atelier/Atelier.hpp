@@ -29,13 +29,20 @@ namespace Tileon::Editor
     public:
 
         /// \brief Static name identifier for the atelier activity.
-        static constexpr Symbol kTitle = "Atelier";
+        static constexpr Symbol kTitle   = "Atelier";
+
+        /// \brief How far the ground may tilt away from edge-on.
+        static constexpr Real32 kMinTilt = 0.15f;
+
+        /// \brief How far the ground may tilt toward flat on.
+        static constexpr Real32 kMaxTilt = 1.0f;
 
         /// \brief Enumerates the projections the viewport offers.
         enum class Perspective : UInt8
         {
-            Ortho,      ///< Views the ground straight on, with nothing foreshortened.
-            Isometric,  ///< Views the ground at a two-to-one angle.
+            Ortho,          ///< Views the ground straight on, with nothing foreshortened.
+            Isometric,      ///< Views the ground at a two-to-one angle.
+            Axonometric,    ///< Views the ground from an angle the cursor swings around.
         };
 
     public:
@@ -109,6 +116,8 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         Real32           mTimescale;
+        Real32           mYaw;
+        Real32           mTilt;
         Bool             mMarquee;
         Bool             mMarqueeMoved;
         ImVec2           mMarqueeScreen;

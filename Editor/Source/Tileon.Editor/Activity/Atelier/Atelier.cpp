@@ -51,6 +51,8 @@ namespace Tileon::Editor
           mGizmo        { Context },
           mTarget       { Renderer::Target::Albedo },
           mTimescale    { 1.0f },
+          mYaw          { 0.0f },
+          mTilt         { kMaxTilt },
           mMarquee      { false },
           mMarqueeMoved { false },
           mPaintTileX   { INT32_MIN },
@@ -236,6 +238,10 @@ namespace Tileon::Editor
                     {
                     case Perspective::Isometric:
                         GetContext().GetDirector().SetProjection(Tileon::Projection::Isometric());
+                        break;
+                    case Perspective::Axonometric:
+                        GetContext().GetDirector().SetProjection(
+                            Tileon::Projection::Axonometric(Angle::FromDegrees(mYaw), mTilt));
                         break;
                     default:
                         GetContext().GetDirector().SetProjection(Tileon::Projection::Ortho());
@@ -433,8 +439,8 @@ namespace Tileon::Editor
         }
     }
 
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     void Atelier::DrawTileToolbar()
     {
@@ -807,10 +813,27 @@ namespace Tileon::Editor
                 Director.SetPosition(Placement::Normalize(Director.GetPosition() + NewPlacement - OldPlacement));
             };
 
+            // Alt and a drag swing the free view around, which is the whole reason it exists: a 3D shape read
+            // straight on is a rectangle, and a few degrees of yaw is what tells its depth from its height.
+            const Perspective Viewing = GetContext().GetEnum("Atelier.Perspective", Perspective::Ortho);
+
+            if (Viewing == Perspective::Axonometric
+                && Toolkit::Composer::IsKeyDown(ImGuiMod_Alt)
+                && Toolkit::Composer::IsMouseDragging(ImGuiMouseButton_Left))
+            {
+                const ImVec2 Swing = Toolkit::Composer::GetMouseDelta();
+
+                mYaw  = Mod(mYaw + Swing.x * 0.4f, 360.0f);
+                mTilt = Clamp(mTilt - Swing.y * 0.004f, kMinTilt, kMaxTilt);
+
+                Director.SetProjection(Tileon::Projection::Axonometric(Angle::FromDegrees(mYaw), mTilt));
+            }
+
             // Hold Space (or drag with the middle mouse) to pan the view with any brush active, so the camera can
             // be repositioned mid-paint without switching to the hand tool.
             const Bool SpacePan = !Toolkit::Composer::IsTextInputActive() && Toolkit::Composer::IsKeyDown(ImGuiKey_Space);
-            const Bool Panning  = Toolkit::Composer::IsMouseDragging(ImGuiMouseButton_Middle) || (SpacePan && Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left));
+            const Bool Panning  = Toolkit::Composer::IsMouseDragging(ImGuiMouseButton_Middle)
+                               || (SpacePan && Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left));
 
             // Hint the pan affordance so holding Space is discoverable.
             if (SpacePan)

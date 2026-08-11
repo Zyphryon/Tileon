@@ -12,6 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+#include <Zyphryon.Math/Angle.hpp>
 #include <Zyphryon.Math/Matrix4x4.hpp>
 #include <Zyphryon.Math/Geometry/Box.hpp>
 
@@ -196,6 +197,20 @@ namespace Tileon
         ZY_INLINE static constexpr Projection Isometric()
         {
             return Projection(Vector2(1.0f, 0.5f), Vector2(0.0f, 1.0f), Vector2(-1.0f, 0.5f));
+        }
+
+        /// \brief Creates the general axonometric projection.
+        ///
+        /// \note Generalizes \ref Ortho and \ref Isometric, which are fixed choices of facing and tilt.
+        ///
+        /// \param Facing The heading the ground is swung to.
+        /// \param Tilt   How much the ground is foreshortened, from edge-on (0) to flat on (1).
+        /// \return The axonometric projection.
+        ZY_INLINE static Projection Axonometric(Angle Facing, Real32 Tilt)
+        {
+            const Real32 Cosine = Angle::Cosine(Facing);
+            const Real32 Sine   = Angle::Sine(Facing);
+            return Projection(Vector2(Cosine, Tilt * Sine), Vector2(0.0f, 1.0f), Vector2(-Sine, Tilt * Cosine));
         }
 
     private:
