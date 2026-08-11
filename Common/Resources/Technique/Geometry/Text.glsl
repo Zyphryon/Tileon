@@ -14,7 +14,11 @@ layout(std140, binding = 2) uniform cb_Material
 
 struct PackedFontParameters
 {
-    vec4  u_OutsetTint;
+    vec4  u_Transform0;
+    vec4  u_Transform1;
+    vec4  u_Transform2;
+
+    uint  u_OutsetTint;
     float u_OutsetOffset;
     float u_OutsetWidth;
     float u_OutsetBias;
@@ -25,7 +29,7 @@ struct PackedFontParameters
 
 layout(std140, binding = 3) uniform cb_Instance
 {
-    PackedFontParameters u_Parameters[64];
+    PackedFontParameters u_Parameters[128];
 };
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -33,10 +37,6 @@ layout(std140, binding = 3) uniform cb_Instance
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #ifdef VERTEX_SHADER
-
-in vec4 a_Transform0;
-in vec4 a_Transform1;
-in vec4 a_Transform2;
 
 in vec4  a_Frame;   // normalized atlas edges: minimum.xy, maximum.xy
 in ivec2 a_Offset;  // corner within the text layout, in subpixel steps
@@ -64,12 +64,14 @@ void main()
 {
     vec2 Corner = TessellateRect(gl_VertexID);
 
+    PackedFontParameters Run = u_Parameters[floatBitsToUint(a_Effect)];
+
     vec2 Plane    = (vec2(a_Offset) + Corner * vec2(a_Size)) * GLYPH_SUBPIXEL;
     vec3 Local    = vec3(Plane, 0.0);
     vec3 Position = vec3(
-        dot(Local, a_Transform0.xyz) + a_Transform0.w,
-        dot(Local, a_Transform1.xyz) + a_Transform1.w,
-        dot(Local, a_Transform2.xyz) + a_Transform2.w
+        dot(Local, Run.u_Transform0.xyz) + Run.u_Transform0.w,
+        dot(Local, Run.u_Transform1.xyz) + Run.u_Transform1.w,
+        dot(Local, Run.u_Transform2.xyz) + Run.u_Transform2.w
     );
 
     gl_Position = u_Camera * vec4(Position, 1.0);
@@ -127,7 +129,7 @@ void main()
     float OuterStrokeA = Scale * (StrokeBase + Font.u_OutsetWidth) + 0.5 + Font.u_OutsetOffset + Font.u_OutsetBias;
 
     vec4 InnerColor    = v_Color;
-    vec4 OuterColor    = Font.u_OutsetTint;
+    vec4 OuterColor    = unpackUnorm4x8(Font.u_OutsetTint);
     float InnerOpacity = clamp(InnerStrokeA, 0.0, 1.0);
     float OuterOpacity = clamp(OuterStrokeA, 0.0, 1.0);
 
@@ -135,10 +137,9 @@ void main()
     float BlurStart  = Font.u_OutsetWidth + Font.u_OutsetBias / Scale;
     float BlurEnd    = BlurStart * (1.0 - Font.u_OutsetBlur);
     float BlurDist   = Font.u_InsetThreshold - DistanceSDF - Font.u_OutsetOffset / Scale;
-    float BlurFactor = mix(1.0, smoothstep(BlurStart, BlurEnd, BlurDist), step(0.0001, Font.u_OutsetBlur));
-    OuterColor.a *= BlurFactor;
+    float BlurFactor = mix(1.0, 1.0 - smoothstep(BlurEnd, BlurStart, BlurDist), step(0.0001, Font.u_OutsetBlur));
 
-    out_Color = InnerColor * InnerOpacity + OuterColor * (OuterOpacity - InnerOpacity);
+    out_Color = InnerColor * InnerOpacity + (OuterColor * BlurFactpr) * (OuterOpacity - InnerOpacity);
 }
 
 #endif // FRAGMENT_SHADER

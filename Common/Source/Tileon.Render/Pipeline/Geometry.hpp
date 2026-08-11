@@ -12,7 +12,9 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Render/Scribe.hpp"
+#include "Tileon.Render/Pipeline/Batcher/Glyphs.hpp"
+#include "Tileon.Render/Pipeline/Batcher/Sprites.hpp"
+#include "Tileon.Render/Pipeline/Batcher/Tiles.hpp"
 #include "Tileon.Render/Component/Mosaic.hpp"
 #include "Tileon.Render/Director.hpp"
 #include "Tileon.Render/Tileset.hpp"
@@ -95,16 +97,28 @@ namespace Tileon::Pipeline
         /// \param Layer      The layer of the region to draw.
         void DrawRegion(ConstRef<Region> Region, Ref<Mosaic> Mosaic, IntVector3 Origin, IntRect Boundaries, Tile::Layer Layer);
 
+        /// \brief Drains everything the collector holds, encoding it as batched draw commands.
+        ///
+        /// \param Encoder The encoder that builds and binds the resulting draw commands.
+        void Drain(Ref<Render::Encoder> Encoder);
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Scribe             mScribe;
         Techniques         mTechniques;
         ConstRef<Tileset>  mTileset;
         ConstPtr<Director> mDirector;
         UInt16             mDensity;
+
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        Render::Collector  mCollector;
+        Tiles              mTiles;
+        Sprites            mSprites;
+        Glyphs             mGlyphs;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

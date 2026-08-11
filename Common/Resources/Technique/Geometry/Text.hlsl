@@ -16,7 +16,11 @@ cbuffer cb_Instance : register(b3)
 {
     struct PackedFontParameters
     {
-        float4 u_OutsetTint;
+        float4 u_Transform0;
+        float4 u_Transform1;
+        float4 u_Transform2;
+
+        uint   u_OutsetTint;
         float  u_OutsetOffset;
         float  u_OutsetWidth;
         float  u_OutsetBias;
@@ -24,7 +28,7 @@ cbuffer cb_Instance : register(b3)
         float  u_InsetRoundness;
         float  u_InsetThreshold;
     };
-    PackedFontParameters u_Parameters[64];
+    PackedFontParameters u_Parameters[128];
 };
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -35,15 +39,11 @@ struct vs_Input
 {
     uint     VertexID   : SV_VertexID;
 
-    float4   Transform0 : SLOT0;
-    float4   Transform1 : SLOT1;
-    float4   Transform2 : SLOT2;
-
-    float4   Frame      : SLOT3;  // normalized atlas edges: minimum.xy, maximum.xy
-    int2     Offset     : SLOT4;  // corner within the text layout, in subpixel steps
-    uint2    Size       : SLOT5;  // extent, in subpixel steps
-    float    Effect     : SLOT6;  // the interned effect slot, reinterpreted as a float
-    float4   Color      : SLOT7;
+    float4   Frame      : SLOT0;  // normalized atlas edges: minimum.xy, maximum.xy
+    int2     Offset     : SLOT1;  // corner within the text layout, in subpixel steps
+    uint2    Size       : SLOT2;  // extent, in subpixel steps
+    float    Effect     : SLOT3;  // the interned run slot, reinterpreted as a float
+    float4   Color      : SLOT4;
 };
 
 struct fs_Input
@@ -77,12 +77,14 @@ fs_Input main(vs_Input Input)
 {
     const float2 Corner = TessellateRect(Input.VertexID);
 
+    const PackedFontParameters Run = u_Parameters[asuint(Input.Effect)];
+
     const float2 Plane    = (float2(Input.Offset) + Corner * float2(Input.Size)) * GLYPH_SUBPIXEL;
     const float3 Local    = float3(Plane, 0.0);
     const float3 Position = float3(
-        dot(Local, Input.Transform0.xyz) + Input.Transform0.w,
-        dot(Local, Input.Transform1.xyz) + Input.Transform1.w,
-        dot(Local, Input.Transform2.xyz) + Input.Transform2.w
+        dot(Local, Run.u_Transform0.xyz) + Run.u_Transform0.w,
+        dot(Local, Run.u_Transform1.xyz) + Run.u_Transform1.w,
+        dot(Local, Run.u_Transform2.xyz) + Run.u_Transform2.w
     );
 
     fs_Input Result;
@@ -102,6 +104,11 @@ fs_Input main(vs_Input Input)
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #ifdef FRAGMENT_SHADER
+
+float4 UnpackTint(uint Value)
+{
+    return float4(uint4(Value, Value >> 8, Value >> 16, Value >> 24) & 0xFF) * (1.0 / 255.0);
+}
 
 Texture2D    t_Albedo : register(t0);
 SamplerState s_Albedo : register(s0);
@@ -138,7 +145,7 @@ float4 main(fs_Input Input) : SV_Target
     const float OuterStrokeA = Scale * (StrokeBase + Font.u_OutsetWidth) + 0.5 + Font.u_OutsetOffset + Font.u_OutsetBias;
 
     float4 InnerColor  = Input.Color;
-    float4 OuterColor  = Font.u_OutsetTint;
+    float4 OuterColor  = UnpackTint(Font.u_OutsetTint);
     float InnerOpacity = clamp(InnerStrokeA, 0.0, 1.0);
     float OuterOpacity = clamp(OuterStrokeA, 0.0, 1.0);
 
@@ -146,10 +153,9 @@ float4 main(fs_Input Input) : SV_Target
     const float BlurStart  = Font.u_OutsetWidth + Font.u_OutsetBias / Scale;
     const float BlurEnd    = BlurStart * (1.0 - Font.u_OutsetBlur);
     const float BlurDist   = Font.u_InsetThreshold - DistanceSDF - Font.u_OutsetOffset / Scale;
-    const float BlurFactor = lerp(1.0, smoothstep(BlurStart, BlurEnd, BlurDist), step(0.0001, Font.u_OutsetBlur));
-    OuterColor.a *= BlurFactor;
+    const float BlurFactor = lerp(1.0, 1.0 - smoothstep(BlurEnd, BlurStart, BlurDist), step(0.0001, Font.u_OutsetBlur));
 
-    float4 Result = (InnerColor * InnerOpacity) + (OuterColor * (OuterOpacity - InnerOpacity));
+    float4 Result = (InnerColor * InnerOpacity) + ((OuterColor * BlurFactor) * (OuterOpacity - InnerOpacity));
     return Result;
 }
 

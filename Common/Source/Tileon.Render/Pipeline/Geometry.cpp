@@ -36,10 +36,12 @@ namespace Tileon::Pipeline
 
     Geometry::Geometry(Ref<Engine::Subsystem::Host> Host, ConstRef<Tileset> Tileset)
         : Locator   { Host },
-          mScribe   { Host },
           mTileset  { Tileset },
           mDirector { nullptr },
-          mDensity  { 0 }
+          mDensity  { 0 },
+          mTiles    { Host.GetService<Graphic::Service>() },
+          mSprites  { Host.GetService<Graphic::Service>(), mCollector },
+          mGlyphs   { Host.GetService<Graphic::Service>(), mCollector }
     {
         OnRegister(* Host.GetService<Scene::Service>());
         OnLoad(* Host.GetService<Content::Service>());
@@ -57,12 +59,15 @@ namespace Tileon::Pipeline
                        mDirector->GetPosition().GetBaseY()));
 
         // Opaque entities go down first, so the ground behind them is rejected by depth rather than shaded twice.
-        mScribe.Begin();
+        mCollector.Begin(Render::Collector::Priority::Opaque);
+
         {
             ZY_PROFILE_SCOPE("Pipeline::Geometry::Opaque");
 
+            mSprites.Reset();
+
             // Draw opaque unlit sprite entities.
-            mScribe.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Opaque)]);
+            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Opaque)]);
             mQrDrawOpaqueUnlitSprites.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
@@ -70,16 +75,16 @@ namespace Tileon::Pipeline
                 ConstRef<Appearance> Appearance,
                 ConstPtr<IntColor8>  Tint)
             {
-                if (const IntBox AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                if (ConstRef<IntBox> AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
-                    mScribe.DrawSprite(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
+                    mSprites.Draw(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
                 }
             });
 
             // Draw opaque lit sprite entities.
-            mScribe.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Opaque_Lit)]);
+            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Opaque_Lit)]);
             mQrDrawOpaqueLitSprites.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
@@ -87,18 +92,18 @@ namespace Tileon::Pipeline
                 ConstRef<Appearance> Appearance,
                 ConstPtr<IntColor8>  Tint)
             {
-                if (const IntBox AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                if (ConstRef<IntBox> AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
-                    mScribe.DrawSprite(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
+                    mSprites.Draw(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
                 }
             });
         }
-        mScribe.Flush(Encoder);
+        Drain(Encoder);
 
         // The ground follows, drawn front to back so the layers above reject the base layer they cover.
-        mScribe.Begin();
+        mTiles.Reset();
         {
             ZY_PROFILE_SCOPE("Pipeline::Geometry::Tiles");
 
@@ -109,7 +114,7 @@ namespace Tileon::Pipeline
                 const Tile::Layer Layer = kLayers[Index - 1];
 
                 // Only the base layer is guaranteed to cover the ground whole, so only it can skip the alpha test.
-                mScribe.SetTechnique(Layer == Tile::Layer::Base
+                mTiles.SetTechnique(Layer == Tile::Layer::Base
                     ? mTechniques[Enum::Cast(Kind::Tile_Opaque)]
                     : mTechniques[Enum::Cast(Kind::Tile_Masked)]);
 
@@ -134,15 +139,17 @@ namespace Tileon::Pipeline
                 });
             }
         }
-        mScribe.Flush(Encoder);
+        mTiles.Flush(Encoder);
 
         // Everything that blends comes last, drained back to front by the collector.
-        mScribe.Begin();
+        mCollector.Begin(Render::Collector::Priority::Transparent);
         {
             ZY_PROFILE_SCOPE("Pipeline::Geometry::Transparent");
 
+            mSprites.Reset();
+
             // Draw transparent unlit sprite entities.
-            mScribe.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Transparent)]);
+            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Transparent)]);
             mQrDrawTransparentUnlitSprites.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
@@ -150,16 +157,16 @@ namespace Tileon::Pipeline
                 ConstRef<Appearance> Appearance,
                 ConstPtr<IntColor8>  Tint)
             {
-                if (const IntBox AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                if (ConstRef<IntBox> AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
-                    mScribe.DrawSprite(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
+                    mSprites.Draw(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
                 }
             });
 
             // Draw transparent lit sprite entities.
-            mScribe.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Transparent_Lit)]);
+            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Transparent_Lit)]);
             mQrDrawTransparentLitSprites.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
@@ -167,16 +174,18 @@ namespace Tileon::Pipeline
                 ConstRef<Appearance> Appearance,
                 ConstPtr<IntColor8>  Tint)
             {
-                if (const IntBox AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                if (ConstRef<IntBox> AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
-                    mScribe.DrawSprite(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
+                    mSprites.Draw(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
                 }
             });
 
+            mGlyphs.Reset();
+
             // Draw text entities.
-            mScribe.SetTechnique(mTechniques[Enum::Cast(Kind::Text)]);
+            mGlyphs.SetTechnique(mTechniques[Enum::Cast(Kind::Text)]);
             mQrDrawTexts.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Enclosure>  Enclosure,
@@ -185,11 +194,11 @@ namespace Tileon::Pipeline
                 ConstPtr<IntColor8>  Tint,
                 ConstPtr<Decoration> Decoration)
             {
-                if (const IntBox AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                if (ConstRef<IntBox> AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
-                    mScribe.DrawText(
+                    mGlyphs.Draw(
                         Lettering,
                         Label,
                         Matrix,
@@ -198,7 +207,32 @@ namespace Tileon::Pipeline
                 }
             });
         }
-        mScribe.Flush(Encoder);
+        Drain(Encoder);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Geometry::Drain(Ref<Render::Encoder> Encoder)
+    {
+        ZY_PROFILE_SCOPE("Pipeline::Geometry::Drain");
+
+        // The runs the glyph batches index into are uploaded here, so a drain can never read a stale palette.
+        mGlyphs.Prepare();
+
+        // Sprites and text share the queue, so one sorted drain hands each batch back to whichever recorded it.
+        mCollector.Poll([&](UInt32 Kind, ConstSpan<Render::Collector::Command> Commands)
+        {
+            switch (static_cast<Batch>(Kind))
+            {
+            case Batch::Sprite:
+                mSprites.Write(Encoder, Commands);
+                break;
+            case Batch::Glyph:
+                mGlyphs.Write(Encoder, Commands);
+                break;
+            }
+        });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -331,7 +365,7 @@ namespace Tileon::Pipeline
                 if (ConstRetainer<::Render::Font> Font = Lettering.GetFont(); Font && Font->HasFinished())
                 {
                     const Pivot2D Pivot   = Label.GetPivot();
-                    const Rect    AABB    = Font->Enclose(Label.GetContent(), Lettering.GetSize());
+                    const Rect    AABB    = Font->Enclose(Label.GetContent(), Lettering.GetSize(), Label.GetSpacing());
                     const Vector2 Measure = AABB.GetSize();
 
                     Actor.Set(Extent(Vector3::FromXY(AABB.GetPosition()), Vector3::FromXY(Measure)));
@@ -442,7 +476,7 @@ namespace Tileon::Pipeline
                     Region.GetY() * Region::kTilesPerY + Block.Y);
 
                 const IntVector2 Phase = Mosaic::GetPhase(Absolute, Glyph.Period, Block.Offset);
-                mScribe.DrawTile(Glyph, Phase, Position, Span, Enum::Cast(Layer));
+                mTiles.Draw(Glyph, Phase, Position, Span, Enum::Cast(Layer));
             }
         }
     }

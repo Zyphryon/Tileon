@@ -839,13 +839,13 @@ namespace Tileon::Editor
     {
         ConstRef<Render::FontEffect> Effect = Component.GetEffect();
 
-        Color  OutsetColor     = Effect.GetOutsetColor();
-        Real32 OutsetOffset    = Effect.GetOutsetOffset();
-        Real32 OutsetWidth     = Effect.GetOutsetWidthRelative();
-        Real32 OutsetBias      = Effect.GetOutsetWidthAbsolute();
-        Real32 OutsetBlur      = Effect.GetOutsetBlur();
-        Real32 InsetRoundness  = Effect.GetInsetRoundness();
-        Real32 InsetThreshold  = Effect.GetInsetThreshold();
+        IntColor8 OutsetColor    = Effect.GetOutsetColor();
+        Real32    OutsetOffset   = Effect.GetOutsetOffset();
+        Real32    OutsetWidth    = Effect.GetOutsetWidthRelative();
+        Real32    OutsetBias     = Effect.GetOutsetWidthAbsolute();
+        Real32    OutsetBlur     = Effect.GetOutsetBlur();
+        Real32    InsetRoundness = Effect.GetInsetRoundness();
+        Real32    InsetThreshold = Effect.GetInsetThreshold();
 
         Bool Dirty = false;
 
@@ -863,8 +863,15 @@ namespace Tileon::Editor
 
         if (Dirty)
         {
-            Component.SetEffect(Render::FontEffect(
-                OutsetColor, OutsetOffset, OutsetWidth, OutsetBias, OutsetBlur, InsetRoundness, InsetThreshold));
+            Render::FontEffect Values(
+                OutsetColor,
+                OutsetOffset,
+                OutsetWidth,
+                OutsetBias,
+                OutsetBlur,
+                InsetRoundness,
+                InsetThreshold);
+            Component.SetEffect(Values);
         }
         return Dirty;
     }
