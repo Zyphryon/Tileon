@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Component/Sprite/Animator.hpp"
+#include "Component/Animator.hpp"
 #include <Zyphryon.Content/Uri.hpp>
 #include <Zyphryon.Math/Color.hpp>
 
@@ -22,22 +22,28 @@
 
 namespace Tileon
 {
-    /// \brief Represents a motif, which is the visual element for a terrain tile.
+    /// \brief Represents the art a terrain draws with.
     class Motif final
     {
     public:
 
-        /// \brief Default constructor.
-        ZY_INLINE Motif() = default;
+        /// \brief Constructs an empty motif.
+        ZY_INLINE Motif()
+            : mID     { 0 },
+              mPeriod { IntVector2::One() },
+              mTint   { IntColor8::White() },
+              mEasing { Easing::Linear }
+        {
+        }
 
-        /// \brief Constructs a motif with the specified unique identifier, span, and tint color.
+        /// \brief Constructs a motif with the specified unique identifier.
         ///
-        /// \param ID   The unique identifier for the motif.
-        /// \param Span The span of the motif, representing how many tiles it covers (default is 1x1).
-        /// \param Tint The tint color to apply to the motif when rendering (default is white).
-        ZY_INLINE Motif(UInt16 ID, IntVector2 Span = IntVector2::One(), IntColor8 Tint = IntColor8::White())
-            : mID     { ID   },
-              mSpan   { Span },
+        /// \param ID     The unique identifier for the motif.
+        /// \param Period The extent of the motif's art, in whole tiles.
+        /// \param Tint   The tint color to apply to the motif when rendering.
+        ZY_INLINE Motif(UInt16 ID, IntVector2 Period, IntColor8 Tint)
+            : mID     { ID },
+              mPeriod { Period },
               mTint   { Tint },
               mEasing { Easing::Linear }
         {
@@ -51,7 +57,7 @@ namespace Tileon
             return mID;
         }
 
-        /// \brief Sets the URI of the material resource used to render this motif.
+        /// \brief Sets the URI of the material resource the motif's frames are cut from.
         ///
         /// \param Material The URI of the material resource.
         ZY_INLINE void SetMaterial(AnyRef<Content::Uri> Material)
@@ -59,7 +65,7 @@ namespace Tileon
             mMaterial = Move(Material);
         }
 
-        /// \brief Gets the URI of the material resource used to render this motif.
+        /// \brief Gets the URI of the material resource the motif's frames are cut from.
         ///
         /// \return The URI of the material resource.
         ZY_INLINE ConstRef<Content::Uri> GetMaterial() const
@@ -67,20 +73,20 @@ namespace Tileon
             return mMaterial;
         }
 
-        /// \brief Sets the span of the motif.
+        /// \brief Sets the extent of the motif's art, in whole tiles.
         ///
-        /// \param Span The new span to set for the motif.
-        ZY_INLINE void SetSpan(IntVector2 Span)
+        /// \param Period The period to set, clamped so it can always divide a coordinate.
+        ZY_INLINE void SetPeriod(IntVector2 Period)
         {
-            mSpan = Span;
+            mPeriod = IntVector2(Max<SInt32>(Period.GetX(), 1), Max<SInt32>(Period.GetY(), 1));
         }
 
-        /// \brief Gets the span of the motif.
+        /// \brief Gets the extent of the motif's art, in whole tiles.
         ///
-        /// \return The span of the motif.
-        ZY_INLINE IntVector2 GetSpan() const
+        /// \return The number of tiles the art covers before it repeats, never less than one.
+        ZY_INLINE IntVector2 GetPeriod() const
         {
-            return mSpan;
+            return mPeriod;
         }
 
         /// \brief Sets the tint color of the motif.
@@ -139,7 +145,7 @@ namespace Tileon
         {
             Archive.Serialize(mID);
             Archive.Serialize(mMaterial);
-            Archive.Serialize(mSpan);
+            Archive.Serialize(mPeriod);
             Archive.Serialize(mTint);
             Archive.Serialize(mEasing);
             Archive.Serialize(mAnimation);
@@ -152,7 +158,7 @@ namespace Tileon
 
         UInt16       mID;
         Content::Uri mMaterial;
-        IntVector2   mSpan;
+        IntVector2   mPeriod;
         IntColor8    mTint;
         Easing       mEasing;
         Animation    mAnimation;

@@ -33,7 +33,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Assembler::Draw(Ref<UI::Composer> Composer, Scene::Entity Actor)
+    void Assembler::Draw(Scene::Entity Actor)
     {
         if (!Actor.IsValid())
         {
@@ -43,14 +43,12 @@ namespace Tileon::Editor
         mAction  = Action::None;
         mSubject = Scene::Entity();
 
-        // TODO: Remove ECS_IS_VALUE_PAIR (temporally fix until flecs fix it)
-        //
         // Draw the components the entity owns.
         Actor.Each([&](Scene::Entity Component)
         {
-            if (!Component.IsPair() && !ECS_IS_VALUE_PAIR(Component.GetID()) && IsAuthorable(Actor, Component))
+            if (!Component.IsPair() && IsAuthorable(Actor, Component))
             {
-                DrawComponent(Composer, Actor, Component, false);
+                DrawComponent(Actor, Component, false);
             }
         });
 
@@ -59,15 +57,15 @@ namespace Tileon::Editor
         {
             Archetype.Each([&](Scene::Entity Component)
             {
-                if (!Component.IsPair() && !ECS_IS_VALUE_PAIR(Component.GetID()) && IsAuthorable(Actor, Component) && !Actor.Owns(Component.GetID()))
+                if (!Component.IsPair() && IsAuthorable(Actor, Component) && !Actor.Owns(Component.GetID()))
                 {
-                    DrawComponent(Composer, Actor, Component, true);
+                    DrawComponent(Actor, Component, true);
                 }
             });
         }
 
-        Composer.Spacing();
-        DrawCatalog(Composer, Actor);
+        Toolkit::Composer::Spacing();
+        DrawCatalog(Actor);
 
         Apply(Actor);
     }
@@ -85,7 +83,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Assembler::DrawComponent(Ref<UI::Composer> Composer, Scene::Entity Actor, Scene::Entity Component, Bool Inherited)
+    void Assembler::DrawComponent(Scene::Entity Actor, Scene::Entity Component, Bool Inherited)
     {
         const ConstPtr<Descriptor> Info  = Component.TryGet<const Descriptor>();
         const String<128>          Label = String<128>::Print<"{0}  {1}##{2}">(Info->GetIcon(), Info->GetLabel(), Component.GetID());
@@ -93,13 +91,13 @@ namespace Tileon::Editor
         // The browser belongs to this assembler, so two views can each have one open on their own subject.
         Workspace Workspace(mContext, mSelector);
 
-        const Bool Open = Composer.TreeNode(Label, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth);
+        const Bool Open = Toolkit::Composer::TreeNode(Label, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth);
 
-        if (Composer.BeginPopupContextItem())
+        if (Toolkit::Composer::BeginPopupContextItem())
         {
             if (Inherited)
             {
-                if (Composer.MenuItem("Override"))
+                if (Toolkit::Composer::MenuItem("Override"))
                 {
                     mAction  = Action::Override;
                     mSubject = Component;
@@ -110,13 +108,13 @@ namespace Tileon::Editor
                 const Scene::Entity Archetype = Actor.GetArchetype();
                 const Bool Revert = Archetype.IsValid() && Archetype.Has(Component);
 
-                if (Composer.MenuItem(Revert ? "Revert to Archetype"_Text : "Remove"_Text))
+                if (Toolkit::Composer::MenuItem(Revert ? "Revert to Archetype"_Text : "Remove"_Text))
                 {
                     mAction  = Action::Remove;
                     mSubject = Component;
                 }
             }
-            Composer.EndPopup();
+            Toolkit::Composer::EndPopup();
         }
 
         if (Open)
@@ -125,14 +123,14 @@ namespace Tileon::Editor
             {
                 const Scene::Entity Archetype = Actor.GetArchetype();
 
-                Composer.TextDisabled("Inherited from {0}", Archetype.GetAlias());
+                Toolkit::Composer::TextDisabled("Inherited from {0}", Archetype.GetAlias());
 
                 // The values on show belong to the archetype, so it is the archetype an inspector would be editing.
-                Composer.BeginDisabled();
-                Info->Inspect(Composer, Workspace, Archetype, Archetype.TryGet(Component));
-                Composer.EndDisabled();
+                Toolkit::Composer::BeginDisabled();
+                Info->Inspect(Workspace, Archetype, Archetype.TryGet(Component));
+                Toolkit::Composer::EndDisabled();
 
-                if (Composer.SmallButton("Override"))
+                if (Toolkit::Composer::SmallButton("Override"))
                 {
                     mAction  = Action::Override;
                     mSubject = Component;
@@ -140,27 +138,27 @@ namespace Tileon::Editor
             }
             else if (Info->HasFields())
             {
-                if (Info->Inspect(Composer, Workspace, Actor, Actor.TryGet(Component)))
+                if (Info->Inspect(Workspace, Actor, Actor.TryGet(Component)))
                 {
                     Actor.Notify(Component);
                 }
             }
             else
             {
-                Composer.TextDisabled("No properties");
+                Toolkit::Composer::TextDisabled("No properties");
             }
-            Composer.TreePop();
+            Toolkit::Composer::TreePop();
         }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Assembler::DrawCatalog(Ref<UI::Composer> Composer, Scene::Entity Actor)
+    void Assembler::DrawCatalog(Scene::Entity Actor)
     {
-        Composer.SetNextItemWidth(-1.0f);
+        Toolkit::Composer::SetNextItemWidth(-1.0f);
 
-        if (Composer.BeginCombo("##catalog", ICON_FA_PLUS "  Add Component", ImGuiComboFlags_HeightLarge))
+        if (Toolkit::Composer::BeginCombo("##catalog", ICON_FA_PLUS "  Add Component", ImGuiComboFlags_HeightLarge))
         {
             Text Group;
 
@@ -178,24 +176,24 @@ namespace Tileon::Editor
                 if (Group != Info->GetGroup())
                 {
                     Group = Info->GetGroup();
-                    Composer.Section(Group);
+                    Toolkit::Composer::Section(Group);
                 }
 
                 // Anything the entity already has, by ownership or inheritance, is shown but not offered.
                 const Bool        Owned = Actor.Has(Component);
                 const String<128> Label = String<128>::Print<"{0}  {1}">(Info->GetIcon(), Info->GetLabel());
 
-                Composer.BeginDisabled(Owned);
+                Toolkit::Composer::BeginDisabled(Owned);
 
-                if (Composer.Selectable(Label) && !Owned)
+                if (Toolkit::Composer::Selectable(Label) && !Owned)
                 {
                     mAction  = Action::Add;
                     mSubject = Component;
                 }
 
-                Composer.EndDisabled();
+                Toolkit::Composer::EndDisabled();
             }
-            Composer.EndCombo();
+            Toolkit::Composer::EndCombo();
         }
     }
 

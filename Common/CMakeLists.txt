@@ -1,4 +1,4 @@
-    ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 ## Copyright (C) 2025-2026 Tileon contributors (see AUTHORS.md)
 ##
 ## This work is licensed under the terms of the MIT license.
@@ -24,8 +24,6 @@ LIST(APPEND       PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 ## Dependency (Zyphryon Engine)
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-SET(ZY_GRAPHIC_LOADER_STB ON CACHE BOOL "Enable STB image loader" FORCE)
 
 FetchContent_Declare(External_ZyEngine
         GIT_REPOSITORY https://github.com/Zyphryon/Engine

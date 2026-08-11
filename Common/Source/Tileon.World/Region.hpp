@@ -85,7 +85,7 @@ namespace Tileon
         /// \param X The x-coordinate of the tile within the region.
         /// \param Y The y-coordinate of the tile within the region.
         /// \return A constant reference to the tile at the specified coordinates.
-        ZY_INLINE ConstRef<Tile> GetTile(UInt8 X, UInt8 Y) const
+        ZY_INLINE Tile GetTile(UInt8 X, UInt8 Y) const
         {
             return mTiles[ConvertTo1D(X, Y, kTilesPerX)];
         }
@@ -95,29 +95,14 @@ namespace Tileon
         /// \param Area   The rectangular area within the region to fill (region-local coordinates).
         /// \param Layer  The tile layer to fill the terrain on.
         /// \param Handle The unique identifier for the terrain type to stamp onto the tiles.
-        /// \param Span   The dimensions of the terrain atlas in tiles, used for calculating the atlas index.
-        /// \param Offset The starting offset within the terrain atlas in tiles, used for calculating the atlas index.
-        ZY_INLINE void Fill(IntRect Area, Tile::Layer Layer, UInt16 Handle, IntVector2 Span, IntVector2 Offset)
+        /// \param Offset The alignment offset, zero to follow the lattice the world defines.
+        ZY_INLINE void Fill(IntRect Area, Tile::Layer Layer, UInt16 Handle, Tile::Offset Offset)
         {
-            UInt16 AtlasY = Offset.GetY();
-
             for (UInt8 Y = Area.GetMinimumY(); Y < Area.GetMaximumY(); ++Y)
             {
-                UInt16 AtlasX = Offset.GetX();
-
                 for (UInt8 X = Area.GetMinimumX(); X < Area.GetMaximumX(); ++X)
                 {
-                    mTiles[ConvertTo1D(X, Y, kTilesPerX)].SetLayer(Layer, Handle, AtlasY * Span.GetX() + AtlasX);
-
-                    if (++AtlasX >= Span.GetX())
-                    {
-                        AtlasX = 0;
-                    }
-                }
-
-                if (++AtlasY >= Span.GetY())
-                {
-                    AtlasY = 0;
+                    mTiles[ConvertTo1D(X, Y, kTilesPerX)].SetLayer(Layer, Handle, Offset);
                 }
             }
         }
@@ -132,7 +117,7 @@ namespace Tileon
             {
                 for (UInt8 X = Area.GetMinimumX(); X < Area.GetMaximumX(); ++X)
                 {
-                    mTiles[ConvertTo1D(X, Y, kTilesPerX)].SetLayer(Layer, 0, 0);
+                    mTiles[ConvertTo1D(X, Y, kTilesPerX)].SetLayer(Layer, 0, Tile::Offset());
                 }
             }
         }

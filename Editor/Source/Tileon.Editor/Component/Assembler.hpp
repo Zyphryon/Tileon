@@ -13,7 +13,6 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Editor/Context.hpp"
-#include "Tileon.Editor/UI/Composer.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -33,19 +32,13 @@ namespace Tileon::Editor
 
         /// \brief Draws the component list of an entity.
         ///
-        /// \param Composer The UI composer used to render the component list.
-        /// \param Actor    The entity whose components are being edited.
-        void Draw(Ref<UI::Composer> Composer, Scene::Entity Actor);
+        /// \param Actor The entity whose components are being edited.
+        void Draw(Scene::Entity Actor);
 
         /// \brief Draws the asset browser a field opened, if any.
-        ///
-        /// Kept apart from \ref Draw because the browser is modal and belongs at window scope, while the component
-        /// list is drawn inside a child. Views call this after closing the child that hosts the list.
-        ///
-        /// \param Composer The UI composer used to render the browser.
-        ZY_INLINE void DrawSelector(Ref<UI::Composer> Composer)
+        ZY_INLINE void DrawSelector()
         {
-            mSelector.Draw(Composer);
+            mSelector.Draw();
         }
 
     private:
@@ -68,17 +61,15 @@ namespace Tileon::Editor
 
         /// \brief Draws a single component as a collapsible section.
         ///
-        /// \param Composer  The UI composer used to render the component.
         /// \param Actor     The entity that owns or inherits the component.
         /// \param Component The component entity being drawn.
         /// \param Inherited `true` if the component's value comes from the entity's archetype.
-        void DrawComponent(Ref<UI::Composer> Composer, Scene::Entity Actor, Scene::Entity Component, Bool Inherited);
+        void DrawComponent(Scene::Entity Actor, Scene::Entity Component, Bool Inherited);
 
         /// \brief Draws the popup listing every component that can be attached to the entity.
         ///
-        /// \param Composer The UI composer used to render the catalog.
         /// \param Actor    The entity the component would be attached to.
-        void DrawCatalog(Ref<UI::Composer> Composer, Scene::Entity Actor);
+        void DrawCatalog(Scene::Entity Actor);
 
         /// \brief Applies the structural change recorded while drawing, if any.
         ///
@@ -90,14 +81,14 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Ref<Context>  mContext;
-        Ref<Registry> mRegistry;
+        Ref<Context>      mContext;
+        Ref<Registry>     mRegistry;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        UI::Selector  mSelector;
-        Action        mAction;
-        Scene::Entity mSubject;
+        Toolkit::Selector mSelector;
+        Action            mAction;
+        Scene::Entity     mSubject;
     };
 }

@@ -65,10 +65,10 @@ namespace Tileon
         Scene.GetComponent<Dynamic>("Dynamic");
         Scene.GetComponent<Unpickable>("Unpickable");
         Scene.GetComponent<Transform>("Transform");
-        Scene.GetComponent<Pose>("Pose").With<Transform>().Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.GetComponent<Pose>("Pose").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Transform>();
         Scene.GetComponent<Anchor>("Anchor").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Bound>("Bound");
-        Scene.GetComponent<Extent>("Extent").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Bound>();
+        Scene.GetComponent<Enclosure>("Enclosure");
+        Scene.GetComponent<Extent>("Extent").With<Enclosure>();
         Scene.GetComponent<Velocity>("Velocity").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Dynamic>();
         Scene.GetComponent<Region>("Region").Grant(Scene::Trait::Serializable);
 
@@ -100,82 +100,63 @@ namespace Tileon
             });
 
         // System that computes motion integration.
-        Scene.CreateSystem<Scene::DSL::In<const Scene::Clock, const Velocity, Pose>>(
+        Scene.CreateSystem<Scene::DSL::Write<Pose, Stale>>(
             "World::ComputeMotion",
             EcsPreUpdate,
-            Scene::Execution::Concurrent,
+            Scene::Execution::Default,
             [](Scene::Entity Actor, ConstRef<Scene::Clock> Clock, ConstRef<Velocity> Velocity, Ref<Pose> Pose)
             {
-                Pose.Translate(Velocity.GetLinear() * Clock.GetDelta());
-                Pose.Rotate(Velocity.GetAngular() * Clock.GetDelta());
+                const Vector3 Linear  = Velocity.GetLinear();
+                const Vector3 Angular = Velocity.GetAngular();
+
+                if (Linear.IsAlmostZero() && Angular.IsAlmostZero())
+                {
+                    return;
+                }
+
+                const Real32  Delta = static_cast<Real32>(Clock.GetDelta());
+
+                Pose.Translate(Linear * Delta);
+
+                if (!Angular.IsAlmostZero())
+                {
+                    Pose.Rotate(Velocity.Integrate(Delta));
+                }
+                Actor.Add<Stale>();
             });
 
-        // System that migrates entities to a neighbouring region when they cross a region boundary.
+        // System that migrates dynamic entities to a neighbouring region when they cross a region boundary.
         // TODO: Revise (Can't be added efficiently until flecs supports direct parent queries in systems).
-        Scene.CreateSystem<Scene::DSL::In<Pose>, Kinetic>(
+        Scene.CreateSystem<Scene::DSL::With<Dynamic>, Scene::DSL::Read<Region>, Scene::DSL::Write<Stale>>(
             "World::RegionMigration",
             EcsPreUpdate,
-            Scene::Execution::Immediate,
+            Scene::Execution::Default,
             [this](Scene::Entity Actor, Ref<Pose> Pose)
             {
-                ConstPtr<Region> Region = nullptr;
-
-                if (const Scene::Entity Parent = Actor.GetParent(); Parent.IsValid())
-                {
-                    Region = Parent.TryGet<Tileon::Region>();
-                }
-
-                if (Region)
-                {
-                    const Vector2 Position = Pose.GetTranslation();
-                    const Vector2 Distance = Vector2(
-                        Floor(Position.GetX() / static_cast<Real32>(Tileon::Region::kTilesPerX)),
-                        Floor(Position.GetY() / static_cast<Real32>(Tileon::Region::kTilesPerY)));
-
-                    if (Distance.IsAlmostZero())
-                    {
-                        return;
-                    }
-
-                    // Try to migrate to the new region and update the parent-child relationship if successful.
-                    const Scene::Entity Parent = mSupervisor.GetRegion(
-                        static_cast<SInt16>(Region->GetX() + static_cast<SInt32>(Distance.GetX())),
-                        static_cast<SInt16>(Region->GetY() + static_cast<SInt32>(Distance.GetY())));
-
-                    if (Parent.IsValid())
-                    {
-                        Actor.Attach(Parent, Scene::Hierarchy::Open);
-
-                        // Remap the pose to be local to the new region so the entity appears at exactly
-                        // the same world position after the parent change.
-                        Pose.SetTranslation(Vector2(
-                            Position.GetX() - Distance.GetX() * static_cast<Real32>(Tileon::Region::kTilesPerX),
-                            Position.GetY() - Distance.GetY() * static_cast<Real32>(Tileon::Region::kTilesPerY)));
-
-                        // Cascades Stale to all static children, making them Kinetic this frame.
-                        Actor.Add<Stale>();
-                    }
-                }
+                mSupervisor.Migrate(Actor, Pose);
             });
 
-        // System that propagates stale states to all static children of a stale entity.
-        Scene.CreateSystem<Scene::DSL::Not<Stale>, Scene::DSL::Cascade<Stale>, Scene::DSL::Out<Ptr<Stale>>>(
+        // System that propagates stale states to all descendants of a stale entity.
+        Scene.CreateSystem<Scene::DSL::Not<Stale>, Scene::DSL::Up<Stale>, Scene::DSL::Write<Stale>>(
             "World::PropagateDirtyStates",
             EcsPreUpdate,
-            Scene::Execution::Concurrent,
+            Scene::Execution::Default,
             [](Scene::Entity Actor)
             {
                 Actor.Add<Stale>();
             });
 
         // System that computes world matrices from local transforms of kinetic entities.
-        Scene.CreateSystem<Scene::DSL::Cascade<ConstPtr<Transform>>, Scene::DSL::In<const Pose, ConstPtr<Anchor>, Transform>, Kinetic>(
+        Scene.CreateSystem<Scene::DSL::Cascade<ConstPtr<Transform>>,
+                           Scene::DSL::In<Pose, Ptr<Anchor>>,
+                           Scene::DSL::InOut<Transform>,
+                           Kinetic>(
             "World::ComputeWorldspace",
             EcsOnUpdate,
-            Scene::Execution::Concurrent,
+            Scene::Execution::Default,
             [](ConstPtr<Transform> Parent, ConstRef<Pose> Pose, ConstPtr<Anchor> Anchor, Ref<Transform> Transform)
             {
-                const Vector2 Pivot = Anchor ? Anchor->GetValue() : Vector2::Zero();
+                const Vector3 Pivot = Anchor ? Anchor->GetValue() : Vector3::Zero();
 
                 if (Parent)
                 {
@@ -188,40 +169,29 @@ namespace Tileon
                 }
             });
 
-        // System to introduce a sync point. TODO: Find a better way?
-        Scene.CreateSystem<>(
-            "World::SyncComputeWorldspace",
-            EcsOnUpdate,
-            Scene::Execution::Immediate,
-            []
-            {
-            });
-
         // System that computes world-space volumes from local-space volumes and updates spatial partitioning.
-        Scene.CreateSystem<Scene::DSL::In<const Transform, const Extent, Bound>, Kinetic>(
+        Scene.CreateSystem<Kinetic>(
             "World::ComputeHierarchy",
             EcsOnUpdate,
-            Scene::Execution::Concurrent,
-            [this](Scene::Entity Actor, ConstRef<Transform> Transform, Extent Extent, Ref<Bound> Bounds)
+            Scene::Execution::Default,
+            [this](Scene::Entity Actor, ConstRef<Transform> Transform, ConstRef<Extent> Extent, Ref<Enclosure> Enclosure)
             {
-                const Rect LocalAABB(Extent.GetOffset(), Extent.GetOffset() + Extent.GetSize());
-                const Rect WorldAABB = Rect::Transform(LocalAABB, Transform.GetWorldspace());
+                const Box        WorldAABB    = Box::Transform(Extent.GetVolume(), Transform.GetWorldspace());
+                const IntBox     NewestAABB   = Box::Enclose<SInt32>(WorldAABB) + Transform.GetOrigin();
+                const IntVector2 NewestCenter = NewestAABB.GetCenter().GetXZ();
 
-                const IntRect    NewestAABB   = Rect::Enclose<SInt32>(WorldAABB) + Transform.GetOrigin();
-                const IntVector2 NewestCenter = NewestAABB.GetCenter();
-
-                if (const IntRect OlderAABB = Bounds.GetRect(); OlderAABB.IsAlmostZero())
+                if (ConstRef<IntBox> OlderAABB = Enclosure.GetBox(); OlderAABB.IsAlmostZero())
                 {
                     mSupervisor.InsertEntityOnCell(Actor, NewestCenter);
                 }
                 else
                 {
-                    mSupervisor.UpdateEntityOnCell(Actor, OlderAABB.GetCenter(), NewestCenter);
+                    mSupervisor.UpdateEntityOnCell(Actor, OlderAABB.GetCenter().GetXZ(), NewestCenter);
                 }
-                Bounds.SetRect(NewestAABB);
+                Enclosure.SetBox(NewestAABB);
             });
 
-        // System that optimizes the entity hierarchy (sync point).
+        // System that optimizes the entity hierarchy.
         Scene.CreateSystem<>(
             "World::UpdateHierarchy",
             EcsPostUpdate,
@@ -232,10 +202,10 @@ namespace Tileon
             });
 
         /// System that disposes of entities marked for disposal.
-        Scene.CreateSystem<Scene::DSL::In<const Dispose>>(
+        Scene.CreateSystem<Scene::DSL::In<Dispose>, Scene::DSL::Read<Enclosure>>(
             "World::DestroyEntitiesTagged",
             EcsPostFrame,
-            Scene::Execution::Concurrent,
+            Scene::Execution::Default,
             [this](Scene::Entity Actor)
             {
                 mSupervisor.DetachEntityOnCell(Actor);

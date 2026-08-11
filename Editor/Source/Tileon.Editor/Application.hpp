@@ -13,7 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Activity.hpp"
-#include "Panel/Bootstrap/Bootstrap.hpp"
+#include "Activity/Bootstrap/Bootstrap.hpp"
 #include <ImGuiSystem.hpp>
 #include <Zyphryon.Runtime/Kernel.hpp>
 
@@ -52,6 +52,8 @@ namespace Tileon::Editor
         {
             Idle,       ///< The application is idle, waiting for user input or project loading.
             Loading,    ///< The application is loading assets and initializing the editor state for the current project.
+            Preparing,  ///< The application is awaiting the sheets a bake cuts from, before the project is committed.
+            Saving,     ///< The application is committing the project, holding until the notice has been presented.
             Running,    ///< The application is running, actively processing user input and updating the editor state.
         };
 
@@ -62,17 +64,20 @@ namespace Tileon::Editor
 
         /// \brief Draws the editor view, which contains the main user interface for editing and manipulating the game world.
         ///
-        /// \param Composer The UI composer used to render the editor interface elements.
-        /// \param Delta    The time elapsed since the last tick.
-        void DrawEditor(Ref<UI::Composer> Composer, Real64 Delta);
+        /// \param Delta The time elapsed since the last tick.
+        void DrawEditor(Real64 Delta);
 
         /// \brief Draws the game view, rendering the current state of the game world.
-        void DrawGame();
+        void DrawGame(Real64 Delta);
 
         /// \brief Draws a simple loading overlay while assets are being streamed in.
+        void DrawLoading();
+
+        /// \brief Draws a centered, input-less notice holding a single line of text.
         ///
-        /// \param Composer The UI composer used to render the loading screen.
-        void DrawLoading(Ref<UI::Composer> Composer);
+        /// \param Identifier The window identifier the notice is drawn under.
+        /// \param Label      The line of text shown in the middle of the notice.
+        void DrawNotice(Text Identifier, Text Label);
 
     private:
 
@@ -80,7 +85,7 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         State                        mState;
-        Panel::Bootstrap             mBootstrap;
+        Bootstrap                    mBootstrap;
         Unique<Context>              mContext;
         Plugin::ImGuiSystem          mFrontend;
         Sequence<Retainer<Activity>> mActivities;

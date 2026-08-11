@@ -11,14 +11,14 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Application.hpp"
-#include "Panel/Archetypes/Archetypes.hpp"
-#include "Panel/Atelier/Atelier.hpp"
-#include "Panel/Foundry/Foundry.hpp"
-#include "Panel/Hierarchy/Hierarchy.hpp"
-#include "Panel/Inspector/Inspector.hpp"
-#include "Panel/Palette/Palette.hpp"
-#include "Panel/Universe/Universe.hpp"
-#include "Tileon.Editor/UI/Theme.hpp"
+#include "Activity/Archetypes/Archetypes.hpp"
+#include "Activity/Atelier/Atelier.hpp"
+#include "Activity/Foundry/Foundry.hpp"
+#include "Activity/Hierarchy/Hierarchy.hpp"
+#include "Activity/Inspector/Inspector.hpp"
+#include "Activity/Palette/Palette.hpp"
+#include "Activity/Universe/Universe.hpp"
+#include "Tileon.Editor/Toolkit/Theme.hpp"
 #include "Tileon_Editor.Modules.hpp"
 #include "Tileon_Editor.Embedded.hpp"
 #include <Zyphryon.Content/Mount/Disk.hpp>
@@ -46,12 +46,17 @@ namespace Tileon::Editor
         {
             const JsonObject Root(Document);
 
-            if (const JsonObject Window = Root.GetObject("Window"); Window.IsValid())
+            if (const JsonObject Section = Root.GetObject("Window"); Section.IsValid())
             {
-                Config.SetWindowMonitor(Window.GetString("monitor", Config.GetWindowMonitor()));
-                Config.SetWindowWidth(Window.GetNumber<UInt32>("width", Config.GetWindowWidth()));
-                Config.SetWindowHeight(Window.GetNumber<UInt32>("height", Config.GetWindowHeight()));
-                Config.SetWindowFullscreen(Window.GetBool("fullscreen", Config.IsWindowFullscreen()));
+                Config.SetWindowMonitor(Section.GetString("monitor", Config.GetWindowMonitor()));
+                Config.SetWindowWidth(Section.GetNumber<UInt32>("width", Config.GetWindowWidth()));
+                Config.SetWindowHeight(Section.GetNumber<UInt32>("height", Config.GetWindowHeight()));
+                Config.SetWindowFullscreen(Section.GetBool("fullscreen", Config.IsWindowFullscreen()));
+            }
+
+            if (const JsonObject Section = Root.GetObject("Graphic"); Section.IsValid())
+            {
+                Config.SetGraphicsTearless(Section.GetBool("tearless", Config.IsGraphicsTearless()));
             }
         }
     }
@@ -72,6 +77,9 @@ namespace Tileon::Editor
         {
             Config.SetWindowMonitor(Monitor->GetName());
         }
+
+        ConstRetainer<Graphic::Service> Graphics = Host.GetService<Graphic::Service>();
+        Config.SetGraphicsTearless(Graphics->IsTearless());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -89,6 +97,9 @@ namespace Tileon::Editor
         Window.SetNumber("width", Config.GetWindowWidth());
         Window.SetNumber("height", Config.GetWindowHeight());
         Window.SetBool("fullscreen", Config.IsWindowFullscreen());
+
+        JsonObject Graphic = Root.SetObject("Graphic");
+        Graphic.SetBool("tearless", Config.IsGraphicsTearless());
 
         const Str Data = JsonDocument::Dump(Document);
         Filesystem::Write(Path, ConstSpan(reinterpret_cast<ConstPtr<Byte>>(Data.GetData()), Data.GetSize()));
@@ -108,15 +119,16 @@ namespace Tileon::Editor
     void Application::OnConfigure(Ref<Runtime::Startup> Startup)
     {
         Startup.SetWindowTitle("Tileon Editor (v0.1)");
-
-#if   defined(ZY_PLATFORM_WINDOWS)
-        Startup.SetGraphicsDriver("D3D11");
-#else
-        Startup.SetGraphicsDriver("GLES3");
-#endif
+        Startup.SetGraphicsColorFormat(Graphic::TextureFormat::RGBA8UIntNorm_sRGB);
 
 #if   defined(ZY_PLATFORM_WEB)
         Startup.SetWindowBorderless(true);
+#endif
+
+#if   defined(ZY_PLATFORM_WINDOWS)
+        Startup.SetGraphicsDriver("D3D11");
+#elif defined(ZY_PLATFORM_WEB) || defined(ZY_PLATFORM_LINUX)
+        Startup.SetGraphicsDriver("GLES3");
 #endif
 
         // Load the persisted editor configuration before the engine spins up.
@@ -136,8 +148,8 @@ namespace Tileon::Editor
         Content->AddMount("Resources", Retainer<Content::Disk>::Create("Editor"));
 
         // Initialize ImGui plugin and the UI theme system, which sets up the rendering the user interface.
-        mFrontend.Initialize(* this);
-        UI::Theme::Initialize();
+        mFrontend.Initialize(* this, Plugin::Colorspace::sRGB);
+        Toolkit::Theme::Initialize(* Content);
 
         // TODO: Manage ImGUI configuration file manually
         return true;
@@ -164,9 +176,25 @@ namespace Tileon::Editor
             }
             break;
         }
+        case State::Preparing:
+        {
+            // A bake refuses to write while a sheet it cuts from is still arriving, so they are awaited first.
+            if (mContext->Prepare())
+            {
+                mState = State::Saving;
+            }
+            break;
+        }
+        case State::Saving:
+        {
+            mContext->Commit();
+
+            mState = State::Running;
+            break;
+        }
         case State::Running:
         {
-            DrawGame();
+            DrawGame(Delta);
             break;
         }
         }
@@ -179,17 +207,15 @@ namespace Tileon::Editor
         {
             mFrontend.Begin(Delta);
             {
-                UI::Composer Composer;
-
                 switch (mState)
                 {
                 case State::Idle:
-                    switch (mBootstrap.Draw(Composer))
+                    switch (mBootstrap.Draw())
                     {
-                    case Panel::Bootstrap::Result::Done:
+                    case Bootstrap::Result::Done:
                         Launch(Move(mBootstrap.GetProject()));
                         break;
-                    case Panel::Bootstrap::Result::Exit:
+                    case Bootstrap::Result::Exit:
                         Quit();
                         break;
                     default:
@@ -197,10 +223,15 @@ namespace Tileon::Editor
                     }
                     break;
                 case State::Loading:
-                    DrawLoading(Composer);
+                    DrawLoading();
+                    break;
+                case State::Preparing:
+                case State::Saving:
+                    DrawEditor(Delta);
+                    DrawNotice("##Saving", "Saving project...");
                     break;
                 case State::Running:
-                    DrawEditor(Composer, Delta);
+                    DrawEditor(Delta);
                     break;
                 }
             }
@@ -239,13 +270,13 @@ namespace Tileon::Editor
         mContext = Unique<Context>::Create(* this, Move(Project));
 
         // Add editor activities to the list of activities, which will be rendered in the interface.
-        mActivities.Append(Retainer<Panel::Foundry>::Create(* mContext));
-        mActivities.Append(Retainer<Panel::Archetypes>::Create(* mContext));
-        mActivities.Append(Retainer<Panel::Inspector>::Create(* mContext));
-        mActivities.Append(Retainer<Panel::Hierarchy>::Create(* mContext));
-        mActivities.Append(Retainer<Panel::Palette>::Create(* mContext));
-        mActivities.Append(Retainer<Panel::Universe>::Create(* mContext));
-        mActivities.Append(Retainer<Panel::Atelier>::Create(* mContext));
+        mActivities.Append(Retainer<Foundry>::Create(* mContext));
+        mActivities.Append(Retainer<Archetypes>::Create(* mContext));
+        mActivities.Append(Retainer<Inspector>::Create(* mContext));
+        mActivities.Append(Retainer<Hierarchy>::Create(* mContext));
+        mActivities.Append(Retainer<Palette>::Create(* mContext));
+        mActivities.Append(Retainer<Universe>::Create(* mContext));
+        mActivities.Append(Retainer<Atelier>::Create(* mContext));
 
         // Signal that we are waiting for the content service to finish loading all queued assets.
         mState = State::Loading;
@@ -254,93 +285,102 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Application::DrawEditor(Ref<UI::Composer> Composer, Real64 Delta)
+    void Application::DrawEditor(Real64 Delta)
     {
         // Draw the main menu bar at the top.
-        if (Composer.BeginMainMenuBar())
+        if (Toolkit::Composer::BeginMainMenuBar())
         {
             // Draw the "File" menu.
-            if (Composer.BeginMenu("File"))
+            if (Toolkit::Composer::BeginMenu("File"))
             {
-                if (Composer.MenuItem("Save", "Ctrl+S"))
+                if (Toolkit::Composer::MenuItem("Save", "Ctrl+S"))
                 {
-                    mContext->GetController().Save();
+                    mState = State::Preparing;
                 }
 
-                Composer.Separator();
+                Toolkit::Composer::Separator();
 
-                if (Composer.MenuItem("Exit"))
+                if (Toolkit::Composer::MenuItem("Exit"))
                 {
                     Quit();
                 }
 
-                Composer.EndMenu();
+                Toolkit::Composer::EndMenu();
             }
 
             // Draw the "View" menu.
-            if (Composer.BeginMenu("View"))
+            if (Toolkit::Composer::BeginMenu("View"))
             {
                 for (ConstRetainer<Activity> Activity : mActivities)
                 {
                     Bool Visibility = Activity->IsVisible();
 
-                    if (Composer.Checkbox(Activity->GetTitle(), Visibility))
+                    if (Toolkit::Composer::Checkbox(Activity->GetTitle(), Visibility))
                     {
                         Activity->SetVisible(Visibility);
                     }
                 }
 
-                Composer.Separator();
+                Toolkit::Composer::Separator();
 
                 // Discarding the node makes the dockspace below rebuild the default arrangement next frame.
-                if (Composer.MenuItem("Reset Layout"))
+                if (Toolkit::Composer::MenuItem("Reset Layout"))
                 {
-                    Composer.ResetDockSpace("EditorDockSpace");
+                    Toolkit::Composer::ResetDockSpace("EditorDockSpace");
                 }
 
-                Composer.EndMenu();
+                Toolkit::Composer::EndMenu();
             }
 
             // Draw the "Settings" menu.
-            if (Composer.BeginMenu("Settings"))
+            if (Toolkit::Composer::BeginMenu("Settings"))
             {
-                Ref<Platform::Window> Window = GetService<Platform::Service>()->GetWindow();
+                Ref<Platform::Window> Window   = GetService<Platform::Service>()->GetWindow();
 
                 Bool Fullscreen = Window.IsFullscreen();
 
-                if (Composer.Checkbox("Fullscreen", Fullscreen))
+                if (Toolkit::Composer::Checkbox("Fullscreen", Fullscreen))
                 {
                     Window.SetFullscreen(Fullscreen);
                 }
 
-                Composer.EndMenu();
+                ConstRetainer<Graphic::Service> Graphics = GetService<Graphic::Service>();
+
+                Bool Tearless = Graphics->IsTearless();
+
+                if (Toolkit::Composer::Checkbox("Tearless", Tearless))
+                {
+                    Graphics->Reset(Window.GetWidth(), Window.GetHeight(), Tearless);
+                }
+
+                Toolkit::Composer::EndMenu();
             }
 
             // Draw the "Help" menu.
-            if (Composer.BeginMenu("Help"))
+            if (Toolkit::Composer::BeginMenu("Help"))
             {
-                if (Composer.BeginMenu("Theme"))
+                if (Toolkit::Composer::BeginMenu("Theme"))
                 {
-                    if (Composer.MenuItem("Dark"))
+                    if (Toolkit::Composer::MenuItem("Dark"))
                     {
-                        UI::Theme::ApplyDarkStyle();
+                        Toolkit::Theme::ApplyDarkStyle();
                     }
-                    if (Composer.MenuItem("Light"))
+                    if (Toolkit::Composer::MenuItem("Light"))
                     {
-                        UI::Theme::ApplyLightStyle();
+                        Toolkit::Theme::ApplyLightStyle();
                     }
 
-                    Composer.EndMenu();
+                    Toolkit::Composer::EndMenu();
                 }
 
-                Composer.EndMenu();
+                Toolkit::Composer::EndMenu();
             }
 
-            Composer.EndMainMenuBar();
+            Toolkit::Composer::EndMainMenuBar();
         }
 
         // Host dockspace filling the viewport's work area; the builder only runs on the first run.
-        Composer.DockSpace("EditorDockSpace", [](Ref<UI::Dock> Layout)
+        Toolkit::Composer::DockSpace("EditorDockSpace", [](Ref<Toolkit::Dock> Layout)
         {
             ImGuiID       Center = Layout.GetRoot();
             const ImGuiID Left   = Layout.Split(Center, ImGuiDir_Left,  0.20f);
@@ -376,7 +416,7 @@ namespace Tileon::Editor
         {
             if (Activity->IsVisible())
             {
-                Activity->OnDraw(Composer);
+                Activity->OnDraw();
             }
         }
 
@@ -386,15 +426,16 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Application::DrawGame()
+    void Application::DrawGame(Real64 Delta)
     {
-        // Render the game view to an off-screen buffer, which will be displayed in the atelier activity's viewport.
-        const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(Panel::Atelier::kTitle.GetData());
+        // A motif authored since the last bake has no frames on the GPU, so the editor copies its own.
+        mContext->GetForge().Tick();
 
-        if (Parent && Parent->Active)
+        // Render the game view to an off-screen buffer, which will be displayed in the atelier activity's viewport.
+        if (const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(Atelier::kTitle.GetData()); Parent && Parent->Active)
         {
             const UInt32 ViewportID   = Parent->GetID("##viewport");
-            const Text   ViewportName = String<64>::Print<"{0}/##viewport_{1:08X}">(Panel::Atelier::kTitle, ViewportID);
+            const Text   ViewportName = String<64>::Print<"{0}/##viewport_{1:08X}">(Atelier::kTitle, ViewportID);
 
             if (const ConstPtr<ImGuiWindow> Child = ImGui::FindWindowByName(ViewportName.GetData()); Child)
             {
@@ -410,7 +451,7 @@ namespace Tileon::Editor
                         mContext->GetController().Resize(Width, Height);
                     }
                 }
-                mContext->GetController().Present();
+                mContext->GetController().Present(Delta);
             }
         }
     }
@@ -418,41 +459,48 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Application::DrawLoading(Ref<UI::Composer> Composer)
+    void Application::DrawLoading()
     {
         ConstRetainer<Content::Service> Content = GetService<Content::Service>();
 
-        // Center a fixed-size, loading window.
-        ImGui::SetNextWindowSize(ImVec2(300, 70), ImGuiCond_Always);
-        Composer.SetNextWindowPos(Composer.GetViewportCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowBgAlpha(0.88f);
+        // Animated ellipsis based on elapsed time.
+        const UInt32 Dots  = static_cast<UInt32>(Toolkit::Composer::GetTime() * 3.0) % 4;
+        const UInt32 Count = Content->GetPending();
+
+        auto Ellipsis = Dots == 0 ? "" : Dots == 1 ? "." : Dots == 2 ? ".." : "...";
+
+        const String<128> Label = String<128>::Print<"Loading{0} ({1} asset{2} remaining)">(
+            Ellipsis, Count, Count == 1u ? "" : "s");
+
+        DrawNotice("##Loading", Label);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Application::DrawNotice(Text Identifier, Text Label)
+    {
+        Toolkit::Composer::SetNextWindowSize(300.0f, 70.0f, ImGuiCond_Always);
+        Toolkit::Composer::SetNextWindowPos(Toolkit::Composer::GetViewportCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        Toolkit::Composer::SetNextWindowBgAlpha(0.88f);
 
         constexpr ImGuiWindowFlags kFlags =
-            ImGuiWindowFlags_NoDecoration          |
-            ImGuiWindowFlags_NoInputs              |
-            ImGuiWindowFlags_NoNav                 |
-            ImGuiWindowFlags_NoMove                |
-            ImGuiWindowFlags_NoBringToFrontOnFocus |
+            ImGuiWindowFlags_NoDecoration |
+            ImGuiWindowFlags_NoInputs     |
+            ImGuiWindowFlags_NoNav        |
+            ImGuiWindowFlags_NoMove       |
             ImGuiWindowFlags_NoDocking;
 
-        if (ImGui::Begin("##Loading", nullptr, kFlags))
+        if (Toolkit::Composer::Begin(Identifier, kFlags))
         {
-            // Animated ellipsis based on elapsed time.
-            const UInt32 Dots  = static_cast<UInt32>(ImGui::GetTime() * 3.0) % 4;
-            const UInt32 Count = Content->GetPending();
-
-            auto Ellipsis = Dots == 0 ? "" : Dots == 1 ? "." : Dots == 2 ? ".." : "...";
-
-            const Text Label = String<128>::Print<"Loading{0} ({1} asset{2} remaining)">(Ellipsis, Count, Count == 1u ? "" : "s");
-
-            // Center the text inside the window.
-            const ImVec2 Available = ImGui::GetContentRegionAvail();
-            const ImVec2 TextSize  = ImGui::CalcTextSize(Label.GetData());
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (Available.x - TextSize.x) * 0.5f);
-            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (Available.y - TextSize.y) * 0.5f);
-            ImGui::TextUnformatted(Label.GetData());
+            const ImVec2 Available = Toolkit::Composer::GetContentRegionAvail();
+            const ImVec2 TextSize  = Toolkit::Composer::CalcTextSize(Label);
+            Toolkit::Composer::BringWindowToFront();
+            Toolkit::Composer::SetCursorPosX(Toolkit::Composer::GetCursorPosX() + (Available.x - TextSize.x) * 0.5f);
+            Toolkit::Composer::SetCursorPosY(Toolkit::Composer::GetCursorPosY() + (Available.y - TextSize.y) * 0.5f);
+            Toolkit::Composer::TextUnformatted(Label);
         }
-        ImGui::End();
+        Toolkit::Composer::End();
     }
 }
 

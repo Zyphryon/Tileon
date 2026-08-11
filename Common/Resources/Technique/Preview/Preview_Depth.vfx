@@ -1,0 +1,39 @@
+{
+  "Properties": {
+    "Depth": {
+      "Mask": false,
+      "Condition": "Always"
+    },
+    "Rasterizer": {
+      "Cull": "None"
+    },
+    "Layout": {
+      "Attributes": [],
+      "Primitive": "TriangleList"
+    }
+  },
+  "Signature": {
+    "Uniforms": [
+      { "Frequency": "Pass", "Name": "Inverse", "Type": "Float4", "Count": 4 }
+    ],
+    "Textures": [
+      { "Name": "Source", "Frequency": "Pass" }
+    ],
+    "Samplers": [
+      { "Name": "Source", "Frequency": "Pass", "Filter": "NearestMipNearest" }
+    ]
+  },
+  "Program": {
+    "Defines": ["PREVIEW_DEPTH", "ELEVATION_SCALE=8.0", "PREVIEW_MIDGROUND=0.10", "PREVIEW_BACKGROUND=0.90"],
+    "Shaders": {
+      "HLSL": [
+        { "Path": "Preview.hlsl", "Stage": "Vertex"   },
+        { "Path": "Preview.hlsl", "Stage": "Fragment" }
+      ],
+      "GLSL": [
+        { "Path": "Preview.glsl", "Stage": "Vertex"   },
+        { "Path": "Preview.glsl", "Stage": "Fragment" }
+      ]
+    }
+  }
+}

@@ -11,7 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Repository.hpp"
-#include "Component/State/Lifecycle.hpp"
+#include "Component/Lifecycle.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -19,17 +19,6 @@
 
 namespace Tileon
 {
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    static Bool IsOverridable(Scene::Entity Component)  // TODO: Core
-    {
-        const Scene::Entity::Handle Handle = Component.GetHandle();
-
-        return !Handle.has(flecs::OnInstantiate, flecs::Inherit)
-            && !Handle.has(flecs::OnInstantiate, flecs::DontInherit);
-    }
-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -47,21 +36,21 @@ namespace Tileon
 
         Content.Read(kManifestUri, [this](Filesystem::Result Result, Blob Data)
         {
-            GetService<Job::Service>().Submit(Job::Lane::Main, [this, Result, Data = Move(Data)] mutable
+            GetService<Job::Service>().Dispatch(Job::Lane::Main, [this, Result, Data = Move(Data)] mutable
             {
                 LoadManifest(Result, Move(Data));
             });
         });
         Content.Read(kArchetypeUri, [this](Filesystem::Result Result, Blob Data)
         {
-            GetService<Job::Service>().Submit(Job::Lane::Main, [this, Result, Data = Move(Data)] mutable
+            GetService<Job::Service>().Dispatch(Job::Lane::Main, [this, Result, Data = Move(Data)] mutable
             {
                 LoadArchetypeDatabase(Result, Move(Data));
             });
         });
         Content.Read(kTerrainUri, [this](Filesystem::Result Result, Blob Data)
         {
-            GetService<Job::Service>().Submit(Job::Lane::Main, [this, Result, Data = Move(Data)] mutable
+            GetService<Job::Service>().Dispatch(Job::Lane::Main, [this, Result, Data = Move(Data)] mutable
             {
                 LoadTerrainDatabase(Result, Move(Data));
             });
@@ -130,12 +119,12 @@ namespace Tileon
                 Instance.Add<Dispose>();
             });
 
-            Ref<Scene::Service> Scene = GetService<Scene::Service>();
+            Ptr<Scene::Service> Scene = AddressOf(GetService<Scene::Service>());
 
-            Parent.Children([&Scene, Part](Scene::Entity Instance)
+            Parent.Children([Scene, Part](Scene::Entity Instance)
             {
-                Scene.CreateEntity()
-                    .SetName(Part.GetName())
+                Scene->CreateEntity()
+                    .SetAlias(Part.GetAlias())
                     .SetArchetype(Part.GetEntity())
                     .Attach(Instance, Scene::Hierarchy::Fixed);
             });
@@ -160,12 +149,10 @@ namespace Tileon
                 {
                     Base.GetEntity().Each([Instance](Scene::Entity Component)
                     {
-                        // TODO: Fix Flecs IsPair
-                        if (ecs_id_is_pair(Component.GetID()) || !IsOverridable(Component) || Instance.Owns(Component))
+                        if (!Component.IsPair() && Component.IsOverridable() && !Instance.Owns(Component))
                         {
-                            return;
+                            Instance.Add(Component);
                         }
-                        Instance.Add(Component);
                     });
                 }
                 Instance.Add<Stale>();

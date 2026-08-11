@@ -12,6 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+#include "Projection.hpp"
 #include "Tileon.World/Placement.hpp"
 #include <Zyphryon.Math/Motion/Tween.hpp>
 #include <Zyphryon.Math/Geometry/Rect.hpp>
@@ -29,51 +30,54 @@ namespace Tileon
     public:
 
         /// \brief The delay duration for camera movements and zoom transitions, in seconds.
-        static constexpr Real32 kDelay   = 0.25f;
+        static constexpr Real32 kDelay        = 0.25f;
 
         /// \brief The minimum zoom value, representing the furthest the camera can zoom in.
-        static constexpr Real32 kMinZoom = 0.125f;
+        static constexpr Real32 kMinZoom      = 0.125f;
 
         /// \brief The maximum zoom value, representing the furthest the camera can zoom out.
-        static constexpr Real32 kMaxZoom = 16.0f;
+        static constexpr Real32 kMaxZoom      = 16.0f;
 
-        /// \brief Enumerates the different camera modes available for rendering the world.
-        enum class Mode
-        {
-            Ortho,      ///< Uses an orthographic projection, where objects maintain their size regardless of distance.
-            Isometric,  ///< Uses an isometric projection, where objects are rendered with a fixed angle.
-        };
+        /// \brief The greatest height the view keeps, in tiles.
+        static constexpr Real32 kMaxElevation = 64.0f;
+
+        /// \brief The depth the world begins at, reserving the range in front of it for content drawn over it.
+        static constexpr Real32 kMinDepth     = 0.10f;
+
+        /// \brief The depth the world ends at, reserving the range behind it for content drawn under it.
+        static constexpr Real32 kMaxDepth     = 0.90f;
 
     public:
 
         /// \brief Constructs it with default camera settings.
         Director();
 
-        /// \brief Updates the camera's state, applying any active tweens or transitions.
+        /// \brief Advances any active position and zoom transitions.
         ///
         /// \param Delta The time delta since the last update, in seconds.
-        /// \return `true` if the camera's state was updated, `false` otherwise
-        Bool Tick(Real64 Delta);
+        void Tick(Real64 Delta);
 
-        /// \brief Sets the camera mode.
+        /// \brief Brings the camera matrices and the frustum and screen rectangles up to date.
         ///
-        /// \param Mode The camera mode to set.
-        ZY_INLINE void SetMode(Mode Mode)
-        {
-            if (mMode != Mode)
-            {
-                mMode = Mode;
+        /// \return `true` if anything changed since the previous refresh, `false` otherwise.
+        Bool Compute();
 
-                SetViewport(mViewport.GetX(), mViewport.GetY());
-            }
+        /// \brief Sets how the world axes project onto the screen.
+        ///
+        /// \param Projection The projection to view the world through.
+        ZY_INLINE void SetProjection(ConstRef<Projection> Projection)
+        {
+            mProjection = Projection;
+
+            SetViewport(mViewport.GetX(), mViewport.GetY());
         }
 
-        /// \brief Gets the current camera mode.
+        /// \brief Gets how the world axes project onto the screen.
         ///
-        /// \return The current camera mode.
-        ZY_INLINE Mode GetMode() const
+        /// \return The projection the world is viewed through.
+        ZY_INLINE ConstRef<Projection> GetProjection() const
         {
-            return mMode;
+            return mProjection;
         }
 
         /// \brief Sets the pixel density of the camera's viewport.
@@ -117,10 +121,9 @@ namespace Tileon
             // Update the camera's position to the new placement.
             mPosition = Placement::Clamp(Position);
 
-            // Apply only the sub-region offset to the camera to avoid floating-point precision loss.
-            mCamera.SetTranslation(
-                Snap(mPosition.GetOffsetX()),
-                Snap(mPosition.GetOffsetY()));
+            // Apply only the sub-region offset to the camera to avoid floating-point precision loss, snapped
+            // to the pixel grid so a placement set outright lands where a transition one would.
+            mCamera.SetTranslation(Snap(mPosition.GetOffsetX()), 0.0f, Snap(mPosition.GetOffsetY()));
         }
 
         /// \brief Gets the current placement of the camera.
@@ -233,6 +236,16 @@ namespace Tileon
             return mCamera.GetViewProjectionInverse();
         }
 
+        /// \brief Checks whether a world-space volume covers any of the screen.
+        ///
+        /// \param Volume The absolute world-space volume to test.
+        /// \return `true` when any part of the volume is on screen, `false` otherwise.
+        ZY_INLINE Bool IsVisible(ConstRef<IntBox> Volume) const
+        {
+            const IntVector3 Base = IntVector3::FromXZ(IntVector2(mPosition.GetBaseX(), mPosition.GetBaseY()));
+            return mProjection.Project(Volume - Base).Test(mScreen);
+        }
+
         /// \brief Gets the current frustum of the camera's view in logical units (e.g., world units).
         ///
         /// \return The current frustum of the camera's view.
@@ -241,18 +254,15 @@ namespace Tileon
             return mFrustum;
         }
 
-        /// \brief Converts screen pixel coordinates to world coordinates.
+        /// \brief Converts a world-space offset into the screen-space offset it projects to.
         ///
-        /// \param Pixel The screen pixel coordinates to convert, where (0, 0) is the top-left corner of the viewport.
-        /// \return The corresponding world coordinates, including region coordinates and sub-region offset.
-        ZY_INLINE Placement GetWorldCoordinates(Vector2 Pixel) const
+        /// \param World The world-space offset to project.
+        /// \return The corresponding offset in screen pixels.
+        ZY_INLINE Vector2 GetScreenDirection(Vector3 World) const
         {
             const Graphic::Viewport Viewport(0, 0, mViewport.GetX(), mViewport.GetY());
 
-            const Vector2 Tile(Pixel.GetX() / mDensity, Pixel.GetY() / mDensity);
-            const Vector2 Local = mCamera.GetWorldCoordinates<Render::Camera::Origin::Northwest>(Tile, Viewport);
-
-            return Placement::Clamp(Placement(mPosition.GetRegionX(), mPosition.GetRegionY(), Local.GetX(), Local.GetY()));
+            return mCamera.GetScreenDirection<Render::Camera::Origin::Northwest>(World, Viewport) * mDensity;
         }
 
         /// \brief Converts world coordinates to screen pixel coordinates.
@@ -263,12 +273,29 @@ namespace Tileon
         {
             const Graphic::Viewport Viewport(0, 0, mViewport.GetX(), mViewport.GetY());
 
-            const Vector2 Local(
-                static_cast<Real32>(World.GetAbsoluteX() - mPosition.GetBaseX()),
-                static_cast<Real32>(World.GetAbsoluteY() - mPosition.GetBaseY()));
+            const Vector3 Local = Vector3::FromXZ(
+                Vector2(static_cast<Real32>(World.GetAbsoluteX() - mPosition.GetBaseX()),
+                        static_cast<Real32>(World.GetAbsoluteY() - mPosition.GetBaseY())));
 
-            const Vector2 Tile = mCamera.GetScreenCoordinates<Render::Camera::Origin::Northwest>(Local, Viewport);
-            return Tile * mDensity;
+            const Vector3 Tile = mCamera.GetScreenCoordinates<Render::Camera::Origin::Northwest>(Local, Viewport);
+            return Vector2(Tile.GetX(), Tile.GetY()) * mDensity;
+        }
+
+        /// \brief Converts screen pixel coordinates to world coordinates.
+        ///
+        /// \param Pixel The screen pixel coordinates to convert, where (0, 0) is the top-left corner of the viewport.
+        /// \return The corresponding world coordinates, including region coordinates and sub-region offset.
+        ZY_INLINE Placement GetWorldCoordinates(Vector2 Pixel) const
+        {
+            const Graphic::Viewport Viewport(0, 0, mViewport.GetX(), mViewport.GetY());
+
+            const Vector3 Tile(Pixel.GetX() / mDensity, Pixel.GetY() / mDensity, 0.0f);
+            const Vector3 Local = mCamera.GetWorldCoordinates<Render::Camera::Origin::Northwest>(Tile, Viewport);
+
+            const Vector3 Step   = mProjection.GetPickDirection();
+            const Vector2 Ground = (Local - Step * (Local.GetY() / Step.GetY())).GetXZ();
+
+            return Placement::Clamp(Placement(mPosition.GetRegionX(), mPosition.GetRegionY(), Ground.GetX(), Ground.GetY()));
         }
 
     private:
@@ -292,10 +319,11 @@ namespace Tileon
         Render::Camera   mCamera;
         Real32           mZoom;
         Vector2          mViewport;
-        Mode             mMode;
+        Projection       mProjection;
         UInt16           mDensity;
         IntRect          mFrustum;
         Placement        mPosition;
+        Rect             mScreen;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

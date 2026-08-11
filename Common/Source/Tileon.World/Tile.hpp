@@ -9,6 +9,12 @@
 #pragma once
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// [  HEADER  ]
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#include <Zyphryon.Math/Vector2.hpp>
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -26,16 +32,29 @@ namespace Tileon
             Detail,     ///< The detail layer of the tile, representing additional terrain features or variations.
         };
 
+        /// \brief Define where the art of a layer is anchored, in whole tiles along each axis.
+        using Offset = AnyVector2<UInt8>;
+
+        /// \brief Represents what a single layer of a tile draws.
+        struct Unit final
+        {
+            /// The unique identifier for the terrain type of the layer.
+            UInt16 Handle;
+
+            /// Where the terrain's art is anchored.
+            Offset Offset;
+        };
+
     public:
 
-        /// \brief Sets the properties of a specific layer in the tile.
+        /// \brief Sets the terrain a specific layer of the tile shows.
         ///
         /// \param Type   The type of layer to set.
         /// \param Handle The unique identifier for the terrain type of the layer.
-        /// \param Weight The weight of the layer, used for multi-span terrains.
-        ZY_INLINE void SetLayer(Layer Type, UInt16 Handle, UInt16 Weight)
+        /// \param Offset The alignment offset, zero to follow the lattice the world defines.
+        ZY_INLINE void SetLayer(Layer Type, UInt16 Handle, Offset Offset)
         {
-            mLayers[Enum::Cast(Type)] = Unit(Handle, Weight);
+            mLayers[Enum::Cast(Type)] = Unit(Handle, Offset);
         }
 
         /// \brief Gets the unique identifier for the terrain type of a specific layer in the tile.
@@ -47,26 +66,28 @@ namespace Tileon
             return mLayers[Enum::Cast(Type)].Handle;
         }
 
-        /// \brief Gets the weight of a specific layer in the tile, used for multi-span terrains.
+        /// \brief Gets where the art of a specific layer of the tile is anchored.
         ///
-        /// \param Type The type of layer to retrieve the weight for.
-        /// \return The weight of the specified layer.
-        ZY_INLINE UInt16 GetWeight(Layer Type) const
+        /// \param Type The type of layer to retrieve the offset of.
+        /// \return The alignment offset.
+        ZY_INLINE Offset GetOffset(Layer Type) const
         {
-            return mLayers[Enum::Cast(Type)].Weight;
+            return mLayers[Enum::Cast(Type)].Offset;
         }
 
-    private:
+    public:
 
-        /// \brief Represents a single layer unit within the tile.
-        struct Unit final
+        /// \brief Reduces an anchor into the period of a motif.
+        ///
+        /// \param Anchor The anchor, in whole tiles.
+        /// \param Period The motif's period, in whole tiles.
+        /// \return The anchor along each axis, always inside the period.
+        ZY_INLINE static IntVector2 Align(IntVector2 Anchor, IntVector2 Period)
         {
-            /// \brief The unique identifier for the terrain type of this layer unit.
-            UInt16 Handle;
-
-            /// \brief The weight of the layer unit, used for multi-span terrains.
-            UInt16 Weight;
-        };
+            const SInt32 X = Anchor.GetX() % Period.GetX();
+            const SInt32 Y = Anchor.GetY() % Period.GetY();
+            return IntVector2(X < 0 ? X + Period.GetX() : X, Y < 0 ? Y + Period.GetY() : Y);
+        }
 
     private:
 

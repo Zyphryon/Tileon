@@ -141,4 +141,3 @@ namespace Tileon::Editor
         mutable JsonObject mObject;
     };
 }
-

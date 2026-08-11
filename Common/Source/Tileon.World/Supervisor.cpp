@@ -160,7 +160,7 @@ namespace Tileon
 
     Scene::Entity Supervisor::LoadRegion(SInt16 RegionX, SInt16 RegionY, Bool CreateIfMissing)
     {
-        const Str32 Name = Str32::Print<"Region.{0}_{1}">(RegionX, RegionY);
+        const Str32 Name = Str32::Print<"Region {0}.{1}">(RegionX, RegionY);
 
         if (Scene::Entity Actor = GetService<Scene::Service>().GetEntity(Name); Actor.IsValid())
         {
@@ -172,8 +172,8 @@ namespace Tileon
 
             Actor = GetService<Scene::Service>().CreateEntity();
             Actor.SetName(Name);
-            Actor.SetAlias(Str32::Print<"Region {0} {1}">(RegionX, RegionY));
-            Actor.Emplace<Transform>(Matrix3x2::Identity(), IntVector2(RegionX * Region::kTilesPerX, RegionY * Region::kTilesPerY));
+            Actor.SetAlias(Name);
+            Actor.Emplace<Transform>(IntVector3(RegionX * Region::kTilesPerX, 0.0f, RegionY * Region::kTilesPerY));
 
             const auto OnResult = [this, Handle = Actor.GetID(), RegionX, RegionY, CreateIfMissing](Filesystem::Result Result, Blob File)
             {
@@ -199,6 +199,61 @@ namespace Tileon
 
         Str Filename = Str::Print<kRegionFilename>(Region.GetX(), Region.GetY());
         GetService<Content::Service>().Write(Move(Filename), Output.Detach(), { });
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    Scene::Entity Supervisor::Migrate(Scene::Entity Actor, Ref<Pose> Pose)
+    {
+        const Scene::Entity Owner = Actor.GetParent();
+
+        if (!Owner.IsValid())
+        {
+            return Scene::Entity();
+        }
+
+        const ConstPtr<Region> Origin = Owner.TryGet<const Tileon::Region>();
+
+        if (!Origin)
+        {
+            return Scene::Entity();
+        }
+
+        // A pose is local to its region, so anything outside the region's own span belongs to a neighbour.
+        const Vector3 Position = Pose.GetTranslation();
+        const Vector2 Ground   = Position.GetXZ();
+        const Vector2 Distance = Vector2(
+            Floor(Ground.GetX() / static_cast<Real32>(Region::kTilesPerX)),
+            Floor(Ground.GetY() / static_cast<Real32>(Region::kTilesPerY)));
+
+        if (Distance.IsAlmostZero())
+        {
+            return Scene::Entity();
+        }
+
+        const Scene::Entity Target = GetRegion(
+            static_cast<SInt16>(Origin->GetX() + static_cast<SInt32>(Distance.GetX())),
+            static_cast<SInt16>(Origin->GetY() + static_cast<SInt32>(Distance.GetY())));
+
+        if (!Target.IsValid())
+        {
+            return Scene::Entity();
+        }
+
+        // Rebase the pose before re-parenting: outside a deferred scope the attach moves the entity to another
+        // table straight away, which would leave the reference pointing at the row it just vacated.
+        Pose.SetTranslation(Vector3(
+            Position.GetX() - Distance.GetX() * static_cast<Real32>(Region::kTilesPerX),
+            Position.GetY(),
+            Position.GetZ() - Distance.GetY() * static_cast<Real32>(Region::kTilesPerY)));
+
+        Actor.Attach(Target, Scene::Hierarchy::Open);
+
+        // Cascades Stale to all static children, making them Kinetic this frame.
+        Actor.Add<Stale>();
+
+        return Target;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -246,7 +301,7 @@ namespace Tileon
 
                 // Calculate which tight cells this loose cell belongs to
                 const IntRect TightCoords = IntRect::Intersection(
-                    Coordinate::GetCell<Base::Log(kHierarchyTightExtent)>(LooseCell.Boundaries), NewTightBoundaries);
+                    Coordinate::GetCell<Base::Log(kHierarchyTightExtent)>(LooseCell.Boundaries.GetXZ()), NewTightBoundaries);
 
                 for (SInt32 TightY = TightCoords.GetMinimumY(); TightY < TightCoords.GetMaximumY(); ++TightY)
                 {
@@ -278,15 +333,15 @@ namespace Tileon
             Ref<HierarchyLooseCell> Loose = mLooseRegistry[LooseKey];
 
             // Refresh loose cell boundaries based on contained entities.
-            const IntRect PreviousBoundaries = Loose.Refresh(Scene);
+            const IntBox PreviousBoundaries = Loose.Refresh(Scene);
 
             if (PreviousBoundaries != Loose.Boundaries)
             {
-                const IntRect OldestIntersect = GetTightCoordinates(PreviousBoundaries);
+                const IntRect OldestIntersect = GetTightCoordinates(PreviousBoundaries.GetXZ());
 
                 if (!Loose.Entities.IsEmpty())
                 {
-                    const IntRect NewestIntersect = GetTightCoordinates(Loose.Boundaries);
+                    const IntRect NewestIntersect = GetTightCoordinates(Loose.Boundaries.GetXZ());
 
                     // Remove from tight cells that are no longer overlapped.
                     IntRect::ForEachRectDiff(OldestIntersect, NewestIntersect, [&](IntRect Difference)
@@ -397,9 +452,9 @@ namespace Tileon
 
     void Supervisor::DetachEntityOnCell(Scene::Entity Root)
     {
-        if (const ConstPtr<Bound> Bound = Root.TryGet<Tileon::Bound>())
+        if (const ConstPtr<Enclosure> Enclosure = Root.TryGet<Tileon::Enclosure>())
         {
-            RemoveEntityOnCell(Root, Bound->GetRect().GetCenter());
+            RemoveEntityOnCell(Root, Enclosure->GetBox().GetCenter().GetXZ());
         }
 
         Root.Children([this](Scene::Entity Child)
@@ -413,28 +468,41 @@ namespace Tileon
 
     void Supervisor::OnAsyncLoad(Filesystem::Result Result, Blob File, UInt64 Handle, SInt16 RegionX, SInt16 RegionY, Bool CreateIfMissing)
     {
-        const Scene::Entity Actor = GetService<Scene::Service>().GetEntity(Handle);
-
         if (Result == Filesystem::Result::Success && File)
         {
-            GetService<Job::Service>().Submit(Job::Lane::Main, [this, Actor, File = Move(File)]
+            GetService<Job::Service>().Dispatch(Job::Lane::Main, [this, Handle, File = Move(File)]
             {
-                Reader Input(File.GetData(), File.GetSize());
-                GetService<Scene::Service>().LoadHierarchy(Input, Actor);
+                const Scene::Entity Actor = GetService<Scene::Service>().GetEntity(Handle);
+
+                if (Actor.IsAlive())
+                {
+                    Reader Input(File.GetData(), File.GetSize());
+                    GetService<Scene::Service>().LoadHierarchy(Input, Actor);
+                }
             });
         }
         else if (CreateIfMissing)
         {
-            GetService<Job::Service>().Submit(Job::Lane::Main, [Actor, RegionX, RegionY]
+            GetService<Job::Service>().Dispatch(Job::Lane::Main, [this, Handle, RegionX, RegionY]
             {
-                Actor.Emplace<Region>(RegionX, RegionY);
+                const Scene::Entity Actor = GetService<Scene::Service>().GetEntity(Handle);
+
+                if (Actor.IsAlive())
+                {
+                    Actor.Emplace<Region>(RegionX, RegionY);
+                }
             });
         }
         else
         {
-            GetService<Job::Service>().Submit(Job::Lane::Main, [Actor]
+            GetService<Job::Service>().Dispatch(Job::Lane::Main, [this, Handle]
             {
-                Actor.Destruct();
+                const Scene::Entity Actor = GetService<Scene::Service>().GetEntity(Handle);
+
+                if (Actor.IsAlive())
+                {
+                    Actor.Destruct();
+                }
             });
         }
     }

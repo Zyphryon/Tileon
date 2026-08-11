@@ -13,7 +13,6 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Context.hpp"
-#include "Tileon.Editor/UI/Composer.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -82,9 +81,7 @@ namespace Tileon::Editor
         }
 
         /// \brief Called when the activity is active and should perform its drawing operations.
-        ///
-        /// \param Composer The composer to use for drawing the activity's user interface.
-        virtual void OnDraw(Ref<UI::Composer> Composer)
+        virtual void OnDraw()
         {
         }
 

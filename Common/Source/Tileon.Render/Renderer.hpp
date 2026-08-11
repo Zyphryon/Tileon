@@ -13,7 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Director.hpp"
-#include "Stage/Debug.hpp"
+#include "Pipeline/Preview.hpp"
 #include "Tileset.hpp"
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Engine/Locator.hpp>
@@ -47,10 +47,11 @@ namespace Tileon
             Geometry,       ///< The geometry phase, where the scene's geometry is rendered to the G-buffer.
             Light,          ///< The lighting phase, where lighting calculations are performed using the G-buffer data.
             Composite,      ///< The composition phase, where the final image is composed by combining previous phases.
+            Preview,        ///< The preview phase, which resolves one raw buffer onto the view (editor only).
         };
 
         /// \brief Represents the diagnostic overlays the pipeline can draw over the composed scene.
-        using Debug = Stage::Debug::Property;
+        using Debug = Pipeline::Preview::Property;
 
     public:
 
@@ -80,6 +81,11 @@ namespace Tileon
         /// \param Height The new height of the viewport in pixels.
         void Resize(UInt16 Width, UInt16 Height);
 
+        /// \brief Sets how many pixels of art the project maps onto one world unit.
+        ///
+        /// \param Density The pixel density sprites are measured against.
+        void SetDensity(UInt16 Density);
+
         /// \brief Executes the rendering pipeline to compose the scene.
         ///
         /// \param Director The director that holds projection and view information for rendering.
@@ -94,10 +100,18 @@ namespace Tileon
             return mRenderer.GetTarget(Enum::Cast(Type)).GetTexture();
         }
 
-        /// \brief Restricts the pipeline to the phases required to produce the specified target.
+        /// \brief Selects the target the preview phase resolves onto the view.
         ///
         /// \param Type The target the pipeline must produce, every phase past its producer is skipped.
         void SetOutput(Target Type);
+
+        /// \brief Gets the target the preview phase resolves onto the view.
+        ///
+        /// \return The target the pipeline currently produces.
+        ZY_INLINE Target GetOutput() const
+        {
+            return mOutput;
+        }
 
         /// \brief Changes the state of a specific diagnostic overlay.
         ///
@@ -105,7 +119,10 @@ namespace Tileon
         /// \param Enable `true` to set the overlay, `false` to clear it.
         ZY_INLINE void SetProperty(Debug Mask, Bool Enable)
         {
-            mDebug->SetProperty(Mask, Enable);
+            if (mPreview)
+            {
+                mPreview->SetProperty(Mask, Enable);
+            }
         }
 
         /// \brief Checks if a specific diagnostic overlay is enabled.
@@ -114,7 +131,7 @@ namespace Tileon
         /// \return `true` if the overlay is enabled, `false` otherwise.
         ZY_INLINE Bool HasProperty(Debug Mask) const
         {
-            return mDebug->HasProperty(Mask);
+            return mPreview && mPreview->HasProperty(Mask);
         }
 
     private:
@@ -135,10 +152,10 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Render::Graph     mRenderer;
-        Tileset           mTileset;
-        Ptr<Stage::Debug> mDebug;
-        Target            mOutput;
-        Bool              mImmediate;
+        Render::Graph          mRenderer;
+        Tileset                mTileset;
+        Ptr<Pipeline::Preview> mPreview;
+        Target                 mOutput;
+        Bool                   mImmediate;
     };
 }

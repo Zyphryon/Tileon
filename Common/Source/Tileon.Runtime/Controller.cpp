@@ -26,7 +26,6 @@ namespace Tileon
           mWorld    { Host },
           mRenderer { Host, Immediate }
     {
-        OnRegister(GetService<Scene::Service>());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -47,6 +46,7 @@ namespace Tileon
         mDirector.SetViewport(Width / static_cast<Real32>(Density), Height / static_cast<Real32>(Density));
 
         // Resize the renderer to match the display dimensions specified in the configuration.
+        mRenderer.SetDensity(Density);
         mRenderer.Resize(Width, Height);
     }
 
@@ -91,28 +91,19 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Controller::Present()
+    void Controller::Present(Real64 Delta)
     {
+        ZY_PROFILE_SCOPE("Tileon::Present");
+
+        mDirector.Tick(Delta);
+
+        if (mDirector.Compute())
+        {
+            const IntRect Frustum = Coordinate::GetRegionCell(mDirector.GetFrustum());
+
+            mWorld.GetSupervisor().Navigate(Frustum.Expand(1));
+        }
+
         mRenderer.Present(mDirector);
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Controller::OnRegister(Ref<Scene::Service> Scene)
-    {
-        // System to update the camera's position and view based on the director's state.
-        Scene.CreateSystem<Scene::DSL::In<const Scene::Clock>>(
-            "Controller::UpdateVisibility",
-            EcsOnLoad,
-            Scene::Execution::Immediate,
-            [this](ConstRef<Scene::Clock> Clock)
-            {
-                if (mDirector.Tick(Clock.GetDelta()))
-                {
-                    const IntRect Frustum = Coordinate::GetRegionCell(mDirector.GetFrustum());
-                    mWorld.GetSupervisor().Navigate(Frustum.Expand(1));
-                }
-            });
     }
 }

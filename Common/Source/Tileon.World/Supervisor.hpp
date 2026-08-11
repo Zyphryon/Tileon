@@ -15,6 +15,7 @@
 #include "Coordinate.hpp"
 #include "Component.hpp"
 #include <Zyphryon.Content/Service.hpp>
+#include <Zyphryon.Math/Geometry/Ray.hpp>
 #include <Zyphryon.Scene/Service.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -86,12 +87,19 @@ namespace Tileon
         /// \param Actor The region entity to save.
         void SaveRegion(Scene::Entity Actor);
 
+        /// \brief Moves an entity into the region its pose now falls in, rebasing the pose to keep it in place.
+        ///
+        /// \param Actor The entity to migrate, whose parent must be the region it currently belongs to.
+        /// \param Pose  The entity's region-local pose, rebased onto the new region when the migration happens.
+        /// \return The region the entity moved into, or an invalid entity when it stayed where it was.
+        Scene::Entity Migrate(Scene::Entity Actor, Ref<Pose> Pose);
+
         /// \brief Queries over entities located within the spatial nodes intersecting the specified hitbox.
         ///
         /// \param Hitbox   The area to query for intersecting entities.
         /// \param Callback The callback function to apply to each entity that intersects the hitbox.
         template<typename Function>
-        ZY_INLINE void QueryEach(IntRect Hitbox, AnyRef<Function> Callback)
+        ZY_INLINE void QueryEach(IntBox Hitbox, AnyRef<Function> Callback)
         {
             ForEachEntity(Hitbox, Callback);
         }
@@ -102,81 +110,45 @@ namespace Tileon
         /// \param Predicate The condition function to apply to each entity that intersects the hitbox.
         /// \return `true` if any entity satisfies the condition, `false` otherwise.
         template<typename Function>
-        ZY_INLINE Bool QueryAnyOf(IntRect Hitbox, AnyRef<Function> Predicate)
+        ZY_INLINE Bool QueryAnyOf(IntBox Hitbox, AnyRef<Function> Predicate)
         {
             return AnyOfEntity(Hitbox, Predicate);
         }
 
-        /// \brief Queries the entity within the specified hitbox that the cursor most likely intends to pick.
+        /// \brief Queries every entity a ray meets, in no particular order.
         ///
-        /// \param Hitbox The area to query for intersecting entities.
-        /// \param Point  The precise world-space point the cursor is targeting, in tile units.
-        /// \param Band   The distance band within which two origins count as equally close.
-        /// \param Bias   The Footprint ratio (0..1) below which a smaller entity outranks a larger one outright.
-        /// \return The best-matching entity that intersects the hitbox, or an empty entity if none are found.
-        ZY_INLINE Scene::Entity QueryFrontmost(IntRect Hitbox, Vector2 Point, Real32 Band = 0.25f, Real32 Bias = 0.75f)
+        /// \param Ray      The ray to cast, in absolute world coordinates.
+        /// \param Limit    The furthest distance along the ray to consider.
+        /// \param Callback Invoked with the entity and the distance to it, for every entity the ray meets.
+        template<typename Function>
+        ZY_INLINE void QueryRay(ConstRef<Ray> Ray, Real32 Limit, AnyRef<Function> Callback)
         {
-            Scene::Entity Result;
-            Real32        BestDistance = 0.0f;
-            SInt32        BestFront    = INT32_MIN;
-            Real32        BestArea     = 0.0f;
+            const Vector3 Start = Ray.GetOrigin();
+            const Vector3 Stop  = Ray.GetPoint(Limit);
+            const IntBox  Swept = Box::Enclose<SInt32>(Box(Vector3::Min(Start, Stop), Vector3::Max(Start, Stop)));
 
-            ForEachEntity(Hitbox, [&](Scene::Entity Actor)
+            ForEachEntity(Swept, [&](Scene::Entity Actor)
             {
-                const IntRect AABB = Actor.Get<Bound>().GetRect();
-
-                // Skip anything flagged unpickable.
-                if (!AABB.Test(Hitbox) || Actor.Has<Unpickable>())
+                if (Actor.Has<Unpickable>())
                 {
                     return;
                 }
 
-                Vector2 Origin;
+                const ConstPtr<Enclosure> Enclosure = Actor.TryGet<const Tileon::Enclosure>();
 
-                if (const ConstPtr<Transform> Transform = Actor.TryGet<const Tileon::Transform>())
+                if (!Enclosure)
                 {
-                    Origin = Transform->GetWorldspace().GetTranslation() + Vector2(Transform->GetOrigin());
-                }
-                else
-                {
-                    Origin = Vector2(
-                        AABB.GetMinimumX() + AABB.GetMaximumX(),
-                        AABB.GetMinimumY() + AABB.GetMaximumY()) * 0.5f;
+                    return;
                 }
 
-                const Real32 Distance = Point.GetDistanceSquared(Origin);
-                const SInt32 Front    = AABB.GetMaximumY();
-                const Real32 Area     = static_cast<Real32>(AABB.GetArea());
+                const IntBox AABB = Enclosure->GetBox();
+                const Box    Volume(Vector3(AABB.GetMinimum()), Vector3(AABB.GetMaximum()));
 
-                Bool Better;
-
-                if (!Result.IsValid())
+                if (Real32 Distance; Ray::Intersects(Ray, Volume, Distance, Limit))
                 {
-                    Better = true;
-                }
-                else if (Area < BestArea * Bias)        // meaningfully smaller -> prefer it
-                {
-                    Better = true;
-                }
-                else if (BestArea < Area * Bias)        // meaningfully larger -> keep the smaller one
-                {
-                    Better = false;
-                }
-                else                                    // comparable size -> closest origin, then frontmost
-                {
-                    const Bool Closer = Distance < BestDistance - Band;
-                    Better = Closer || (Abs(Distance - BestDistance) <= Band && Front > BestFront);
-                }
-
-                if (Better)
-                {
-                    Result       = Actor;
-                    BestDistance = Distance;
-                    BestFront    = Front;
-                    BestArea     = Area;
+                    Callback(Actor, Distance);
                 }
             });
-            return Result;
         }
 
         /// \brief Updates the hierarchy, refreshing dirty cells and recalculating boundaries as needed.
@@ -202,7 +174,7 @@ namespace Tileon
             Atomic<Bool> Dirty;
 
             /// \brief The boundaries of the cell within the grid.
-            IntRect      Boundaries;
+            IntBox       Boundaries;
 
             /// \brief Flat array of cells in the region.
             Bag<UInt64>  Entities;
@@ -228,33 +200,33 @@ namespace Tileon
             ///
             /// \param Scene The scene service to access entity data.
             /// \return The previous boundaries before the refresh.
-            ZY_INLINE IntRect Refresh(Ref<Scene::Service> Scene)
+            ZY_INLINE IntBox Refresh(Ref<Scene::Service> Scene)
             {
-                const IntRect Previous = Boundaries;
+                const IntBox Previous = Boundaries;
 
                 if (Dirty)
                 {
                     if (Entities.IsEmpty())
                     {
-                        Boundaries = IntRect::Zero();
+                        Boundaries = IntBox::Zero();
                     }
                     else
                     {
-                        IntRect AABB(INT32_MAX, INT32_MAX, INT32_MIN, INT32_MIN);
-                        Bool    Bounded = false;
+                        IntBox AABB(INT32_MAX, INT32_MAX, INT32_MAX, INT32_MIN, INT32_MIN, INT32_MIN);
+                        Bool   Bounded = false;
 
                         ForEach([&](UInt64 ID)
                         {
                             const Scene::Entity Actor = Scene.GetEntity(ID);
                             ZY_ASSERT(Actor.IsValid(), "Loose cell contains a dangling entity id");
 
-                            if (Actor.Has<Bound>())
+                            if (Actor.Has<Enclosure>())
                             {
-                                AABB    = IntRect::Union(AABB, Actor.Get<Bound>().GetRect());
+                                AABB    = IntBox::Union(AABB, Actor.Get<Enclosure>().GetBox());
                                 Bounded = true;
                             }
                         });
-                        Boundaries = Bounded ? AABB : IntRect::Zero();
+                        Boundaries = Bounded ? AABB : IntBox::Zero();
                     }
                     Dirty = false;
                 }
@@ -411,18 +383,18 @@ namespace Tileon
 
         /// \brief Iterates over entities located within the spatial nodes intersecting the specified hitbox.
         ///
-        /// \param Volume The area to query for intersecting entities.
+        /// \param Volume The volume to query for intersecting entities.
         /// \param Action The function invoked for each candidate entity.
         template<typename Function>
-        ZY_INLINE void ForEachEntity(IntRect Volume, AnyRef<Function> Action)
+        ZY_INLINE void ForEachEntity(IntBox Volume, AnyRef<Function> Action)
         {
             Ref<Scene::Service> Scene = GetService<Scene::Service>();
 
             thread_local Bag<UInt32> LooseAlreadyProcessed;
             LooseAlreadyProcessed.Clear();
 
-            // Iterate all tight cells within the specified volume.
-            ForEachTightCell(GetTightCoordinates(Volume), [&](ConstRef<HierarchyTightCell> TightCell)
+            // Walk the grid over the query's ground footprint, then reject per cell on the full volume.
+            ForEachTightCell(GetTightCoordinates(Volume.GetXZ()), [&](ConstRef<HierarchyTightCell> TightCell)
             {
                 TightCell.ForEach([&](UInt32 LooseKey)
                 {
@@ -434,8 +406,8 @@ namespace Tileon
 
                     ConstRef<HierarchyLooseCell> LooseCell = mLooseRegistry[LooseKey];
 
-                    // Early reject if the loose cell AABB does not intersect the query.
-                    if (IntRect::Intersection(Volume, LooseCell.Boundaries).IsAlmostZero())
+                    // Early reject if the loose cell volume does not intersect the query.
+                    if (!IntBox::Overlaps(Volume, LooseCell.Boundaries))
                     {
                         return;
                     }
@@ -451,19 +423,19 @@ namespace Tileon
 
         /// \brief Checks if any entity intersects the specified hitbox satisfies a given condition.
         ///
-        /// \param Volume    The area to query for intersecting entities.
+        /// \param Volume    The volume to query for intersecting entities.
         /// \param Predicate The condition function to apply to each entity that intersects the hitbox.
         /// \return `true` if any entity satisfies the condition, `false` otherwise.
         template<typename Function>
-        ZY_INLINE Bool AnyOfEntity(IntRect Volume, AnyRef<Function> Predicate)
+        ZY_INLINE Bool AnyOfEntity(IntBox Volume, AnyRef<Function> Predicate)
         {
             Ref<Scene::Service> Scene = GetService<Scene::Service>();
 
             thread_local Bag<UInt32> LooseAlreadyProcessed;
             LooseAlreadyProcessed.Clear();
 
-            // Iterate all tight cells within the specified volume.
-            return AnyOfTightCell(GetTightCoordinates(Volume), [&](ConstRef<HierarchyTightCell> TightCell)
+            // Walk the grid over the query's ground footprint, then reject per cell on the full volume.
+            return AnyOfTightCell(GetTightCoordinates(Volume.GetXZ()), [&](ConstRef<HierarchyTightCell> TightCell)
             {
                 return TightCell.AnyOf([&](UInt32 LooseKey)
                 {
@@ -475,8 +447,8 @@ namespace Tileon
 
                     ConstRef<HierarchyLooseCell> LooseCell = mLooseRegistry[LooseKey];
 
-                    // Early reject if the loose cell AABB does not intersect the query.
-                    if (IntRect::Intersection(Volume, LooseCell.Boundaries).IsAlmostZero())
+                    // Early reject if the loose cell volume does not intersect the query.
+                    if (!IntBox::Overlaps(Volume, LooseCell.Boundaries))
                     {
                         return false;
                     }
@@ -582,7 +554,7 @@ namespace Tileon
 
         /// \brief Handles asynchronous load result of a \ref Region.
         ///
-        /// \param Result         The result of the asynchronous load operation.
+        /// \param Result          The result of the asynchronous load operation.
         /// \param File            The loaded file blob.
         /// \param Handle          The handle of the entity associated with the load operation.
         /// \param RegionX         The X coordinate of the region.

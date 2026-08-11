@@ -14,7 +14,7 @@
 
 #include "Motif.hpp"
 #include <Zyphryon.Content/Service.hpp>
-#include <Zyphryon.Graphic/Material.hpp>
+#include <Zyphryon.Graphic/Image.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -22,7 +22,7 @@
 
 namespace Tileon
 {
-    /// \brief Represents a tileset that manages the rendering data for different terrains in the world.
+    /// \brief Holds the art every terrain in the world draws with.
     class Tileset final : public Engine::Locator<Content::Service>
     {
     public:
@@ -30,23 +30,48 @@ namespace Tileon
         /// \brief The maximum number of motif a tileset can hold (must match the limit in repository).
         static constexpr UInt32 kLimit    = 1'024;
 
-        /// \brief The filename of the tileset data file.
-        static constexpr Text   kFilename = "Resources://Data/Tileset.bin";
+        /// \brief The filename of the baked arrays, one per distinct frame extent the tileset holds.
+        static constexpr Symbol kAtlas    = "Resources://Material/Tileset.{0}.tex";
 
-        /// \brief Defines a glyph structure that represents the visual representation of a motif.
+        /// \brief The filename of the tileset data file.
+        static constexpr Symbol kFilename = "Resources://Data/Tileset.bin";
+
+        /// \brief Names the run of slices a bake wrote a motif's frames into.
+        struct Placement final
+        {
+            /// The unique identifier of the motif the run belongs to.
+            UInt16 Motif  = 0;
+
+            /// The first slice of the run.
+            UInt16 Base   = 0;
+
+            /// The number of slices the run occupies, one per animation frame.
+            UInt16 Frames = 0;
+
+            /// The baked array the run lives in.
+            UInt16 Atlas  = 0;
+        };
+
+        /// \brief Everything a draw needs to put a terrain on the ground.
         struct Glyph final
         {
-            /// \brief The cached material used for rendering the motif.
-            Retainer<Graphic::Material> Material;
+            /// The array texture holding the motif's frames, or zero until its bake arrives.
+            Graphic::Object Texture = 0;
 
-            /// \brief The active frame of the motif's animation, used for animated tiles.
-            Rect                        Crop = Rect::Zero();
+            /// The first slice of the run holding the motif's frames.
+            UInt16          Start   = 0;
 
-            /// \brief Copy of \c Motif::Span — tile extent in columns and rows.
-            IntVector2                  Span = IntVector2();
+            /// The slice the motif shows right now, which is \ref Start plus the active keyframe.
+            UInt16          Slice   = 0;
 
-            /// \brief Copy of \c Motif::Tint — color multiplier applied at render time.
-            IntColor8                   Tint = IntColor8::Transparent();
+            /// The number of slices the run occupies, one per animation frame.
+            UInt16          Count   = 0;
+
+            /// Copy of \c Motif::GetPeriod — the tiles the art covers before it repeats.
+            IntVector2      Period  = IntVector2::One();
+
+            /// Copy of \c Motif::GetTint — color multiplier applied at render time.
+            IntColor8       Tint    = IntColor8::Transparent();
         };
 
     public:
@@ -62,56 +87,91 @@ namespace Tileon
         /// \brief Saves the tile data to the tileset file.
         void Save();
 
-        /// \brief Updates the animations of the tileset based on the elapsed time.
+        /// \brief Checks whether a bake is on its way in and has yet to be bound to the motifs it covers.
         ///
-        /// \param Time The elapsed time since the last update, in seconds.
+        /// \return `true` while a baked array is still loading, `false` otherwise.
+        ZY_INLINE Bool IsLoading() const
+        {
+            for (ConstRef<Retainer<Graphic::Image>> Atlas : mAtlases)
+            {
+                if (!Atlas || !Atlas->HasFinished())
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// \brief Advances every motif's animation, and binds any bake that has finished arriving.
+        ///
+        /// \param Time The absolute time of the scene, in seconds.
         void Tick(Real64 Time);
 
-        /// \brief Preloads all motifs in the tileset, building their glyph caches.
+        /// \brief Rebuilds the glyph of every motif the tileset holds.
         void Preload();
 
-        /// \brief Refreshes the glyph cache for a single motif.
+        /// \brief Rebuilds the glyph of a single motif, dropping whatever run it was bound to.
         ///
-        /// \param Motif The motif whose glyph cache should be rebuilt.
+        /// \param Motif The motif whose glyph should be rebuilt.
         void Refresh(ConstRef<Motif> Motif);
 
-        /// \brief Clones the properties of one motif to another.
+        /// \brief Replaces the runs the motifs draw from, as a fresh bake laid them out.
         ///
-        /// \param Source The unique identifier of the source motif.
-        /// \param Target The unique identifier of the target motif.
+        /// \param Placements The run every motif the bake covered was written into.
+        void Rebind(AnyRef<Sequence<Placement>> Placements);
+
+        /// \brief Copies the properties of one motif onto another.
+        ///
+        /// \param Source The unique identifier of the motif to copy from.
+        /// \param Target The unique identifier of the motif to copy onto.
         void Clone(UInt16 Source, UInt16 Target);
 
-        /// \brief Gets a reference to the motif associated with the specified terrain.
+        /// \brief Gets a reference to the motif of a terrain, authoring one when it has none.
         ///
-        /// \param ID The unique identifier of the terrain to retrieve.
-        /// \return A reference to the motif associated with the specified terrain.
+        /// \param ID The unique identifier of the terrain to retrieve the motif of.
+        /// \return A reference to the motif associated with the terrain.
         ZY_INLINE Ref<Motif> GetMotif(UInt16 ID)
         {
             if (!mRegistry.IsAllocated(ID))
             {
-                mRegistry.Acquire(ID, ID);
+                mRegistry.Acquire(ID, ID, IntVector2::One(), IntColor8::White());
             }
             return mRegistry[ID];
         }
 
-        ///\brief Gets a reference to the glyph associated with the specified motif.
+        /// \brief Gets the glyph a terrain draws with.
         ///
-        /// \param ID The unique identifier of the motif to retrieve the glyph for.
-        /// \return A reference to the glyph associated with the specified motif.
+        /// \param ID The unique identifier of the terrain to retrieve the glyph of.
+        /// \return A reference to the glyph associated with the terrain.
         ZY_INLINE ConstRef<Glyph> GetGlyph(UInt16 ID) const
         {
             return mGlyphs[ID];
         }
 
-        /// \brief Gets the revision of the glyph cache.
+        /// \brief Gets a writable reference to the glyph a terrain draws with.
         ///
-        /// \return A counter bumped on every glyph refresh, letting derived caches detect staleness.
-        ZY_INLINE UInt32 GetGeneration() const
+        /// \param ID The unique identifier of the terrain to retrieve the glyph of.
+        /// \return A reference to the glyph associated with the terrain.
+        ZY_INLINE Ref<Glyph> GetGlyph(UInt16 ID)
         {
-            return mGeneration;
+            return mGlyphs[ID];
+        }
+
+        /// \brief Gets the pool holding every motif the tileset knows.
+        ///
+        /// \return A reference to the motif pool, which only reports the identifiers a project authored.
+        ZY_INLINE ConstRef<Pool<Motif, kLimit>> GetRegistry() const
+        {
+            return mRegistry;
         }
 
     private:
+
+        /// \brief Requests the baked array each placement names, dropping whatever a previous bake left.
+        void Request();
+
+        /// \brief Hands every placed motif the run of slices the bake wrote its frames into.
+        void Update();
 
         /// \brief Loads the tileset database from file.
         void LoadDatabase(Filesystem::Result Result, Blob Data);
@@ -124,8 +184,10 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Pool<Motif, kLimit>  mRegistry;
-        Array<Glyph, kLimit> mGlyphs;
-        UInt32               mGeneration;
+        Pool<Motif, kLimit>                mRegistry;
+        Array<Glyph, kLimit>               mGlyphs;
+        Sequence<Placement>                mPlacements;
+        Sequence<Retainer<Graphic::Image>> mAtlases;
+        Bool                               mDirty;
     };
 }

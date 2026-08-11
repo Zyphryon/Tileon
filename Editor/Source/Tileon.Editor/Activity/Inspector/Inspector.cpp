@@ -1,0 +1,168 @@
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Copyright (C) 2025-2026 Tileon contributors (see AUTHORS.md)
+//
+// This work is licensed under the terms of the MIT license.
+//
+// For a copy, see <https://opensource.org/licenses/MIT>.
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// [  HEADER  ]
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#include "Inspector.hpp"
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// [   CODE   ]
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+namespace Tileon::Editor
+{
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    Inspector::Inspector(Ref<Context> Context)
+        : Activity   { Context, "Inspector", true },
+          mAssembler { Context }
+    {
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Inspector::OnDraw()
+    {
+        Toolkit::Composer::SetNextWindowSize(300, 500, ImGuiCond_FirstUseEver);
+
+        if (Toolkit::Composer::Begin(GetTitle(), mVisible))
+        {
+            constexpr Real32 kFooterHeight = 40.0f;
+
+            // The selection can be destroyed from elsewhere while it is still being pointed at.
+            const Scene::Entity Actor = GetContext().GetScene().GetEntity(GetContext().GetInteger("Selection.Entity"));
+            const Bool          Alive = Actor.IsValid() && Actor.IsAlive();
+
+            if (Alive)
+            {
+                DrawHeader(Actor);
+                Toolkit::Composer::Separator();
+            }
+
+            Toolkit::Composer::BeginChild("##body", ImVec2(0, -kFooterHeight - Toolkit::Composer::GetStyle().ItemSpacing.y), ImGuiChildFlags_Borders);
+
+            if (Alive)
+            {
+                DrawBody(Actor);
+            }
+            else
+            {
+                DrawEmptyPanel("No entity selected");
+            }
+            Toolkit::Composer::EndChild();
+
+            Toolkit::Composer::BeginChild("##footer", ImVec2(0, kFooterHeight));
+
+            if (Alive)
+            {
+                DrawFooter(Actor);
+            }
+            Toolkit::Composer::EndChild();
+        }
+        Toolkit::Composer::End();
+
+        // The browser is modal, so it is drawn outside the window that hosts the fields which opened it.
+        mAssembler.DrawSelector();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Inspector::DrawHeader(Scene::Entity Actor)
+    {
+        Toolkit::Composer::Field("ID");
+        Toolkit::Composer::Label("{0:016X}", Actor.GetID());
+        Toolkit::Composer::Spacing();
+
+        Toolkit::Composer::Field("Name");
+        Toolkit::Composer::SetNextItemWidth(-1.0f);
+        Toolkit::Composer::Label(Actor.GetName());
+        Toolkit::Composer::Spacing();
+
+        Toolkit::Composer::Field("Alias");
+        Toolkit::Composer::SetNextItemWidth(-1.0f);
+        Toolkit::Composer::InputText("##entity_alias", Actor.GetAlias(), [&](Text Value)
+        {
+            Actor.SetAlias(Value);
+        });
+        Toolkit::Composer::Spacing();
+
+        Toolkit::Composer::Field("Archetype");
+
+        if (const Scene::Entity Archetype = Actor.GetArchetype(); Archetype.IsValid())
+        {
+            Toolkit::Composer::Label("{0}", Archetype.GetAlias());
+        }
+        else
+        {
+            Toolkit::Composer::TextDisabled("None");
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Inspector::DrawBody(Scene::Entity Actor)
+    {
+        // Make the override-only nature explicit: a part's structure belongs to its archetype, not this instance.
+        if (Actor.GetParent(Scene::Hierarchy::Fixed).IsValid())
+        {
+            Toolkit::Composer::TextDisabled(ICON_FA_PUZZLE_PIECE "  Prefab part: structure is defined by its archetype");
+            Toolkit::Composer::Spacing();
+        }
+
+        Toolkit::Composer::Section("Components");
+
+        mAssembler.Draw(Actor);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Inspector::DrawFooter(Scene::Entity Actor)
+    {
+        if (Bool Awake = Actor.IsAwake(); Toolkit::Composer::Checkbox("Awake", Awake))
+        {
+            Awake ? Actor.Awake() : Actor.Sleep();
+        }
+
+        Toolkit::Composer::SameLine();
+
+        // A prefab part is owned by its archetype and a region owns its own load/unload lifecycle, so neither may
+        // be destroyed from here; only an independently-placed instance can be removed.
+        const Bool Destroyable = !Actor.GetParent(Scene::Hierarchy::Fixed).IsValid() && !Actor.Has<Region>();
+
+        Toolkit::Composer::BeginDisabled(!Destroyable);
+
+        if (Toolkit::Composer::Button(ICON_FA_TRASH "  Destroy") && Destroyable)
+        {
+            Actor.Add<Dispose>();
+
+            GetContext().SetInteger("Selection.Entity", 0);
+        }
+
+        Toolkit::Composer::EndDisabled();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Inspector::DrawEmptyPanel(Text Message)
+    {
+        const ImVec2 Available = Toolkit::Composer::GetContentRegionAvail();
+        const ImVec2 HintSize  = Toolkit::Composer::CalcTextSize(Message);
+
+        Toolkit::Composer::SetCursorPosX((Available.x - HintSize.x) * 0.5f);
+        Toolkit::Composer::SetCursorPosY((Available.y - HintSize.y) * 0.5f);
+        Toolkit::Composer::TextDisabled(Message);
+    }
+}

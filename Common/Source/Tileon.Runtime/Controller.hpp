@@ -57,8 +57,10 @@ namespace Tileon
         /// \param Height The new height of the viewport in pixels.
         void Resize(UInt16 Width, UInt16 Height);
 
-        /// \brief Presents the rendered scene to the display, executing the rendering pipeline.
-        void Present();
+        /// \brief Advances the camera, streams the regions it now sees, and executes the pipeline.
+        ///
+        /// \param Delta The unscaled time delta since the last frame, in seconds.
+        void Present(Real64 Delta);
 
         /// \brief Gets the world instance associated with the controller.
         ///
@@ -83,13 +85,6 @@ namespace Tileon
         {
             return mRenderer;
         }
-
-    private:
-
-        /// \brief Registers the controller with the specified scene service.
-        ///
-        /// \param Scene The scene service to register with.
-        void OnRegister(Ref<Scene::Service> Scene);
 
     private:
 

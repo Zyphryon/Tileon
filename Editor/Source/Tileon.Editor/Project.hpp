@@ -141,4 +141,3 @@ namespace Tileon::Editor
         UInt16 mDensity;
     };
 }
-

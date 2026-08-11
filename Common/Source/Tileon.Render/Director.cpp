@@ -22,23 +22,23 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Director::Director()
-        : mZoom    { 1.0f },
-          mMode    { Mode::Ortho },
-          mDensity { 32 }
+        : mZoom       { 1.0f },
+          mProjection { Projection::Ortho() },
+          mDensity    { 32 }
     {
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Director::Tick(Real64 Delta)
+    void Director::Tick(Real64 Delta)
     {
         // Ensure that the camera's position changes in discrete steps that align with the pixel grid.
         if (!mTweenPosition.IsComplete())
         {
             mPosition = mTweenPosition.Tick(Delta);
 
-            mCamera.SetTranslation(Snap(mPosition.GetOffsetX()), Snap(mPosition.GetOffsetY()));
+            mCamera.SetTranslation(Snap(mPosition.GetOffsetX()), 0.0f, Snap(mPosition.GetOffsetY()));
         }
 
         // Ensure that the zoom level changes in discrete steps that align with the pixel grid.
@@ -48,27 +48,38 @@ namespace Tileon
 
             SetViewport(mViewport.GetX(), mViewport.GetY());
         }
+    }
 
-        // Compute the camera's transformation and determine if it has changed since the last update.
-        const Bool Dirty = mCamera.Compute();
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        if (Dirty)
+    Bool Director::Compute()
+    {
+        if (!mCamera.Compute())
         {
-            const Real32 HalfWidth  = (mViewport.GetX() * 0.5f * mZoom);
-            const Real32 HalfHeight = (mViewport.GetY() * 0.5f * mZoom);
-
-            const Real64 AbsoluteX  = mPosition.GetAbsoluteX();
-            const Real64 AbsoluteY  = mPosition.GetAbsoluteY();
-
-            const Real32 FrustumHalfX = (mMode == Mode::Isometric) ? (HalfWidth * 0.5f + HalfHeight) : HalfWidth;
-            const Real32 FrustumHalfY = (mMode == Mode::Isometric) ? (HalfWidth * 0.5f + HalfHeight) : HalfHeight;
-
-            mFrustum.Set(Max(Floor(AbsoluteX - FrustumHalfX), Placement::kMinTileX),
-                         Max(Floor(AbsoluteY - FrustumHalfY), Placement::kMinTileY),
-                         Min( Ceil(AbsoluteX + FrustumHalfX), Placement::kMaxTileX),
-                         Min( Ceil(AbsoluteY + FrustumHalfY), Placement::kMaxTileY));
+            return false;
         }
-        return Dirty;
+
+        const Real32 HalfWidth  = (mViewport.GetX() * 0.5f * mZoom);
+        const Real32 HalfHeight = (mViewport.GetY() * 0.5f * mZoom);
+
+        const Real64 AbsoluteX  = mPosition.GetAbsoluteX();
+        const Real64 AbsoluteY  = mPosition.GetAbsoluteY();
+
+        const Vector2 Extent = mProjection.GetGroundExtent(Vector2(HalfWidth, HalfHeight));
+
+        mFrustum.Set(Max(Floor(AbsoluteX - Extent.GetX()), Placement::kMinTileX),
+                     Max(Floor(AbsoluteY - Extent.GetY()), Placement::kMinTileY),
+                     Min( Ceil(AbsoluteX + Extent.GetX()), Placement::kMaxTileX),
+                     Min( Ceil(AbsoluteY + Extent.GetY()), Placement::kMaxTileY));
+
+        const Vector2 Offset(mPosition.GetOffsetX(), mPosition.GetOffsetY());
+        const Vector2 Origin = mProjection.Project(Vector3::FromXZ(Offset));
+
+        mScreen.Set(Origin.GetX() - HalfWidth, Origin.GetY() - HalfHeight,
+                    Origin.GetX() + HalfWidth, Origin.GetY() + HalfHeight);
+
+        return true;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -80,17 +91,14 @@ namespace Tileon
 
         const Real32 HalfWidth  = (mViewport.GetX() * 0.5f) * mZoom;
         const Real32 HalfHeight = (mViewport.GetY() * 0.5f) * mZoom;
-        mCamera.SetOrthographic(-HalfWidth, HalfWidth, -HalfHeight, HalfHeight, 0.0f, 1.0f);
 
-        // Apply an additional shear transformation to the projection matrix if the camera is in isometric mode.
-        if (mMode == Mode::Isometric)
-        {
-            static const Matrix4x4 kIsometricShear(
-                Vector4( 1.0f, 0.5f, 0.0f, 0.0f),
-                Vector4(-1.0f, 0.5f, 0.0f, 0.0f),
-                Vector4::UnitZ(),
-                Vector4::UnitW());
-            mCamera.SetProjection(mCamera.GetProjection() * kIsometricShear);
-        }
+        // Depth reserves a band of the buffer so the layers either side of the world keep their own room.
+        const Vector2 Ground = mProjection.GetGroundExtent(Vector2(HalfWidth, HalfHeight));
+        const Real32  Extent = mProjection.GetDepthExtent(Ground, kMaxElevation);
+        const Real32  Span   = (2.0f * Extent) / (kMaxDepth - kMinDepth);
+        const Real32  Near   = -Extent - kMinDepth * Span;
+
+        mCamera.SetOrthographic(-HalfWidth, HalfWidth, -HalfHeight, HalfHeight, Near, Near + Span);
+        mCamera.SetProjection(mCamera.GetProjection() * mProjection.GetShear());
     }
 }

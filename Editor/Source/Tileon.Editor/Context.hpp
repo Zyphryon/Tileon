@@ -14,6 +14,7 @@
 
 #include "Tileon.Runtime/Controller.hpp"
 #include "Component/Registry.hpp"
+#include "Masonry/Forge.hpp"
 #include "Project.hpp"
 #include "Session.hpp"
 
@@ -36,6 +37,14 @@ namespace Tileon::Editor
 
         /// \brief Tears down the context, releasing any resources it holds.
         void Teardown();
+
+        /// \brief Requests every sheet the bake cuts from, reporting whether they have all settled.
+        ///
+        /// \return `true` once every sheet has settled, `false` while any is still loading.
+        Bool Prepare();
+
+        /// \brief Writes the project to disk, baking the tileset's arrays before its database names them.
+        void Commit();
 
         /// \brief Gets a reference to the scene service associated with the context.
         ///
@@ -117,6 +126,14 @@ namespace Tileon::Editor
             return mRegistry;
         }
 
+        /// \brief Gets a reference to the forge that authors the tileset.
+        ///
+        /// \return A reference to the forge associated with the context.
+        ZY_INLINE Ref<Masonry::Forge> GetForge()
+        {
+            return mForge;
+        }
+
     private:
 
         /// \brief Restores the persisted editor session for the current project, including the camera position.
@@ -130,8 +147,9 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Controller mController;
-        Project    mProject;
-        Registry   mRegistry;
+        Controller     mController;
+        Project        mProject;
+        Registry       mRegistry;
+        Masonry::Forge mForge;
     };
 }

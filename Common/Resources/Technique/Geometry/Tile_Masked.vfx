@@ -1,0 +1,51 @@
+{
+    "Properties": {
+        "Blend": {
+            "SrcColor": "One",
+            "DstColor": "Zero",
+            "SrcAlpha": "One",
+            "DstAlpha": "Zero"
+        },
+        "Depth": {
+            "Mask": true,
+            "Condition": "Less"
+        },
+        "Rasterizer": {
+            "Cull": "None"
+        },
+        "Layout": {
+            "Attributes": [
+                [0, "SInt16x2",     0,  0, 1],
+                [1, "UInt8x4",      0,  4, 1],
+                [2, "UInt8x4",      0,  8, 1],
+                [3, "UInt32x1",     0, 12, 1],
+                [4, "UIntNorm8x4",  0, 16, 1]
+            ],
+            "Primitive": "TriangleStrip"
+        }
+    },
+    "Signature": {
+        "Textures": [
+            { "Name": "Albedo" }
+        ],
+        "Samplers": [
+            { "Name": "Albedo", "AddressModeU": "Repeat", "AddressModeV": "Repeat", "Filter": "PointMipLinear" }
+        ]
+    },
+    "Program": {
+        "Defines": [
+            "ENABLE_ALPHA_TEST",
+            "TILE_LAYER_BIAS=0.00001"
+        ],
+        "Shaders": {
+            "GLSL": [
+                { "Path": "Tile.glsl", "Stage": "Vertex" },
+                { "Path": "Tile.glsl", "Stage": "Fragment" }
+            ],
+            "HLSL": [
+                { "Path": "Tile.hlsl", "Stage": "Vertex" },
+                { "Path": "Tile.hlsl", "Stage": "Fragment" }
+            ]
+        }
+    }
+}
