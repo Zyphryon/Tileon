@@ -70,6 +70,12 @@ namespace Tileon::Editor
         /// \brief Draws the pause toggle and speed selector the scene simulation runs at.
         void DrawTimescaleToolbar();
 
+        /// \brief Outlines the entity a click would select.
+        ///
+        /// \param Lens  The viewport the outline is drawn into.
+        /// \param Actor The entity a click would take, if any.
+        void DrawSelectionHint(ConstRef<Lens> Lens, Scene::Entity Actor);
+
         /// \brief Draws the tile editing toolbar for the scene activity.
         void DrawTileToolbar();
 

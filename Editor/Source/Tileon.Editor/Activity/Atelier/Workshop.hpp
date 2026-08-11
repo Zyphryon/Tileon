@@ -228,6 +228,12 @@ namespace Tileon::Editor
         /// \brief Clears the entire selection.
         void ClearSelection();
 
+        /// \brief Resolves the entity a click at a placement would select.
+        ///
+        /// \param Placement The placement in the world to pick from.
+        /// \return The entity a click would take, or an invalid entity if there is none.
+        Scene::Entity ResolveSelection(Placement Placement);
+
         /// \brief Replaces the selection with whatever sits under the placement, or clears it when empty.
         ///
         /// \param Placement The placement in the world to pick from.

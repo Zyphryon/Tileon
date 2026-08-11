@@ -309,6 +309,64 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    void Atelier::DrawSelectionHint(ConstRef<Lens> Lens, Scene::Entity Actor)
+    {
+        if (!Actor.IsValid())
+        {
+            return;
+        }
+
+        const ConstPtr<Enclosure> Bounds = Actor.TryGet<const Enclosure>();
+
+        if (!Bounds)
+        {
+            return;
+        }
+
+        // The box is already in absolute tiles, so its corners project straight onto the ground and the
+        // height above it. An entity the spatial pass has not measured yet has nothing worth outlining.
+        const IntBox Volume = Bounds->GetBox();
+
+        if (Volume.IsAlmostZero())
+        {
+            return;
+        }
+
+        const IntVector3 Lower = Volume.GetMinimum();
+        const IntVector3 Upper = Volume.GetMaximum();
+
+        const auto Corner = [&](SInt32 X, SInt32 Z, SInt32 Y)
+        {
+            return Lens.Project(Placement(0, 0, X, Z), static_cast<Real32>(Y));
+        };
+
+        const ImVec2 Floor[4] =
+        {
+            Corner(Lower.GetX(), Lower.GetZ(), Lower.GetY()), Corner(Upper.GetX(), Lower.GetZ(), Lower.GetY()),
+            Corner(Upper.GetX(), Upper.GetZ(), Lower.GetY()), Corner(Lower.GetX(), Upper.GetZ(), Lower.GetY()),
+        };
+        const ImVec2 Roof[4] =
+        {
+            Corner(Lower.GetX(), Lower.GetZ(), Upper.GetY()), Corner(Upper.GetX(), Lower.GetZ(), Upper.GetY()),
+            Corner(Upper.GetX(), Upper.GetZ(), Upper.GetY()), Corner(Lower.GetX(), Upper.GetZ(), Upper.GetY()),
+        };
+
+        constexpr UInt32 kTint = IM_COL32(255, 200, 90, 210);
+
+        const Ptr<ImDrawList> List = Toolkit::Composer::GetWindowDrawList();
+
+        List->AddQuad(Floor[0], Floor[1], Floor[2], Floor[3], kTint, 1.5f);
+        List->AddQuad(Roof[0],  Roof[1],  Roof[2],  Roof[3],  kTint, 1.5f);
+
+        for (UInt32 Edge = 0; Edge < 4; ++Edge)
+        {
+            List->AddLine(Floor[Edge], Roof[Edge], kTint, 1.5f);
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void Atelier::DrawTimescaleToolbar()
     {
         Ref<Scene::Service> Scene = GetContext().GetScene();
@@ -784,6 +842,12 @@ namespace Tileon::Editor
                 if (Toolkit::Composer::IsKeyDown(ImGuiMod_Ctrl) && Toolkit::Composer::IsKeyPressed(ImGuiKey_V))
                 {
                     mWorkshop.Paste(Cursor);
+                }
+
+                // Outline what a click would take. A marquee decides by area instead, so it takes over.
+                if (!mMarquee)
+                {
+                    DrawSelectionHint(Lens, mWorkshop.ResolveSelection(Cursor));
                 }
 
                 // A press starts either a marquee or a plain click; the drag distance decides which on release.

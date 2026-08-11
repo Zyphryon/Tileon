@@ -379,13 +379,25 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    Scene::Entity Workshop::ResolveSelection(Placement Placement)
+    {
+        // A part belongs to the instance it was built into, so a pick always lands on that root.
+        if (const Scene::Entity Actor = PickEntity(Placement); Actor.IsValid())
+        {
+            return Scene::Entity::ResolveRecursively(Actor, Scene::Hierarchy::Fixed);
+        }
+        return Scene::Entity();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void Workshop::SelectSingle(Placement Placement)
     {
         mSelection.Clear();
 
-        if (Scene::Entity Actor = PickEntity(Placement); Actor.IsValid())
+        if (const Scene::Entity Actor = ResolveSelection(Placement); Actor.IsValid())
         {
-            Actor = Scene::Entity::ResolveRecursively(Actor, Scene::Hierarchy::Fixed);
             mSelection.Insert(Actor.GetID());
             SetPrimary(Actor.GetID());
         }
@@ -400,13 +412,12 @@ namespace Tileon::Editor
 
     void Workshop::SelectToggle(Placement Placement)
     {
-        Scene::Entity Actor = PickEntity(Placement);
+        const Scene::Entity Actor = ResolveSelection(Placement);
 
         if (!Actor.IsValid())
         {
             return;
         }
-        Actor = Scene::Entity::ResolveRecursively(Actor, Scene::Hierarchy::Fixed);
 
         if (const UInt64 ID = Actor.GetID(); mSelection.Contains(ID))
         {
