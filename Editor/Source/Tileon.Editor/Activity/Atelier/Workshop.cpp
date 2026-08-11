@@ -493,7 +493,7 @@ namespace Tileon::Editor
                 return;
             }
 
-            const IntVector2 Center = Volume->GetBox().GetCenter().GetXZ();
+            const IntVector2 Center = Volume->GetVolume().GetCenter().GetXZ();
             const ImVec2     Screen = Lens.Project(Placement(0, 0, static_cast<Real32>(Center.GetX()), static_cast<Real32>(Center.GetY())));
 
             if (Screen.x < Minimum.x || Screen.x > Maximum.x || Screen.y < Minimum.y || Screen.y > Maximum.y)

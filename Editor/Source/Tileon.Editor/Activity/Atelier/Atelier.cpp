@@ -26,7 +26,7 @@ namespace Tileon::Editor
         if (const ConstPtr<Tileon::Enclosure> Volume = Actor.TryGet<const Tileon::Enclosure>())
         {
             // The brackets wrap what the entity covers on screen, which is the projection's business now.
-            const IntRect Rect = Rect::Enclose<SInt32>(Projection.Project(Volume->GetBox()));
+            const IntRect Rect = Rect::Enclose<SInt32>(Projection.Project(Volume->GetVolume()));
 
             if (!Rect.IsAlmostZero())
             {
@@ -331,7 +331,7 @@ namespace Tileon::Editor
 
         // The box is already in absolute tiles, so its corners project straight onto the ground and the
         // height above it. An entity the spatial pass has not measured yet has nothing worth outlining.
-        const IntBox Volume = Bounds->GetBox();
+        const IntBox Volume = Bounds->GetVolume();
 
         if (Volume.IsAlmostZero())
         {

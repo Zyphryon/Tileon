@@ -180,15 +180,15 @@ namespace Tileon
                 const IntBox     NewestAABB   = Box::Enclose<SInt32>(WorldAABB) + Transform.GetOrigin();
                 const IntVector2 NewestCenter = NewestAABB.GetCenter().GetXZ();
 
-                if (ConstRef<IntBox> OlderAABB = Enclosure.GetBox(); OlderAABB.IsAlmostZero())
+                if (Enclosure.IsLinked())
                 {
-                    mSupervisor.InsertEntityOnCell(Actor, NewestCenter);
+                    mSupervisor.UpdateEntityOnCell(Actor, Enclosure, NewestCenter);
                 }
                 else
                 {
-                    mSupervisor.UpdateEntityOnCell(Actor, OlderAABB.GetCenter().GetXZ(), NewestCenter);
+                    mSupervisor.InsertEntityOnCell(Actor, Enclosure, NewestCenter);
                 }
-                Enclosure.SetBox(NewestAABB);
+                Enclosure.SetVolume(NewestAABB);
             });
 
         // System that optimizes the entity hierarchy.

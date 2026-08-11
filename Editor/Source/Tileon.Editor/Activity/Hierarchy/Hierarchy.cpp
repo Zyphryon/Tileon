@@ -180,7 +180,7 @@ namespace Tileon::Editor
         {
             if (const ConstPtr<Enclosure> Bounds = Actor.TryGet<const Enclosure>())
             {
-                if (const IntBox Volume = Bounds->GetBox(); !Volume.IsAlmostZero())
+                if (const IntBox Volume = Bounds->GetVolume(); !Volume.IsAlmostZero())
                 {
                     const IntVector2 Ground = Volume.GetCenter().GetXZ();
 

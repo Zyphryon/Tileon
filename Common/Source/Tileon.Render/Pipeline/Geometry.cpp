@@ -70,7 +70,7 @@ namespace Tileon::Pipeline
                 ConstRef<Appearance> Appearance,
                 ConstPtr<IntColor8>  Tint)
             {
-                if (const IntBox AABB = Enclosure.GetBox(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                if (const IntBox AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
@@ -87,7 +87,7 @@ namespace Tileon::Pipeline
                 ConstRef<Appearance> Appearance,
                 ConstPtr<IntColor8>  Tint)
             {
-                if (const IntBox AABB = Enclosure.GetBox(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                if (const IntBox AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
@@ -150,7 +150,7 @@ namespace Tileon::Pipeline
                 ConstRef<Appearance> Appearance,
                 ConstPtr<IntColor8>  Tint)
             {
-                if (const IntBox AABB = Enclosure.GetBox(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                if (const IntBox AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
@@ -167,7 +167,7 @@ namespace Tileon::Pipeline
                 ConstRef<Appearance> Appearance,
                 ConstPtr<IntColor8>  Tint)
             {
-                if (const IntBox AABB = Enclosure.GetBox(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                if (const IntBox AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
@@ -185,7 +185,7 @@ namespace Tileon::Pipeline
                 ConstPtr<IntColor8>  Tint,
                 ConstPtr<Decoration> Decoration)
             {
-                if (const IntBox AABB = Enclosure.GetBox(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                if (const IntBox AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 

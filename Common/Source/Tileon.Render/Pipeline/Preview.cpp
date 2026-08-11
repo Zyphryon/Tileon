@@ -113,7 +113,7 @@ namespace Tileon::Pipeline
         {
             mQrDrawGeometryBoundaries.Run([&](Scene::Entity Actor, ConstRef<Enclosure> Enclosure)
             {
-                if (const IntBox Volume = Enclosure.GetBox(); mDirector->IsVisible(Volume))
+                if (const IntBox Volume = Enclosure.GetVolume(); mDirector->IsVisible(Volume))
                 {
                     const IntBox  Local = Volume - Origin;
                     const Vector3 Lower(Local.GetMinimum());
@@ -127,7 +127,7 @@ namespace Tileon::Pipeline
         {
             mQrDrawLightBoundaries.Run([&](Scene::Entity Actor, ConstRef<Enclosure> Enclosure)
             {
-                if (const IntBox Volume = Enclosure.GetBox(); mDirector->IsVisible(Volume))
+                if (const IntBox Volume = Enclosure.GetVolume(); mDirector->IsVisible(Volume))
                 {
                     const IntBox Local = Volume - Origin;
                     const Vector3 Lower(Local.GetMinimum());

@@ -84,7 +84,7 @@ namespace Tileon::Pipeline
             ConstRef<Glowlight> Light,
             ConstPtr<IntColor8> Tint)
         {
-            if (const IntBox AABB = Enclosure.GetBox(); !AABB.IsAlmostZero() && !mDirector->IsVisible(AABB))
+            if (const IntBox AABB = Enclosure.GetVolume(); !AABB.IsAlmostZero() && !mDirector->IsVisible(AABB))
             {
                 return;
             }
@@ -106,7 +106,7 @@ namespace Tileon::Pipeline
             ConstRef<Spotlight> Light,
             ConstPtr<IntColor8> Tint)
         {
-            if (const IntBox AABB = Enclosure.GetBox(); !AABB.IsAlmostZero() && !mDirector->IsVisible(AABB))
+            if (const IntBox AABB = Enclosure.GetVolume(); !AABB.IsAlmostZero() && !mDirector->IsVisible(AABB))
             {
                 return;
             }

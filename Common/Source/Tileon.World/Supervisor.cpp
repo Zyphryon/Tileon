@@ -377,14 +377,14 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Supervisor::InsertEntityOnCell(Scene::Entity Actor, IntVector2 Center)
+    void Supervisor::InsertEntityOnCell(Scene::Entity Actor, Ref<Enclosure> Enclosure, IntVector2 Center)
     {
-        // Link entity to loose cell.
-        IntVector2 Loose = Center >> Base::Log(kHierarchyLooseExtent);
-        Loose.SetX(Clamp(Loose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
-        Loose.SetY(Clamp(Loose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
+        const IntVector2 Loose    = GetLooseCoordinate(Center);
+        const UInt32     LooseKey = GetKey(Loose.GetX(), Loose.GetY(), mLooseBoundaries);
 
-        const UInt32 LooseKey = GetKey(Loose.GetX(), Loose.GetY(), mLooseBoundaries);
+        // Link entity to loose cell, and remember the cell so it can be unfiled from the same one.
+        Enclosure.SetCell(Loose);
+
         if (!mLooseRegistry[LooseKey].Insert(Actor))
         {
             // Mark cell as dirty for next hierarchy update.
@@ -396,18 +396,16 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Supervisor::RemoveEntityOnCell(Scene::Entity Actor, IntVector2 Center)
+    void Supervisor::RemoveEntityOnCell(Scene::Entity Actor, Ref<Enclosure> Enclosure)
     {
-        // Unlink entity from loose cell.
-        IntVector2 Loose    = Center >> Base::Log(kHierarchyLooseExtent);
-        Loose.SetX(Clamp(Loose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
-        Loose.SetY(Clamp(Loose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
+        const IntVector2 Loose = Enclosure.GetCell();
 
-        const UInt32 LooseKey = GetKey(Loose.GetX(), Loose.GetY(), mLooseBoundaries);
+        Enclosure.SetCell(Enclosure::kUnlinked);
 
-        // The registry may not be sized yet (before the first Navigate) or may be torn down.
-        if (LooseKey < mLooseRegistry.GetSize())
+        if (mLooseBoundaries.Contains(Loose.GetX(), Loose.GetY()))
         {
+            const UInt32 LooseKey = GetKey(Loose.GetX(), Loose.GetY(), mLooseBoundaries);
+
             if (!mLooseRegistry[LooseKey].Remove(Actor))
             {
                 // Mark cell as dirty for next hierarchy update.
@@ -420,30 +418,25 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Supervisor::UpdateEntityOnCell(Scene::Entity Actor, IntVector2 OldestCenter, IntVector2 NewestCenter)
+    void Supervisor::UpdateEntityOnCell(Scene::Entity Actor, Ref<Enclosure> Enclosure, IntVector2 NewestCenter)
     {
-        IntVector2 OldLoose  = OldestCenter >> Base::Log(kHierarchyLooseExtent);
-        OldLoose.SetX(Clamp(OldLoose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
-        OldLoose.SetY(Clamp(OldLoose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
+        const IntVector2 Newest = GetLooseCoordinate(NewestCenter);
 
-        IntVector2 NewLoose  = NewestCenter >> Base::Log(kHierarchyLooseExtent);
-        NewLoose.SetX(Clamp(NewLoose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
-        NewLoose.SetY(Clamp(NewLoose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
-
-        if (OldLoose == NewLoose)
+        if (Newest == Enclosure.GetCell())
         {
-            const UInt32 LooseKey = GetKey(NewLoose.GetX(), NewLoose.GetY(), mLooseBoundaries);
-            if (!mLooseRegistry[LooseKey].Update())
+            const UInt32 NewestKey = GetKey(Newest.GetX(), Newest.GetY(), mLooseBoundaries);
+
+            if (!mLooseRegistry[NewestKey].Update())
             {
                 // Mark cell as dirty for next hierarchy update.
                 Guard Guard(mLooseMutex);
-                mLooseDirty.Append(LooseKey);
+                mLooseDirty.Append(NewestKey);
             }
         }
         else
         {
-            RemoveEntityOnCell(Actor, OldestCenter);
-            InsertEntityOnCell(Actor, NewestCenter);
+            RemoveEntityOnCell(Actor, Enclosure);
+            InsertEntityOnCell(Actor, Enclosure, NewestCenter);
         }
     }
 
@@ -452,9 +445,9 @@ namespace Tileon
 
     void Supervisor::DetachEntityOnCell(Scene::Entity Root)
     {
-        if (const ConstPtr<Enclosure> Enclosure = Root.TryGet<Tileon::Enclosure>())
+        if (const Ptr<Enclosure> Enclosure = Root.TryGet<Tileon::Enclosure>(); Enclosure && Enclosure->IsLinked())
         {
-            RemoveEntityOnCell(Root, Enclosure->GetBox().GetCenter().GetXZ());
+            RemoveEntityOnCell(Root, * Enclosure);
         }
 
         Root.Children([this](Scene::Entity Child)

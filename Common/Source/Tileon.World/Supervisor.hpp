@@ -141,7 +141,7 @@ namespace Tileon
                     return;
                 }
 
-                const IntBox AABB = Enclosure->GetBox();
+                const IntBox AABB = Enclosure->GetVolume();
                 const Box    Volume(Vector3(AABB.GetMinimum()), Vector3(AABB.GetMaximum()));
 
                 if (Real32 Distance; Ray::Intersects(Ray, Volume, Distance, Limit))
@@ -222,7 +222,7 @@ namespace Tileon
 
                             if (Actor.Has<Enclosure>())
                             {
-                                AABB    = IntBox::Union(AABB, Actor.Get<Enclosure>().GetBox());
+                                AABB    = IntBox::Union(AABB, Actor.Get<Enclosure>().GetVolume());
                                 Bounded = true;
                             }
                         });
@@ -528,24 +528,37 @@ namespace Tileon
             return IntRect::Intersection(Coordinate::GetCell<Base::Log(kHierarchyTightExtent)>(Volume), mTightBoundaries);
         }
 
-        /// \brief Inserts an entity into the appropriate cell based on its volume.
+        /// \brief Gets the loose cell a world position falls in, in world coordinates.
         ///
-        /// \param Actor  The entity to insert.
         /// \param Center The center coordinates of the entity's volume.
-        void InsertEntityOnCell(Scene::Entity Actor, IntVector2 Center);
+        /// \return The coordinates of the cell containing that position, clamped to what is loaded.
+        ZY_INLINE IntVector2 GetLooseCoordinate(IntVector2 Center) const
+        {
+            IntVector2 Loose = Center >> Base::Log(kHierarchyLooseExtent);
+            Loose.SetX(Clamp(Loose.GetX(), mLooseBoundaries.GetMinimumX(), mLooseBoundaries.GetMaximumX() - 1));
+            Loose.SetY(Clamp(Loose.GetY(), mLooseBoundaries.GetMinimumY(), mLooseBoundaries.GetMaximumY() - 1));
+            return Loose;
+        }
 
-        /// \brief Removes an entity from the appropriate cell based on its volume.
+        /// \brief Files an entity under the cell its volume falls in, and records which one on the enclosure.
         ///
-        /// \param Actor  The entity to remove.
-        /// \param Center The center coordinates of the entity's volume.
-        void RemoveEntityOnCell(Scene::Entity Actor, IntVector2 Center);
+        /// \param Actor     The entity to file.
+        /// \param Enclosure The entity's enclosure, which is given the cell it was filed under.
+        /// \param Center    The center coordinates of the entity's volume.
+        void InsertEntityOnCell(Scene::Entity Actor, Ref<Enclosure> Enclosure, IntVector2 Center);
 
-        /// \brief Updates an entity's position in the grid based on its old and new volumes.
+        /// \brief Unfiles an entity from the cell its enclosure was filed under.
         ///
-        /// \param Actor        The entity to update.
-        /// \param OldestCenter The previous center coordinates of the entity's volume before the update.
+        /// \param Actor     The entity to unfile.
+        /// \param Enclosure The entity's enclosure, which is left unlinked.
+        void RemoveEntityOnCell(Scene::Entity Actor, Ref<Enclosure> Enclosure);
+
+        /// \brief Moves an entity to the cell its new volume falls in, if that is a different one.
+        ///
+        /// \param Actor        The entity to move.
+        /// \param Enclosure    The entity's enclosure, which is given the cell it ends up under.
         /// \param NewestCenter The new center coordinates of the entity's volume after the update.
-        void UpdateEntityOnCell(Scene::Entity Actor, IntVector2 OldestCenter, IntVector2 NewestCenter);
+        void UpdateEntityOnCell(Scene::Entity Actor, Ref<Enclosure> Enclosure, IntVector2 NewestCenter);
 
         /// \brief Recursively unlinks an entity and all of its descendants from their spatial cells.
         ///
