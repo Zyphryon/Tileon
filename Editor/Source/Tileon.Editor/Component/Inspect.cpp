@@ -770,7 +770,7 @@ namespace Tileon::Editor
 
         ConstRetainer<::Render::Font> Font = Component.GetFont();
 
-        InspectAsset(Workspace, Actor, "Font", ".artery", Font ? Font->GetKey() : Content::Uri(),
+        InspectAsset(Workspace, Actor, "Font", ".fnt", Font ? Font->GetKey() : Content::Uri(),
             [&](AnyRef<Content::Uri> Path)
             {
                 Component.SetFont(Move(Path));
