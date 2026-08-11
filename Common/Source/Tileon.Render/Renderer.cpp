@@ -157,7 +157,7 @@ namespace Tileon
         // Geometry: rasterize the scene into the albedo and normal buffers, depth-tested.
         Ref<Pipeline::Geometry> Geometry = mRenderer.AddPass<Pipeline::Geometry>(Host, mTileset);
         Geometry.AddColor({ .Target = AddressOf(Albedo), .Tint = Color::Black() });
-        Geometry.AddColor({ .Target = AddressOf(Normal), .Tint = Color(0.5f, 1.0f, 0.5f, 128.0f / 255.0f) });
+        Geometry.AddColor({ .Target = AddressOf(Normal), .Tint = Color(0.5f, 1.0f, 0.5f, 1.0f) });
         Geometry.SetDepth({ .Target = AddressOf(Depth) });
 
         // Light: accumulates each light's contribution into the radiance buffer, sampling the normal buffer.

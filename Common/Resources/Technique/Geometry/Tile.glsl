@@ -89,7 +89,8 @@ void main()
     out_Albedo = v_Color * Texel;
 
     // A tile lies flat on the ground, so its normal is the world's up axis rather than the viewer's.
-    out_Normal = vec4(0.5, 1.0, 0.5, out_Albedo.a);
+    // The ground faces the sky and passes no light through, so it is solid in the opacity channel.
+    out_Normal = vec4(0.5, 1.0, 0.5, 1.0);
 }
 
 #endif // FRAGMENT_SHADER

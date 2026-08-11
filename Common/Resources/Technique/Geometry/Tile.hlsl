@@ -106,7 +106,8 @@ fs_Output main(fs_Input Input)
     Result.Albedo = Input.Color * Texel;
 
     // A tile lies flat on the ground, so its normal is the world's up axis rather than the viewer's.
-    Result.Normal = float4(0.5, 1.0, 0.5, Result.Albedo.a);
+    // The ground faces the sky and passes no light through, so it is solid in the opacity channel.
+    Result.Normal = float4(0.5, 1.0, 0.5, 1.0);
 
     return Result;
 }

@@ -125,8 +125,12 @@ void main()
     }
 
 #ifdef ENABLE_NORMAL_MAPPING
-    vec3  Normal     = normalize(texture(t_Normal, v_Probe.zw).rgb * 2.0 - 1.0);
-    float NormalDotL = max(dot(Normal, Incident), 0.0);
+    vec4  Surface    = texture(t_Normal, v_Probe.zw);
+    vec3  Normal     = normalize(Surface.rgb * 2.0 - 1.0);
+    float Lambert    = clamp(dot(Normal, Incident) / 1.0, 0.0, 1.0);
+
+    float Through    = max(dot(-Normal, Incident), 0.0) * (1.0 - Surface.a);
+    float NormalDotL = max(Lambert, Through);
 #else
     float NormalDotL = 1.0;
 #endif

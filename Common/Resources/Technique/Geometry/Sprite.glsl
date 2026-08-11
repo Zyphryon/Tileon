@@ -107,13 +107,28 @@ void main()
     out_Albedo = v_Color * Texel;
 
 #ifdef ENABLE_NORMAL_MAPPING
-    vec3 Tangent = normalize(texture(t_Normal, v_Texture).rgb * 2.0 - 1.0);
-    vec3 Normal  = normalize(Tangent.x * v_AxisX + Tangent.y * v_AxisY + Tangent.z * v_AxisZ);
+    vec4 Sampled = texture(t_Normal, v_Texture);
+    vec3 Tangent = normalize(Sampled.rgb * 2.0 - 1.0);
+    vec3 Normal  = normalize(Tangent.x * v_AxisX + Tangent.y * v_AxisY - Tangent.z * v_AxisZ);
 
     // The sprite plane faces +Z, so the tangent-space Z carries over to world space unchanged.
-    out_Normal = vec4(Normal * 0.5 + 0.5, out_Albedo.a);
+#if defined(ENABLE_TRANSLUCENCY)
+    float Opacity = Sampled.a;
+#elif defined(ENABLE_ALPHA_TEST)
+    float Opacity = 1.0;
 #else
-    out_Normal = vec4(0.5, 0.5, 1.0, out_Albedo.a);
+    float Opacity = out_Albedo.a;
+#endif
+
+    out_Normal = vec4(Normal * 0.5 + 0.5, Opacity);
+#else
+#if defined(ENABLE_ALPHA_TEST)
+    float Opacity = 1.0;
+#else
+    float Opacity = out_Albedo.a;
+#endif
+
+    out_Normal = vec4(0.5, 0.5, 0.0, Opacity);
 #endif
 }
 

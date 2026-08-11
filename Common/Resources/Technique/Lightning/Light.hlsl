@@ -131,8 +131,12 @@ float4 main(fs_Input Input) : SV_Target0
     clip(Attenuation - 0.001);
 
 #if defined(ENABLE_NORMAL_MAPPING)
-    const float3 Normal     = normalize(t_Normal.Sample(s_Normal, Input.Probe.zw).rgb * 2.0 - 1.0);
-    const float  NormalDotL = saturate(dot(Normal, Incident));
+    const float4 Surface    = t_Normal.Sample(s_Normal, Input.Probe.zw);
+    const float3 Normal     = normalize(Surface.rgb * 2.0 - 1.0);
+    const float  Lambert    = saturate(dot(Normal, Incident) / 1.0);
+
+    const float  Through    = saturate(dot(-Normal, Incident)) * (1.0 - Surface.a);
+    const float  NormalDotL = max(Lambert, Through);
 #else
     const float  NormalDotL = 1.0;
 #endif

@@ -603,29 +603,20 @@ namespace Tileon::Editor
         constexpr UInt32 kSpot = IM_COL32(160, 210, 255, 235);
         constexpr UInt32 kFoot = IM_COL32(255, 255, 255, 110);
 
-        mQrGlowlights.Run([&](ConstRef<Tileon::Transform> Transform, ConstRef<Tileon::Glowlight> Light)
+        mQrGlowlights.Run([&](ConstRef<Tileon::Transform> Transform, ConstRef<Tileon::Glowlight>)
         {
             const Vector3 World = Locate(Transform);
             const ImVec2  At    = Lens.Project(Placement::FromAbsolute(World.GetX(), World.GetZ()), World.GetY());
 
-            const ImVec2 Span   = Lens.Direction(Vector3(Light.GetRadius(), 0.0f, 0.0f));
-            const Real32 Radius = Sqrt(Span.x * Span.x + Span.y * Span.y);
-
-            List->AddCircle(At, Radius, IM_COL32(255, 225, 120, 90));
             DrawStem(At, World, kFoot);
             DrawIcon(At, ICON_FA_LIGHTBULB, kGlow);
         });
 
-        mQrSpotlights.Run([&](ConstRef<Tileon::Transform> Transform, ConstRef<Tileon::Spotlight> Light)
+        mQrSpotlights.Run([&](ConstRef<Tileon::Transform> Transform, ConstRef<Tileon::Spotlight>)
         {
             const Vector3 World = Locate(Transform);
             const ImVec2  At    = Lens.Project(Placement::FromAbsolute(World.GetX(), World.GetZ()), World.GetY());
 
-            const Vector3 Basis = Transform.GetWorldspace().GetBasisX();
-            const Vector3 Reach = Basis.IsAlmostZero() ? Vector3(0.0f) : Vector3::Normalize(Basis) * Light.GetRange();
-            const ImVec2  Aim   = Lens.Direction(Reach);
-
-            List->AddLine(At, ImVec2(At.x + Aim.x, At.y + Aim.y), IM_COL32(160, 210, 255, 120));
             DrawStem(At, World, kFoot);
             DrawIcon(At, ICON_FA_LIGHTBULB, kSpot);
         });

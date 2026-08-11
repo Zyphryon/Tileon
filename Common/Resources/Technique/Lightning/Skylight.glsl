@@ -39,7 +39,8 @@ layout(location = 0) out vec4 out_Color;
 
 void main()
 {
-    vec3 Normal = normalize(texture(t_Normal, v_Texture).rgb * 2.0 - 1.0);
+    vec4 Surface = texture(t_Normal, v_Texture);
+    vec3 Normal  = normalize(Surface.rgb * 2.0 - 1.0);
 
     // Hemisphere ambient
     float Weight = Normal.y * 0.5 + 0.5;
@@ -47,7 +48,10 @@ void main()
 
     // Directional
     vec3 SunDir = vec3(u_SunColor.w, u_SkyColor.w, u_GroundColor.w);
-    vec3 Sun    = u_SunColor.rgb * max(dot(Normal, normalize(SunDir)), 0.0);
+    vec3 Toward = normalize(SunDir);
+
+    float Facing = max(max(dot(Normal, Toward), 0.0), max(dot(-Normal, Toward), 0.0) * (1.0 - Surface.a));
+    vec3  Sun    = u_SunColor.rgb * Facing;
 
     out_Color = vec4((Ambient + Sun) * 0.5, 1.0);
 }

@@ -38,7 +38,8 @@
     "Program": {
         "Defines": [
             "ENABLE_ALPHA_TEST",
-            "ENABLE_NORMAL_MAPPING"
+            "ENABLE_NORMAL_MAPPING",
+            "ENABLE_TRANSLUCENCY"
         ],
         "Shaders": {
             "GLSL": [

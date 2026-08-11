@@ -117,12 +117,28 @@ fs_Output main(fs_Input Input)
     Result.Albedo = Input.Color * Texel;
 
 #ifdef ENABLE_NORMAL_MAPPING
-    float3 Tangent = normalize(t_Normal.Sample(s_Normal, Input.Texture).rgb * 2.0 - 1.0);
-    float3 Normal  = normalize(Tangent.x * Input.AxisX + Tangent.y * Input.AxisY + Tangent.z * Input.AxisZ);
+    float4 Sampled = t_Normal.Sample(s_Normal, Input.Texture);
+    float3 Tangent = normalize(Sampled.rgb * 2.0 - 1.0);
+    float3 Normal  = normalize(Tangent.x * Input.AxisX + Tangent.y * Input.AxisY - Tangent.z * Input.AxisZ);
 
-    Result.Normal = float4(Normal * 0.5 + 0.5, Result.Albedo.a);
+    // The sprite plane faces +Z, so the tangent-space Z carries over to world space unchanged.
+#if defined(ENABLE_TRANSLUCENCY)
+    const float Opacity = Sampled.a;
+#elif defined(ENABLE_ALPHA_TEST)
+    const float Opacity = 1.0;
 #else
-    Result.Normal = float4(0.5, 0.5, 1.0, Result.Albedo.a);
+    const float Opacity = Result.Albedo.a;
+#endif
+
+    Result.Normal = float4(Normal * 0.5 + 0.5, Opacity);
+#else
+#if defined(ENABLE_ALPHA_TEST)
+    const float Opacity = 1.0;
+#else
+    const float Opacity = Result.Albedo.a;
+#endif
+
+    Result.Normal = float4(0.5, 0.5, 0.0, Opacity);
 #endif
 
     return Result;

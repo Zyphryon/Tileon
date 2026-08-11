@@ -48,7 +48,8 @@ SamplerState s_Normal : register(s0);
 
 float4 main(fs_Input Input) : SV_Target0
 {
-    const float3 Normal = normalize(t_Normal.Sample(s_Normal, Input.Texture).rgb * 2.0 - 1.0);
+    const float4 Surface = t_Normal.Sample(s_Normal, Input.Texture);
+    const float3 Normal  = normalize(Surface.rgb * 2.0 - 1.0);
 
     // Hemisphere ambient
     const float  Weight  = Normal.y * 0.5 + 0.5;
@@ -56,7 +57,10 @@ float4 main(fs_Input Input) : SV_Target0
 
     // Directional
     const float3 SunDir = float3(u_SunColor.w, u_SkyColor.w, u_GroundColor.w);
-    const float3 Sun    = u_SunColor.rgb * saturate(dot(Normal, SunDir * rsqrt(dot(SunDir, SunDir))));
+    const float3 Toward = SunDir * rsqrt(dot(SunDir, SunDir));
+
+    const float  Facing = max(saturate(dot(Normal, Toward)), saturate(dot(-Normal, Toward)) * (1.0 - Surface.a));
+    const float3 Sun    = u_SunColor.rgb * Facing;
 
     return float4((Ambient + Sun) * 0.5, 1.0);
 }

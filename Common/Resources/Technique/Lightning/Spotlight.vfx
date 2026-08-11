@@ -34,7 +34,7 @@
       { "Name": "Depth",  "Frequency": "Pass" }
     ],
     "Samplers": [
-      { "Name": "Normal", "Frequency": "Pass", "Filter": "LinearMipLinear" },
+      { "Name": "Normal", "Frequency": "Pass", "Filter": "NearestMipNearest" },
       { "Name": "Depth",  "Frequency": "Pass", "Filter": "NearestMipNearest" }
     ]
   },
