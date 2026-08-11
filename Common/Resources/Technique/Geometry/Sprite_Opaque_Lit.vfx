@@ -31,8 +31,8 @@
             { "Name": "Normal" }
         ],
         "Samplers": [
-            { "Name": "Albedo" },
-            { "Name": "Normal" }
+            { "Name": "Albedo", "Filter": "PointMipLinear" },
+            { "Name": "Normal", "Filter": "PointMipLinear" }
         ]
     },
     "Program": {

@@ -67,6 +67,7 @@ namespace Tileon::Pipeline
             Sprite_Opaque,         ///< Technique for rendering opaque sprites without normal mapping.
             Sprite_Opaque_Lit,     ///< Technique for rendering opaque sprites with normal mapping.
             Sprite_Transparent,    ///< Technique for rendering transparent sprites without normal mapping.
+            Sprite_Transparent_Lit,///< Technique for rendering transparent sprites with normal mapping.
             Tile_Opaque,           ///< Technique for rendering the base layer, whose art covers the ground whole.
             Tile_Masked,           ///< Technique for rendering the layers above the base, whose art cuts out.
             Text,                  ///< Technique for rendering text glyphs from a font atlas.
@@ -110,7 +111,8 @@ namespace Tileon::Pipeline
 
         Scene::Query       mQrDrawOpaqueUnlitSprites;
         Scene::Query       mQrDrawOpaqueLitSprites;
-        Scene::Query       mQrDrawTransparentSprites;
+        Scene::Query       mQrDrawTransparentUnlitSprites;
+        Scene::Query       mQrDrawTransparentLitSprites;
         Scene::Query       mQrDrawTexts;
         Scene::Query       mQrDrawRegions;
     };

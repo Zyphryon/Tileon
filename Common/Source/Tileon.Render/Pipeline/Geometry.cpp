@@ -141,9 +141,26 @@ namespace Tileon::Pipeline
         {
             ZY_PROFILE_SCOPE("Pipeline::Geometry::Transparent");
 
-            // Draw transparent sprite entities.
+            // Draw transparent unlit sprite entities.
             mScribe.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Transparent)]);
-            mQrDrawTransparentSprites.Run<>([&](
+            mQrDrawTransparentUnlitSprites.Run<>([&](
+                ConstRef<Transform>  Transform,
+                ConstRef<Extent>     Extent,
+                ConstRef<Enclosure>  Enclosure,
+                ConstRef<Appearance> Appearance,
+                ConstPtr<IntColor8>  Tint)
+            {
+                if (const IntBox AABB = Enclosure.GetBox(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                {
+                    const Matrix4x3 Matrix = Transform.Rebase(Origin);
+
+                    mScribe.DrawSprite(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
+                }
+            });
+
+            // Draw transparent lit sprite entities.
+            mScribe.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Transparent_Lit)]);
+            mQrDrawTransparentLitSprites.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
                 ConstRef<Enclosure>  Enclosure,
@@ -357,10 +374,16 @@ namespace Tileon::Pipeline
             Scene::DSL::Not<Transparent, Unlit>
         >("Render::Geometry::DrawOpaqueLitSprites", Scene::Cache::Auto);
 
-        mQrDrawTransparentSprites = Scene.CreateQuery<
+        mQrDrawTransparentUnlitSprites = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
-            Scene::DSL::With<Transparent>
-        >("Render::Geometry::DrawTransparentSprites", Scene::Cache::Auto);
+            Scene::DSL::With<Transparent, Unlit>
+        >("Render::Geometry::DrawTransparentUnlitSprites", Scene::Cache::Auto);
+
+        mQrDrawTransparentLitSprites = Scene.CreateQuery<
+            Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
+            Scene::DSL::With<Transparent>,
+            Scene::DSL::Not<Unlit>
+        >("Render::Geometry::DrawTransparentLitSprites", Scene::Cache::Auto);
 
         mQrDrawTexts = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Enclosure, const Lettering, const Label, ConstPtr<IntColor8>, ConstPtr<Decoration>>

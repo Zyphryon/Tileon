@@ -27,13 +27,18 @@
     },
     "Signature": {
         "Textures": [
-            { "Name": "Albedo" }
+            { "Name": "Albedo" },
+            { "Name": "Normal" }
         ],
         "Samplers": [
-            { "Name": "Albedo", "Filter": "PointMipLinear" }
+            { "Name": "Albedo", "Filter": "PointMipLinear" },
+            { "Name": "Normal", "Filter": "PointMipLinear" }
         ]
     },
     "Program": {
+        "Defines": [
+            "ENABLE_NORMAL_MAPPING"
+        ],
         "Shaders": {
             "GLSL": [
                 { "Path": "Sprite.glsl", "Stage": "Vertex" },

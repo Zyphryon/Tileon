@@ -30,7 +30,7 @@
             { "Name": "Albedo" }
         ],
         "Samplers": [
-            { "Name": "Albedo" }
+            { "Name": "Albedo", "Filter": "PointMipLinear" }
         ]
     },
     "Program": {
