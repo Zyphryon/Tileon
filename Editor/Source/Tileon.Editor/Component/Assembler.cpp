@@ -141,6 +141,8 @@ namespace Tileon::Editor
                 if (Info->Inspect(Workspace, Actor, Actor.TryGet(Component)))
                 {
                     Actor.Notify(Component);
+
+                    Touch(Actor);
                 }
             }
             else
@@ -240,7 +242,24 @@ namespace Tileon::Editor
             break;
         }
 
+        Touch(Actor);
+
         mAction  = Action::None;
         mSubject = Scene::Entity();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Assembler::Touch(Scene::Entity Actor)
+    {
+        for (Scene::Entity Cursor = Actor; Cursor.IsValid(); Cursor = Cursor.GetParent())
+        {
+            if (Cursor.Has<Region>())
+            {
+                Cursor.Add<Persist>();
+                return;
+            }
+        }
     }
 }

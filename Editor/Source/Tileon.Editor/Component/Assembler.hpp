@@ -76,6 +76,11 @@ namespace Tileon::Editor
         /// \param Actor The entity to apply the change to.
         void Apply(Scene::Entity Actor);
 
+        /// \brief Marks the region an entity was placed in as needing a save.
+        ///
+        /// \param Actor The entity that was edited.
+        void Touch(Scene::Entity Actor);
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
