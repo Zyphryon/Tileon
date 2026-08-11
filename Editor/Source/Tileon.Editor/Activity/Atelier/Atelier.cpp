@@ -587,8 +587,21 @@ namespace Tileon::Editor
             List->AddText(ImVec2(At.x - Size.x * 0.5f, At.y - Size.y * 0.5f), Color, Icon.GetData());
         };
 
+        const auto DrawStem = [&](ImVec2 At, Vector3 World, UInt32 Color)
+        {
+            const ImVec2 Foot = Lens.Project(Placement::FromAbsolute(World.GetX(), World.GetZ()), 0.0f);
+
+            if (Abs(Foot.y - At.y) > 1.0f)
+            {
+                List->AddLine(At, Foot, Color);
+            }
+
+            List->AddCircleFilled(Foot, 2.0f, Color);
+        };
+
         constexpr UInt32 kGlow = IM_COL32(255, 225, 120, 235);
         constexpr UInt32 kSpot = IM_COL32(160, 210, 255, 235);
+        constexpr UInt32 kFoot = IM_COL32(255, 255, 255, 110);
 
         mQrGlowlights.Run([&](ConstRef<Tileon::Transform> Transform, ConstRef<Tileon::Glowlight> Light)
         {
@@ -599,6 +612,7 @@ namespace Tileon::Editor
             const Real32 Radius = Sqrt(Span.x * Span.x + Span.y * Span.y);
 
             List->AddCircle(At, Radius, IM_COL32(255, 225, 120, 90));
+            DrawStem(At, World, kFoot);
             DrawIcon(At, ICON_FA_LIGHTBULB, kGlow);
         });
 
@@ -612,6 +626,7 @@ namespace Tileon::Editor
             const ImVec2  Aim   = Lens.Direction(Reach);
 
             List->AddLine(At, ImVec2(At.x + Aim.x, At.y + Aim.y), IM_COL32(160, 210, 255, 120));
+            DrawStem(At, World, kFoot);
             DrawIcon(At, ICON_FA_LIGHTBULB, kSpot);
         });
     }
