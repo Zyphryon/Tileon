@@ -11,8 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Bakery.hpp"
-#include <Baker.hpp>
-#include <Importer/STBImporter.hpp>
+#include <Baker.Texture/Baker.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -20,29 +19,6 @@
 
 namespace Tileon::Editor::Masonry
 {
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    static Str Locate(Text Folder, Text Sheet)
-    {
-        const Text Stem = StrBeforeLast(Sheet, '.');
-
-        for (const Text Type : Pipeline::Baker::Image::STBImporter::kTypes)
-        {
-            Str Candidate = Str::Print<"{0}/{1}.{2}">(Folder, Stem, Type);
-
-            Filesystem::Handle Handle;
-
-            if (Filesystem::Open(Candidate, Filesystem::Access::Read, Handle) == Filesystem::Result::Success)
-            {
-                Filesystem::Close(Handle);
-
-                return Candidate;
-            }
-        }
-        return Str();
-    }
-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -100,7 +76,7 @@ namespace Tileon::Editor::Masonry
     {
         Bool Ready = true;
 
-        mTileset.GetRegistry().ForEach([this, &Ready](ConstRef<Motif> Motif)
+        mTileset.ForEachMotif([this, &Ready](ConstRef<Motif> Motif)
         {
             Ready = mGallery.Settle(Motif) && Ready;
         });
@@ -138,7 +114,7 @@ namespace Tileon::Editor::Masonry
     {
         Bool Gathered = true;
 
-        mTileset.GetRegistry().ForEach([&](ConstRef<Motif> Motif)
+        mTileset.ForEachMotif([&](ConstRef<Motif> Motif)
         {
             const Gallery::Cut Cut = mGallery.Measure(Motif);
 
@@ -154,18 +130,9 @@ namespace Tileon::Editor::Masonry
                 return;
             }
 
-            // A material names the baked sheet, which no importer reads back, so the frames are cut out of
-            // the art it was baked from instead.
-            const Str Source = Locate(Folder, Cut.Image->GetKey().GetPath());
-
-            if (Source.IsEmpty())
-            {
-                LOG_E("Tileset: no source art beside '{0}', which motif {1} cuts its frames from",
-                    Cut.Image->GetKey().GetPath(), Motif.GetID());
-
-                Gathered = false;
-                return;
-            }
+            // The baker reads a baked sheet back, so the frames are cut out of the very file the material
+            // names rather than out of art kept beside it.
+            const Str Source = Str::Print<"{0}/{1}">(Folder, Cut.Image->GetKey().GetPath());
 
             // Every slice of an array shares one extent, so a frame of a size no group holds opens a new one.
             SInt Index = Groups.Find([&Cut](ConstRef<Group> Batch)
@@ -215,10 +182,10 @@ namespace Tileon::Editor::Masonry
 
     Bool Bakery::Assemble(Text Folder, ConstRef<Sequence<Group>> Groups)
     {
-        const Pipeline::Baker::Image::Baker Assembler(GetService<Job::Service>());
+        const Pipeline::Baker::Texture::Baker Assembler(GetService<Job::Service>());
 
         // Tile art is authored in sRGB, so it bakes to an sRGB format and the GPU decodes it on sample.
-        Pipeline::Baker::Image::Profile Settings;
+        Pipeline::Baker::Texture::Profile Settings;
         Settings.Linear  = false;
         Settings.Mipmaps = true;
 

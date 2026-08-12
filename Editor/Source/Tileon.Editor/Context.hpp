@@ -25,7 +25,7 @@
 namespace Tileon::Editor
 {
     /// \brief Represents the context for the editor, providing access to various services.
-    class Context final : public Session, public Engine::Locator<Scene::Service, Content::Service, Graphic::Service>
+    class Context final : public Session, Engine::Locator<Content::Service, Graphic::Service, Job::Service,  Scene::Service>
     {
     public:
 
@@ -46,14 +46,6 @@ namespace Tileon::Editor
         /// \brief Writes the project to disk, baking the tileset's arrays before its database names them.
         void Commit();
 
-        /// \brief Gets a reference to the scene service associated with the context.
-        ///
-        /// \return A reference to the scene service associated with the context.
-        ZY_INLINE Ref<Scene::Service> GetScene()
-        {
-            return GetService<Scene::Service>();
-        }
-
         /// \brief Gets a reference to the content service associated with the context.
         ///
         /// \return A reference to the content service associated with the context.
@@ -68,6 +60,22 @@ namespace Tileon::Editor
         ZY_INLINE Ref<Graphic::Service> GetGraphic()
         {
             return GetService<Graphic::Service>();
+        }
+
+        /// \brief Gets a reference to the scheduler the in-process bakers run their work on.
+        ///
+        /// \return A reference to the job service associated with the context.
+        ZY_INLINE Ref<Job::Service> GetScheduler()
+        {
+            return GetService<Job::Service>();
+        }
+
+        /// \brief Gets a reference to the scene service associated with the context.
+        ///
+        /// \return A reference to the scene service associated with the context.
+        ZY_INLINE Ref<Scene::Service> GetScene()
+        {
+            return GetService<Scene::Service>();
         }
 
         /// \brief Gets a reference to the controller associated with the context.
@@ -124,6 +132,14 @@ namespace Tileon::Editor
         ZY_INLINE Ref<Registry> GetRegistry()
         {
             return mRegistry;
+        }
+
+        /// \brief Gets a reference to the project the editor has open.
+        ///
+        /// \return A reference to the project associated with the context.
+        ZY_INLINE Ref<Project> GetProject()
+        {
+            return mProject;
         }
 
         /// \brief Gets a reference to the forge that authors the tileset.

@@ -272,6 +272,18 @@ namespace Tileon::Editor::Toolkit
             return ImGui::DragFloat(ID.GetData(), AddressOf(Value), Speed, Min, Max, Format.GetData(), Flags);
         }
 
+        ZY_INLINE static Bool DragInt(
+            Text             ID,
+            Ref<SInt32>      Value,
+            Real32           Speed  = 1.0f,
+            SInt32           Min    = 0,
+            SInt32           Max    = 0,
+            Text             Format = "%d",
+            ImGuiSliderFlags Flags  = ImGuiSliderFlags_None)
+        {
+            return ImGui::DragInt(ID.GetData(), AddressOf(Value), Speed, Min, Max, Format.GetData(), Flags);
+        }
+
         ZY_INLINE static Bool SliderAngle(Text ID, Ref<Real32> Radians, Real32 Min = 0.0f, Real32 Max = 360.0f, Text Format = "%.1f°")
         {
             return ImGui::SliderAngle(ID.GetData(), AddressOf(Radians), Min, Max, Format.GetData());
@@ -829,6 +841,12 @@ namespace Tileon::Editor::Toolkit
         ZY_INLINE static Bool BeginPopupContextItem(Text ID = {})
         {
             return ImGui::BeginPopupContextItem(ID.IsEmpty() ? nullptr : ID.GetData());
+        }
+
+        ZY_INLINE static Bool BeginPopupContextWindow(
+            Text ID = {}, ImGuiPopupFlags Flags = ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems)
+        {
+            return ImGui::BeginPopupContextWindow(ID.IsEmpty() ? nullptr : ID.GetData(), Flags);
         }
 
         ZY_INLINE static void EndPopup()

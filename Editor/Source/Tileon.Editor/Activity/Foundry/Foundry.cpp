@@ -440,9 +440,12 @@ namespace Tileon::Editor
                     const Real32  Density = GetContext().GetDirector().GetDensity();
                     const Vector2 Size(Glyph.Period.GetX() * Density, Glyph.Period.GetY() * Density);
 
+                    // Every slice shares one identifier, so which of them is drawn rides in the coordinates.
+                    const Real32 Offset = Glyph.Slice * Plugin::ImGuiRenderer::kSliceStride;
+
                     mPreviewer.Draw(
-                        Plugin::ImGuiRenderer::GetTextureID(Glyph.Texture, Glyph.Slice),
-                        Size, Rect::One(), Color::FromColor8(Glyph.Tint));
+                        Plugin::ImGuiRenderer::GetLayeredTextureID(Glyph.Texture),
+                        Size, Rect(Offset, 0.0f, Offset + 1.0f, 1.0f), Color::FromColor8(Glyph.Tint));
 
                     Toolkit::Composer::EndTabItem();
                 }

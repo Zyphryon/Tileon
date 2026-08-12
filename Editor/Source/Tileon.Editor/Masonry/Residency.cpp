@@ -55,7 +55,7 @@ namespace Tileon::Editor::Masonry
             return;
         }
 
-        mTileset.GetRegistry().ForEach([this](ConstRef<Motif> Motif)
+        mTileset.ForEachMotif([this](ConstRef<Motif> Motif)
         {
             Ref<Tileset::Glyph> Glyph = mTileset.GetGlyph(Motif.GetID());
 

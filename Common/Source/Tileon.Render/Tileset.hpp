@@ -157,12 +157,13 @@ namespace Tileon
             return mGlyphs[ID];
         }
 
-        /// \brief Gets the pool holding every motif the tileset knows.
+        /// \brief Iterates over every motif a project authored.
         ///
-        /// \return A reference to the motif pool, which only reports the identifiers a project authored.
-        ZY_INLINE ConstRef<Pool<Motif, kLimit>> GetRegistry() const
+        /// \param Callback The callback function to apply to each motif.
+        template<typename Function>
+        ZY_INLINE void ForEachMotif(AnyRef<Function> Callback) const
         {
-            return mRegistry;
+            mRegistry.ForEach(Callback);
         }
 
     private:
@@ -184,7 +185,7 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Pool<Motif, kLimit>                mRegistry;
+        Pool<Motif, kLimit, 0>             mRegistry;
         Array<Glyph, kLimit>               mGlyphs;
         Sequence<Placement>                mPlacements;
         Sequence<Retainer<Graphic::Image>> mAtlases;

@@ -141,11 +141,13 @@ namespace Tileon::Editor
             // Draw the terrain item in the gallery, showing the array slice its motif was promoted into.
             if (Glyph.Texture)
             {
-                const ImTextureID Thumbnail = Plugin::ImGuiRenderer::GetTextureID(Glyph.Texture, Glyph.Slice);
+                // Every slice shares one identifier, so which of them is drawn rides in the coordinates.
+                const ImTextureID Thumbnail = Plugin::ImGuiRenderer::GetLayeredTextureID(Glyph.Texture);
+                const Real32      Offset    = Glyph.Slice * Plugin::ImGuiRenderer::kSliceStride;
 
                 WasSelected = mTerrains.DrawItem(
                     Terrain.GetID(),
-                    Terrain.GetName(), Thumbnail, Rect::One(), Glyph.Tint);
+                    Terrain.GetName(), Thumbnail, Rect(Offset, 0.0f, Offset + 1.0f, 1.0f), Glyph.Tint);
             }
             else
             {

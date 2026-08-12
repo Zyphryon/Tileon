@@ -1132,7 +1132,12 @@ namespace Tileon::Editor
 
                     if (Selection != 0 && !IsBucket && Glyph.Texture)
                     {
-                        const ImTextureID Slice = Plugin::ImGuiRenderer::GetTextureID(Glyph.Texture, Glyph.Slice);
+                        // Every slice shares one identifier, so which of them is drawn rides in the coordinates.
+                        const ImTextureID Slice  = Plugin::ImGuiRenderer::GetLayeredTextureID(Glyph.Texture);
+                        const auto        Sample = [&](Real32 U, Real32 V)
+                        {
+                            return Plugin::ImGuiRenderer::GetLayeredTextureUV(Glyph.Slice, ImVec2(U, V));
+                        };
 
                         const UInt32 Base    = Glyph.Tint.ToRGBA8();
                         const UInt32 Alpha   = static_cast<UInt32>(((Base >> 24) & 0xFF) * 0.7f) << 24;
@@ -1164,8 +1169,8 @@ namespace Tileon::Editor
                                 List->AddImageQuad(Slice,
                                     Project(CellX,     CellY),     Project(CellX + 1, CellY),
                                     Project(CellX + 1, CellY + 1), Project(CellX,     CellY + 1),
-                                    ImVec2(U0, V0 + CellV), ImVec2(U0 + CellU, V0 + CellV),
-                                    ImVec2(U0 + CellU, V0), ImVec2(U0, V0),
+                                    Sample(U0, V0 + CellV), Sample(U0 + CellU, V0 + CellV),
+                                    Sample(U0 + CellU, V0), Sample(U0, V0),
                                     Preview);
                             }
                         }

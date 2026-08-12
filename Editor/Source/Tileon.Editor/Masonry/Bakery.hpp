@@ -13,7 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Gallery.hpp"
-#include <Manifest.hpp>
+#include <Baker.Texture/Manifest.hpp>
 #include <Zyphryon.Job/Service.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -53,7 +53,7 @@ namespace Tileon::Editor::Masonry
     private:
 
         /// Shorthand for the manifest entry naming one frame's crop on the sheet it is cut from.
-        using Entry = ::Pipeline::Baker::Image::Manifest::Entry;
+        using Entry = ::Pipeline::Baker::Texture::Manifest::Entry;
 
         /// \brief One array's worth of frames, all of them cut to the same size, and the entries naming them.
         struct Group final
