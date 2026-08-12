@@ -608,6 +608,14 @@ namespace Tileon::Editor
             Component.SetBrightness(Brightness);
             Dirty = true;
         }
+
+        Toolkit::Composer::Spacing();
+
+        if (Real32 Exposure = Component.GetExposure(); InspectScalar("Exposure", Exposure))
+        {
+            Component.SetExposure(Exposure);
+            Dirty = true;
+        }
         return Dirty;
     }
 

@@ -12,9 +12,13 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+#include "Tileon.Render/Component/Skylight.hpp"
 #include <Zyphryon.Content/Service.hpp>
+#include <Zyphryon.Engine/Locator.hpp>
 #include <Zyphryon.Graphic/Technique.hpp>
+#include <Zyphryon.Math/Vector4.hpp>
 #include <Zyphryon.Render/Pass.hpp>
+#include <Zyphryon.Scene/Service.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -23,7 +27,7 @@
 namespace Tileon::Pipeline
 {
     /// \brief Represents the composite stage of the rendering pipeline, responsible for compositing the final image.
-    class Composite final : public Render::Pass
+    class Composite final : public Render::Pass, public Engine::Locator<Graphic::Service>
     {
     public:
 
@@ -50,6 +54,13 @@ namespace Tileon::Pipeline
         /// \brief Defines a type alias for a collection of rendering techniques.
         using Techniques = Array<Retainer<Graphic::Technique>, Enum::Count<Kind>()>;
 
+        /// \brief Represents the per-pass data the composite technique consumes.
+        struct GpuCompositeLayout final
+        {
+            /// The exposure applied before the tone map, with the remaining channels unused.
+            Vector4 Exposure;
+        };
+
         /// \brief Loads the necessary resources for the stage, such as shaders and materials.
         ///
         /// \param Content The content service used to load resources for the stage.
@@ -60,6 +71,7 @@ namespace Tileon::Pipeline
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+        Scene::World             mWorld;
         Techniques               mTechniques;
         ConstPtr<Render::Target> mAlbedo;
         ConstPtr<Render::Target> mRadiance;

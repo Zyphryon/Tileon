@@ -36,7 +36,8 @@ namespace Tileon
             : mSunTint    { IntColor8(255, 244, 224) },
               mSkyTint    { IntColor8(160, 190, 255) },
               mGroundTint { IntColor8( 90,  85,  80) },
-              mBrightness { 1.0f }
+              mBrightness { 1.0f },
+              mExposure   { 1.0f }
         {
             SetSunDirection(kDefaultDirection);
         }
@@ -48,11 +49,13 @@ namespace Tileon
         /// \param SkyTint      The tint of ambient light coming from the sky in the scene.
         /// \param GroundTint   The tint of ambient light reflected from the ground in the scene.
         /// \param Brightness   The overall brightness of the environment, defining the intensity of all lighting effects in the scene.
-        ZY_INLINE Skylight(Vector3 SunDirection, IntColor8 SunTint, IntColor8 SkyTint, IntColor8 GroundTint, Real32 Brightness)
+        /// \param Exposure     The exposure the composed scene is scaled by before the tone map compresses it.
+        ZY_INLINE Skylight(Vector3 SunDirection, IntColor8 SunTint, IntColor8 SkyTint, IntColor8 GroundTint, Real32 Brightness, Real32 Exposure)
             : mSunTint    { SunTint },
               mSkyTint    { SkyTint },
               mGroundTint { GroundTint },
-              mBrightness { Brightness }
+              mBrightness { Brightness },
+              mExposure   { Exposure }
         {
             SetSunDirection(SunDirection);
         }
@@ -137,6 +140,22 @@ namespace Tileon
             return mBrightness;
         }
 
+        /// \brief Sets the exposure the composed scene is scaled by before the tone map compresses it.
+        ///
+        /// \param Exposure The new exposure value for the environment.
+        ZY_INLINE void SetExposure(Real32 Exposure)
+        {
+            mExposure = Exposure;
+        }
+
+        /// \brief Gets the exposure the composed scene is scaled by before the tone map compresses it.
+        ///
+        /// \return The current exposure value of the environment.
+        ZY_INLINE Real32 GetExposure() const
+        {
+            return mExposure;
+        }
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -147,5 +166,6 @@ namespace Tileon
         IntColor8 mSkyTint;
         IntColor8 mGroundTint;
         Real32    mBrightness;
+        Real32    mExposure;
     };
 }

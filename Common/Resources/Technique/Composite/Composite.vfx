@@ -13,6 +13,9 @@
     }
   },
   "Signature": {
+    "Uniforms": [
+      { "Frequency": "Pass", "Name": "Exposure", "Type": "Float4" }
+    ],
     "Textures": [
       { "Name": "Albedo",   "Frequency": "Pass" },
       { "Name": "Radiance", "Frequency": "Pass" }
