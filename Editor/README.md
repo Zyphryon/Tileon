@@ -15,18 +15,25 @@ main world view (the **Atelier** panel). Most viewport keys require the viewport
 | Input | Action |
 |-------|--------|
 | **Mouse wheel** | Zoom in / out, centered on the cursor |
-| **Hold Space + LMB drag** | Pan the view |
+| **Hold Space + LMB drag** | Pan the view (the cursor turns into a hand while Space is held) |
 | **MMB drag** | Pan the view |
+| **LMB drag** (Hand brush) | Pan the view |
+| **Alt + LMB drag** | Swing the view — yaw and tilt. **Axonometric projection only** |
+| **Projection combo** | Ortho · Isometric · Axonometric |
 | **Toolbar X / Y fields** | Type a world coordinate, then **Enter** or click away to jump the camera there |
 | **🔍➕ / 🔍➖ / 🏠 buttons** | Zoom in · zoom out · reset zoom |
 
 The camera position is remembered per project — reopening a project restores the last view.
 
+Swinging exists because a 3D shape read straight on is just a rectangle: a few degrees of yaw is
+what separates its depth from its height. It does nothing in Ortho or Isometric, where the angle
+is fixed.
+
 ---
 
 ## 🧭 Viewport — Select & Transform
 
-*Select tool (arrow) — the gizmo appears on the current selection.*
+*Select brush (arrow) — the gizmo appears on the current selection.*
 
 | Input | Action |
 |-------|--------|
@@ -36,9 +43,24 @@ The camera position is remembered per project — reopening a project restores t
 | **Shift + LMB drag** | Add the marquee result to the selection |
 | **Q / W / E** | Gizmo mode → Move · Rotate · Scale |
 | **Drag a gizmo handle** | Move / rotate / scale the whole selection |
+| **Ctrl + V** | Paste at the cursor |
+
+Whether a press is a click or a marquee is decided on release, by how far you dragged.
+
+The gizmo's handles sit on the **primary** entity's origin, and that origin is the pivot the whole
+selection turns and scales about.
+
+> ⚠️ A gizmo drag cannot be cancelled once started, and the editor has no undo — release only when
+> the result is what you want.
+
+### Clipboard & delete
+
+*These act on the whole selection whenever the **viewport is focused**, whichever brush is active.*
+
+| Input | Action |
+|-------|--------|
 | **Ctrl + C** | Copy selection |
 | **Ctrl + X** | Cut selection |
-| **Ctrl + V** | Paste at the cursor |
 | **Delete** | Delete selection |
 
 ---
@@ -51,13 +73,15 @@ The camera position is remembered per project — reopening a project restores t
 | **RMB / RMB drag** | Erase |
 | **Bucket brush** | Fill the whole region |
 | **🧲 Magnet toggle** | Grid-aligned (seamless) ⇄ free (precise) stamping |
-| **Layer 1 / 2** | Paint on the Base or Detail layer |
+| **Layer 1 / 2 buttons** | Paint on the Base or Detail layer |
 
 The floating footprint shows exactly which cells — and which tile art — will be placed.
 
 ---
 
 ## 🧱 Viewport — Entity Mode
+
+*Placement happens with the Select brush, with an archetype picked in the Palette.*
 
 | Input | Action |
 |-------|--------|
@@ -66,6 +90,9 @@ The floating footprint shows exactly which cells — and which tile art — will
 | **Hold Q / E** | Rotate the pending entity (hold **Shift** for fine control) |
 | **Ctrl + Mouse wheel** | Scale the pending entity |
 | **✛ Center toggle, or hold Shift** | Snap placement to the tile's center |
+
+> **Note:** Q and E do double duty. Tapping either also switches the gizmo's mode, which is
+> harmless while a placement is pending because the gizmo is not on screen.
 
 ---
 
@@ -110,13 +137,26 @@ The component list's **RMB** menu offers Override / Remove / Revert to Archetype
 
 ---
 
-## 🔬 Preview Panes
-
-*The image preview in the Foundry and Archetypes side panels.*
+## 🔍 Inspector
 
 | Input | Action |
 |-------|--------|
-| **Mouse wheel** | Zoom |
+| **Asset field → …** | Browse for an asset |
+| **Asset field → ⟳** | Reload the asset from disk (disabled until it has finished loading) |
+| **Type a path + Enter** | Assign an asset by path |
+
+Reloading re-reads the **baked** file. A material pointing at a `.tex` refreshes after the baker
+runs, not after you edit the source art.
+
+---
+
+## 🔬 Preview Panes
+
+*The image preview in the Foundry and Archetypes side panels. These act on **hover**, not focus.*
+
+| Input | Action |
+|-------|--------|
+| **Mouse wheel** | Zoom, keeping the point under the cursor fixed |
 | **MMB drag** | Pan |
 | **R** | Reset the preview view |
 
@@ -133,4 +173,5 @@ The component list's **RMB** menu offers Override / Remove / Revert to Archetype
 | **Settings** | Fullscreen | Toggle fullscreen |
 | **Help** | Theme → Dark / Light | Switch the UI theme |
 
-> **Note:** *Save* is invoked from the **File** menu; the `Ctrl+S` text is the menu's shortcut label.
+> **Note:** *Save* is invoked from the **File** menu; the `Ctrl+S` text is the menu's shortcut
+> label, not a bound key.
