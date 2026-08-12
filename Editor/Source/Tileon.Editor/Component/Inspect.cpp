@@ -340,7 +340,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    template<typename Callback>
+    template<typename Type, typename Callback>
     static void InspectAsset(
         Ref<Workspace>         Workspace,
         Scene::Entity          Actor,
@@ -350,6 +350,7 @@ namespace Tileon::Editor
         AnyRef<Callback>       Action)
     {
         Ref<Toolkit::Selector> Selector = Workspace.Selector;
+        Ref<Content::Service>  Service  = Workspace.Context.GetContent();
 
         const UInt64 Key = Toolkit::Composer::IsDisabled() ? 0 : HashCombine(Label, Actor.GetID());
 
@@ -358,9 +359,17 @@ namespace Tileon::Editor
             Action(Content::Uri(Move(Selection)));
         }
 
+        // Reloading an asset that has not finished does nothing, so the button rejects the press instead.
+        Retainer<Type> Asset;
+
+        if (Value.IsValid())
+        {
+            Asset = Service.Load<Type>(Value);
+        }
+
         Toolkit::Composer::FieldInline(Label);
         Toolkit::Composer::PushID(Label);
-        Toolkit::Composer::InputTextWithButton("##value", Value.GetPath(),
+        Toolkit::Composer::InputTextWithButtons("##value", Value.GetPath(),
             [&](Text Path)
             {
                 Action(Content::Uri(Str::Print<"Resources://{0}">(Path)));
@@ -369,6 +378,12 @@ namespace Tileon::Editor
             [&]
             {
                 Selector.Open(Key, Filter);
+            },
+            ICON_FA_ROTATE,
+            !(Asset && Asset->HasFinished()),
+            [&]
+            {
+                Service.Reload(Asset);
             },
             ImGuiInputTextFlags_EnterReturnsTrue);
         Toolkit::Composer::PopID();
@@ -626,7 +641,7 @@ namespace Tileon::Editor
     {
         Bool Dirty = false;
 
-        InspectAsset(Workspace, Actor, "Path", ".mtl", Component.GetPath(),
+        InspectAsset<Graphic::Material>(Workspace, Actor, "Path", ".mtl", Component.GetPath(),
             [&](AnyRef<Content::Uri> Path)
             {
                 Component.SetPath(Move(Path));
@@ -778,7 +793,7 @@ namespace Tileon::Editor
 
         ConstRetainer<::Render::Font> Font = Component.GetFont();
 
-        InspectAsset(Workspace, Actor, "Font", ".fnt", Font ? Font->GetKey() : Content::Uri(),
+        InspectAsset<::Render::Font>(Workspace, Actor, "Font", ".fnt", Font ? Font->GetKey() : Content::Uri(),
             [&](AnyRef<Content::Uri> Path)
             {
                 Component.SetFont(Move(Path));

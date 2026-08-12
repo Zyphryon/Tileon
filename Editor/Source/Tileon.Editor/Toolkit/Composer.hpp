@@ -1079,6 +1079,54 @@ namespace Tileon::Editor::Toolkit
             }
         }
 
+        /// \brief Draws a text field followed by two small buttons.
+        ///
+        /// \param ID             The identifier of the field.
+        /// \param TextValue      The text the field shows.
+        /// \param TextAction     The callable invoked with the text the field commits.
+        /// \param FirstLabel     The label of the first button.
+        /// \param FirstAction    The callable invoked when the first button is pressed.
+        /// \param SecondLabel    The label of the second button.
+        /// \param SecondDisabled Whether the second button rejects input.
+        /// \param SecondAction   The callable invoked when the second button is pressed.
+        /// \param Flags          The flags applied to the text field.
+        template<typename InputCallback, typename FirstCallback, typename SecondCallback>
+        ZY_INLINE static void InputTextWithButtons(
+            Text                   ID,
+            Text                   TextValue,
+            AnyRef<InputCallback>  TextAction,
+            Text                   FirstLabel,
+            AnyRef<FirstCallback>  FirstAction,
+            Text                   SecondLabel,
+            Bool                   SecondDisabled,
+            AnyRef<SecondCallback> SecondAction,
+            ImGuiInputTextFlags    Flags = ImGuiInputTextFlags_None)
+        {
+            ConstRef<ImGuiStyle> Style = ImGui::GetStyle();
+
+            const Real32 FirstWidth  = ImGui::CalcTextSize(FirstLabel.GetData()).x  + Style.FramePadding.x * 2.0f;
+            const Real32 SecondWidth = ImGui::CalcTextSize(SecondLabel.GetData()).x + Style.FramePadding.x * 2.0f;
+
+            ImGui::SetNextItemWidth(
+                ImGui::GetContentRegionAvail().x - FirstWidth - SecondWidth - Style.ItemSpacing.x * 2.0f);
+            InputText(ID, TextValue, TextAction, Flags);
+
+            ImGui::SameLine();
+            if (ImGui::SmallButton(FirstLabel.GetData()))
+            {
+                FirstAction();
+            }
+
+            ImGui::SameLine();
+            ImGui::BeginDisabled(SecondDisabled);
+
+            if (ImGui::SmallButton(SecondLabel.GetData()) && !SecondDisabled)
+            {
+                SecondAction();
+            }
+            ImGui::EndDisabled();
+        }
+
         template<typename InputCallback, typename ButtonCallback>
         ZY_INLINE static void InputTextWithButton(
             Text                   ID,
