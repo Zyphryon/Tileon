@@ -106,6 +106,8 @@ namespace Tileon::Editor::Toolkit
         // Right-click activation is a per-frame, one-shot signal, so clear it before the items are drawn.
         mActivated = -1;
 
+        mCells.Clear();
+
         if (mMode == Mode::Grid)
         {
             const ImVec2 Available = Toolkit::Composer::GetContentRegionAvail();
@@ -194,42 +196,30 @@ namespace Tileon::Editor::Toolkit
             mActivated = ID;
         }
 
-        // Background highlight for selected or hovered state.
-        const Ptr<ImDrawList> DrawList = Toolkit::Composer::GetWindowDrawList();
+        Ref<Cell> Record = mCells.Append();
+        Record.Minimum = Origin;
+        Record.Maximum = BR;
+        Record.First   = ImVec2(Crop.GetMinimumX(), Crop.GetMinimumY());
+        Record.Last    = ImVec2(Crop.GetMaximumX(), Crop.GetMaximumY());
+        Record.Texture = Thumbnail;
+        Record.Tint    = Tint.ToRGBA8();
 
+        // Background highlight for selected or hovered state.
         if (WasSelected || IsClicked)
         {
-            DrawList->AddRectFilled(Origin, BR, Toolkit::Composer::GetColorU32(ImGuiCol_ButtonActive, 0.5f));
+            Record.Fill = Toolkit::Composer::GetColorU32(ImGuiCol_ButtonActive, 0.5f);
         }
         else if (IsHovered)
         {
-            DrawList->AddRectFilled(Origin, BR, Toolkit::Composer::GetColorU32(ImGuiCol_ButtonHovered, 0.5f));
-        }
-
-        // Draw the thumbnail if available, otherwise render a "?" placeholder.
-        if (Thumbnail)
-        {
-            const ImVec2 UV0(Crop.GetMinimumX(), Crop.GetMinimumY());
-            const ImVec2 UV1(Crop.GetMaximumX(), Crop.GetMaximumY());
-            DrawList->AddImage(Thumbnail, Origin, BR, UV0, UV1, Tint.ToRGBA8());
-        }
-        else
-        {
-            constexpr Text kPlaceholder = "?";
-            const ImVec2        TextSize     = Toolkit::Composer::CalcTextSize(kPlaceholder);
-            const ImVec2        TextPos(
-                Origin.x + (mSize - TextSize.x) * 0.5f,
-                Origin.y + (mSize - TextSize.y) * 0.5f);
-            DrawList->AddText(TextPos, Toolkit::Composer::GetColorU32(ImGuiCol_TextDisabled), kPlaceholder.GetData());
+            Record.Fill = Toolkit::Composer::GetColorU32(ImGuiCol_ButtonHovered, 0.5f);
         }
 
         // Cell border; changes colour for selected / hovered states.
-        const ImU32 BorderColor = (WasSelected || IsClicked)
+        Record.Border = (WasSelected || IsClicked)
             ? Toolkit::Composer::GetColorU32(ImGuiCol_ButtonActive)
             : (IsHovered
                 ? Toolkit::Composer::GetColorU32(ImGuiCol_ButtonHovered)
                 : Toolkit::Composer::GetColorU32(ImGuiCol_Border));
-        DrawList->AddRect(Origin, BR, BorderColor);
 
         // Show item name as a tooltip on hover.
         if (IsHovered)
@@ -250,7 +240,68 @@ namespace Tileon::Editor::Toolkit
             Toolkit::Composer::EndTable();
         }
 
+        Flush();
+
         mActive = false;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Gallery::Flush()
+    {
+        if (mCells.IsEmpty())
+        {
+            return;
+        }
+
+        const Ptr<ImDrawList> DrawList = Toolkit::Composer::GetWindowDrawList();
+
+        // A motif is baked into the array holding its frame size and an entity into whichever atlas its
+        // sheet landed in, so neighbouring cells alternate between textures and each alternation costs a
+        // command. Cells cover disjoint rectangles, so which one is drawn first is not visible.
+        mCells.Sort([](ConstRef<Cell> Left, ConstRef<Cell> Right)
+        {
+            return Left.Texture < Right.Texture;
+        });
+
+        for (ConstRef<Cell> Item : mCells)
+        {
+            if (Item.Fill)
+            {
+                DrawList->AddRectFilled(Item.Minimum, Item.Maximum, Item.Fill);
+            }
+        }
+
+        for (ConstRef<Cell> Item : mCells)
+        {
+            if (Item.Texture)
+            {
+                DrawList->AddImage(Item.Texture, Item.Minimum, Item.Maximum, Item.First, Item.Last, Item.Tint);
+            }
+        }
+
+        constexpr Text kPlaceholder = "?";
+
+        const ImVec2 TextSize  = Toolkit::Composer::CalcTextSize(kPlaceholder);
+        const ImU32  TextColor = Toolkit::Composer::GetColorU32(ImGuiCol_TextDisabled);
+
+        for (ConstRef<Cell> Item : mCells)
+        {
+            DrawList->AddRect(Item.Minimum, Item.Maximum, Item.Border);
+
+            // A cell with nothing to show says so, centred where its thumbnail would have been.
+            if (!Item.Texture)
+            {
+                const ImVec2 TextPos(
+                    Item.Minimum.x + (mSize - TextSize.x) * 0.5f,
+                    Item.Minimum.y + (mSize - TextSize.y) * 0.5f);
+
+                DrawList->AddText(TextPos, TextColor, kPlaceholder.GetData());
+            }
+        }
+
+        mCells.Clear();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

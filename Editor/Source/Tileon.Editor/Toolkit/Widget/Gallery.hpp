@@ -151,6 +151,50 @@ namespace Tileon::Editor::Toolkit
 
     private:
 
+        /// \brief One grid cell, held until the whole grid can be drawn a primitive at a time.
+        struct Cell final
+        {
+            /// \brief Constructs a cell standing for nothing.
+            ZY_INLINE Cell()
+                : Minimum { 0.0f, 0.0f },
+                  Maximum { 0.0f, 0.0f },
+                  First   { 0.0f, 0.0f },
+                  Last    { 0.0f, 0.0f },
+                  Texture { 0 },
+                  Tint    { 0 },
+                  Fill    { 0 },
+                  Border  { 0 }
+            {
+            }
+
+            /// The upper left corner of the cell, in screen space.
+            ImVec2      Minimum;
+
+            /// The lower right corner of the cell, in screen space.
+            ImVec2      Maximum;
+
+            /// The upper left texture coordinates of the thumbnail.
+            ImVec2      First;
+
+            /// The lower right texture coordinates of the thumbnail.
+            ImVec2      Last;
+
+            /// The thumbnail the cell shows, or zero when it draws a placeholder instead.
+            ImTextureID Texture;
+
+            /// The tint applied to the thumbnail.
+            ImU32       Tint;
+
+            /// The highlight behind the thumbnail, or zero when the cell is neither selected nor hovered.
+            ImU32       Fill;
+
+            /// The colour of the cell's outline.
+            ImU32       Border;
+        };
+
+        /// \brief Draws every cell the grid gathered, one primitive at a time.
+        void Flush();
+
         /// \brief Checks if an item with the specified name matches the current filter string.
         ///
         /// \param Name The name of the item to check against the current filter string.
@@ -162,11 +206,12 @@ namespace Tileon::Editor::Toolkit
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Bool   mActive;
-        Mode   mMode;
-        Real32 mSize;
-        Str    mFilter;
-        UInt32 mSelection;
-        SInt64 mActivated;
+        Bool           mActive;
+        Mode           mMode;
+        Real32         mSize;
+        Str            mFilter;
+        UInt32         mSelection;
+        SInt64         mActivated;
+        Sequence<Cell> mCells;
     };
 }
