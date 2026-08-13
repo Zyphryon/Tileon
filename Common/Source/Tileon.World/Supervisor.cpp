@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Supervisor.hpp"
+#include "Placement.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -31,13 +32,14 @@ namespace Tileon
 
     void Supervisor::Teardown()
     {
-        for (Scene::Entity Actor : mRegionList)
+        for (ConstRef<decltype(mRegistry)::Pair> Pair : mRegistry)
         {
-            if (Actor.IsValid())
+            if (const Scene::Entity Actor = Pair.Second->Actor; Actor.IsValid())
             {
                 Actor.Destruct();
             }
         }
+        mRegistry.Clear();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -45,9 +47,9 @@ namespace Tileon
 
     void Supervisor::Save()
     {
-        for (Scene::Entity Actor : mRegionList)
+        for (ConstRef<decltype(mRegistry)::Pair> Pair : mRegistry)
         {
-            if (Actor.IsValid() && Actor.Has<Persist>())
+            if (const Scene::Entity Actor = Pair.Second->Actor; Actor.IsValid() && Actor.Has<Persist>())
             {
                 SaveRegion(Actor);
             }
@@ -57,68 +59,48 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Supervisor::Navigate(IntRect Boundaries)
+    Bool Supervisor::Reside(ConstSpan<IntVector2> Regions)
     {
-        if (mRegionBoundaries == Boundaries)
+        mManifest.Clear();
+        mManifest.Reserve(Regions.GetSize());
+
+        for (IntVector2 Coordinate : Regions)
         {
-            return false;
+            mManifest.Insert(GetKey(Coordinate.GetX(), Coordinate.GetY()));
         }
 
-        Sequence<Scene::Entity> Registry(Boundaries.GetWidth() * Boundaries.GetHeight());
-        Registry.Advance(Registry.GetCapacity());
+        Bool Dirty = false;
 
-        // Dispose regions that fall outside new boundaries.
-        IntRect::ForEachRectDiff(mRegionBoundaries, Boundaries, [&](IntRect Difference)
+        // Retire every resident region the new set no longer asks for.
+        mRegistry.EraseIf([&](UInt32 Key, Ref<Unique<Slot>> Holder)
         {
-            for (SInt32 Y = Difference.GetMinimumY(); Y < Difference.GetMaximumY(); ++Y)
+            if (mManifest.Contains(Key))
             {
-                for (SInt32 X = Difference.GetMinimumX(); X < Difference.GetMaximumX(); ++X)
-                {
-                    Scene::Entity Actor = mRegionList[GetKey(X, Y, mRegionBoundaries)];
-
-                    if (Actor.IsValid())
-                    {
-                        if (Actor.Has<Persist>())
-                        {
-                            SaveRegion(Actor);
-                        }
-
-                        DetachEntityOnCell(Actor);
-                        Actor.Destruct();
-                    }
-                }
+                return false;
             }
+
+            Evict(* Holder);
+            Dirty = true;
+            return true;
         });
 
-        // Load regions newly included in boundaries.
-        IntRect::ForEachRectDiff(Boundaries, mRegionBoundaries, [&](IntRect Difference)
+        // Bring in every region the new set asks for that is not resident yet.
+        for (IntVector2 Coordinate : Regions)
         {
-            for (SInt32 Y = Difference.GetMinimumY(); Y < Difference.GetMaximumY(); ++Y)
-            {
-                for (SInt32 X = Difference.GetMinimumX(); X < Difference.GetMaximumX(); ++X)
-                {
-                    Registry[GetKey(X, Y, Boundaries)] = LoadRegion(X, Y, false);
-                }
-            }
-        });
+            const UInt32 Key = GetKey(Coordinate.GetX(), Coordinate.GetY());
 
-        // Preserve regions that overlap old and new boundaries.
-        const IntRect Intersect = IntRect::Intersection(mRegionBoundaries, Boundaries);
-
-        for (SInt32 Y = Intersect.GetMinimumY(); Y < Intersect.GetMaximumY(); ++Y)
-        {
-            for (SInt32 X = Intersect.GetMinimumX(); X < Intersect.GetMaximumX(); ++X)
+            if (mRegistry.Contains(Key))
             {
-                Registry[GetKey(X, Y, Boundaries)] = Move(mRegionList[GetKey(X, Y, mRegionBoundaries)]);
+                continue;
             }
+
+            Unique<Slot> Holder = Unique<Slot>::Create();
+            Holder->Actor = LoadRegion(Coordinate.GetX(), Coordinate.GetY(), false);
+
+            mRegistry.Assign(Key, Move(Holder));
+            Dirty = true;
         }
-
-        mRegionList       = Move(Registry);
-        mRegionBoundaries = Boundaries;
-
-        // Adjust spatial hierarchy to new boundaries.
-        AdjustHierarchy(Boundaries * IntVector2(Region::kTilesPerX, Region::kTilesPerY));
-        return true;
+        return Dirty;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -126,13 +108,8 @@ namespace Tileon
 
     Scene::Entity Supervisor::GetRegion(SInt16 RegionX, SInt16 RegionY) const
     {
-        Scene::Entity Actor;
-
-        if (const UInt32 Key = GetKey(RegionX, RegionY, mRegionBoundaries); Key < mRegionList.GetSize())
-        {
-            Actor = mRegionList[Key];
-        }
-        return Actor;
+        const ConstPtr<Unique<Slot>> Holder = mRegistry.Find(GetKey(RegionX, RegionY));
+        return Holder ? (* Holder)->Actor : Scene::Entity();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -140,16 +117,28 @@ namespace Tileon
 
     Scene::Entity Supervisor::GetOrLoadRegion(SInt16 RegionX, SInt16 RegionY, Bool CreateIfMissing)
     {
-        Scene::Entity Actor = GetRegion(RegionX, RegionY);
+        const UInt32 Key = GetKey(RegionX, RegionY);
 
-        if (!Actor.IsValid())
+        if (const Ptr<Unique<Slot>> Holder = mRegistry.Find(Key); Holder && (* Holder)->Actor.IsValid())
         {
-            Actor = LoadRegion(RegionX, RegionY, CreateIfMissing);
+            return (* Holder)->Actor;
+        }
 
-            if (Actor.IsValid() && mRegionBoundaries.Contains(RegionX, RegionY))
+        const Scene::Entity Actor = LoadRegion(RegionX, RegionY, CreateIfMissing);
+
+        // A region loaded on demand becomes resident like any other, so it is saved and evicted with the rest.
+        if (Actor.IsValid())
+        {
+            if (const Ptr<Unique<Slot>> Holder = mRegistry.Find(Key))
             {
-                const UInt32 Key = GetKey(RegionX, RegionY, mRegionBoundaries);
-                mRegionList[Key] = Actor;
+                (* Holder)->Actor = Actor;
+            }
+            else
+            {
+                Unique<Slot> Fresh = Unique<Slot>::Create();
+                Fresh->Actor = Actor;
+
+                mRegistry.Assign(Key, Move(Fresh));
             }
         }
         return Actor;
@@ -206,119 +195,60 @@ namespace Tileon
 
     Scene::Entity Supervisor::Migrate(Scene::Entity Actor, Ref<Pose> Pose)
     {
-        const Scene::Entity Owner = Actor.GetParent();
+        const Scene::Entity Source = Actor.GetParent();
+        ZY_ASSERT(Source.IsValid(), "A migrating entity must be parented to the region that owns it");
 
-        if (!Owner.IsValid())
-        {
-            return Scene::Entity();
-        }
-
-        const ConstPtr<Region> Origin = Owner.TryGet<const Tileon::Region>();
-
-        if (!Origin)
-        {
-            return Scene::Entity();
-        }
+        // A part follows the root it belongs to, so only an entity a region owns outright may move by itself.
+        ConstRef<Region> Origin = Source.Get<const Tileon::Region>();
 
         // A pose is local to its region, so anything outside the region's own span belongs to a neighbour.
         const Vector3 Position = Pose.GetTranslation();
         const Vector2 Ground   = Position.GetXZ();
-        const Vector2 Distance = Vector2(
-            Floor(Ground.GetX() / static_cast<Real32>(Region::kTilesPerX)),
-            Floor(Ground.GetY() / static_cast<Real32>(Region::kTilesPerY)));
+        const Vector2 Distance = Vector2::Floor(Ground / Vector2(Region::kTilesPerX, Region::kTilesPerY));
 
         if (Distance.IsAlmostZero())
         {
             return Scene::Entity();
         }
 
-        const Scene::Entity Target = GetRegion(
-            static_cast<SInt16>(Origin->GetX() + static_cast<SInt32>(Distance.GetX())),
-            static_cast<SInt16>(Origin->GetY() + static_cast<SInt32>(Distance.GetY())));
+        // The world ends somewhere, so a step past its edge is refused rather than wrapped to the far side.
+        const SInt32 TargetX = Clamp(Origin.GetX() + static_cast<SInt32>(Distance.GetX()),
+            static_cast<SInt32>(Placement::kMinRegion),
+            static_cast<SInt32>(Placement::kMaxRegion));
+        const SInt32 TargetY = Clamp(Origin.GetY() + static_cast<SInt32>(Distance.GetY()),
+            static_cast<SInt32>(Placement::kMinRegion),
+            static_cast<SInt32>(Placement::kMaxRegion));
 
-        if (!Target.IsValid())
+        const Scene::Entity Target = GetRegion(static_cast<SInt16>(TargetX), static_cast<SInt16>(TargetY));
+
+        if (Target.IsValid())
         {
-            return Scene::Entity();
+            // Rebase the pose before re-parenting: outside a deferred scope the attach moves the entity to another
+            // table straight away, which would leave the reference pointing at the row it just vacated.
+            Pose.SetTranslation(Vector3(
+                Position.GetX() - Distance.GetX() * static_cast<Real32>(Region::kTilesPerX),
+                Position.GetY(),
+                Position.GetZ() - Distance.GetY() * static_cast<Real32>(Region::kTilesPerY)));
+
+            // Cascades Stale to all static children, making them Kinetic this frame.
+            Actor.Attach(Target, Scene::Hierarchy::Open);
+            Actor.Add<Stale>();
+
+            // Both regions changed, the one that lost the entity and the one that took it in.
+            Source.Add<Persist>();
+            Target.Add<Persist>();
         }
+        else
+        {
+            static constexpr Real32 kSpanX = Region::kTilesPerX * (1.0f - kEpsilon<Real32>);
+            static constexpr Real32 kSpanY = Region::kTilesPerY * (1.0f - kEpsilon<Real32>);
 
-        // Rebase the pose before re-parenting: outside a deferred scope the attach moves the entity to another
-        // table straight away, which would leave the reference pointing at the row it just vacated.
-        Pose.SetTranslation(Vector3(
-            Position.GetX() - Distance.GetX() * static_cast<Real32>(Region::kTilesPerX),
-            Position.GetY(),
-            Position.GetZ() - Distance.GetY() * static_cast<Real32>(Region::kTilesPerY)));
-
-        Actor.Attach(Target, Scene::Hierarchy::Open);
-
-        // Cascades Stale to all static children, making them Kinetic this frame.
-        Actor.Add<Stale>();
-
+            Pose.SetTranslation(Vector3(
+                Clamp(Position.GetX(), 0.0f, kSpanX),
+                Position.GetY(),
+                Clamp(Position.GetZ(), 0.0f, kSpanY)));
+        }
         return Target;
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Supervisor::AdjustHierarchy(IntRect Boundaries)
-    {
-        const IntRect NewLooseBoundaries = Coordinate::GetCell<kHierarchyLooseLog>(Boundaries);
-        const IntRect NewTightBoundaries = Coordinate::GetCell<kHierarchyTightLog>(Boundaries);
-
-        Sequence<HierarchyLooseCell> NewLooseRegistry(NewLooseBoundaries.GetWidth() * NewLooseBoundaries.GetHeight());
-        Sequence<HierarchyTightCell> NewTightRegistry(NewTightBoundaries.GetWidth() * NewTightBoundaries.GetHeight());
-
-        NewLooseRegistry.Advance(NewLooseRegistry.GetCapacity());
-        NewTightRegistry.Advance(NewTightRegistry.GetCapacity());
-
-        // Preserve loose cells that overlap old and new boundaries.
-        const IntRect LooseIntersect = IntRect::Intersection(mLooseBoundaries, NewLooseBoundaries);
-
-        for (SInt32 Y = LooseIntersect.GetMinimumY(); Y < LooseIntersect.GetMaximumY(); ++Y)
-        {
-            for (SInt32 X = LooseIntersect.GetMinimumX(); X < LooseIntersect.GetMaximumX(); ++X)
-            {
-                const UInt32 OldKey = GetKey(X, Y, mLooseBoundaries);
-                const UInt32 NewKey = GetKey(X, Y, NewLooseBoundaries);
-                NewLooseRegistry[NewKey] = Move(mLooseRegistry[OldKey]);
-            }
-        }
-
-        // Re-assign all loose cells to tight cells.
-        for (SInt32 LooseY = NewLooseBoundaries.GetMinimumY(); LooseY < NewLooseBoundaries.GetMaximumY(); ++LooseY)
-        {
-            for (SInt32 LooseX = NewLooseBoundaries.GetMinimumX(); LooseX < NewLooseBoundaries.GetMaximumX(); ++LooseX)
-            {
-                const UInt32 LooseKey = GetKey(LooseX, LooseY, NewLooseBoundaries);
-                Ref<HierarchyLooseCell> LooseCell = NewLooseRegistry[LooseKey];
-
-                if (LooseCell.Entities.IsEmpty())
-                {
-                    continue;
-                }
-
-                // Refresh loose cell boundaries based on contained entities.
-                LooseCell.Refresh(GetService<Scene::Service>());
-
-                // Calculate which tight cells this loose cell belongs to
-                const IntRect TightCoords = IntRect::Intersection(
-                    Coordinate::GetCellRange<kHierarchyTightLog>(LooseCell.Boundaries.GetXZ()), NewTightBoundaries);
-
-                for (SInt32 TightY = TightCoords.GetMinimumY(); TightY < TightCoords.GetMaximumY(); ++TightY)
-                {
-                    for (SInt32 TightX = TightCoords.GetMinimumX(); TightX < TightCoords.GetMaximumX(); ++TightX)
-                    {
-                        const UInt32 TightKey = GetKey(TightX, TightY, NewTightBoundaries);
-                        NewTightRegistry[TightKey].Insert(LooseKey);
-                    }
-                }
-            }
-        }
-
-        mLooseBoundaries = NewLooseBoundaries;
-        mTightBoundaries = NewTightBoundaries;
-        mLooseRegistry   = Move(NewLooseRegistry);
-        mTightRegistry   = Move(NewTightRegistry);
-        mLooseDirty.Clear();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -328,50 +258,40 @@ namespace Tileon
     {
         Ref<Scene::Service> Scene = GetService<Scene::Service>();
 
-        for (const UInt32 LooseKey : mLooseDirty)
+        IntVector2 Reach = IntVector2::Zero();
+
+        for (ConstRef<decltype(mRegistry)::Pair> Pair : mRegistry)
         {
-            Ref<HierarchyLooseCell> Loose = mLooseRegistry[LooseKey];
+            Ref<Slot> Slot = (* Pair.Second);
 
-            // Refresh loose cell boundaries based on contained entities.
-            const IntBox PreviousBoundaries = Loose.Refresh(Scene);
-
-            if (PreviousBoundaries != Loose.Boundaries)
+            // A region no entity touched this frame keeps all of its cells out of the sweep.
+            if (Exchange(Slot.Dirty, false))
             {
-                const IntRect OldestIntersect = GetTightCoordinates(PreviousBoundaries.GetXZ());
+                IntBox Boundaries(INT32_MAX, INT32_MAX, INT32_MAX, INT32_MIN, INT32_MIN, INT32_MIN);
+                Bool   Bounded = false;
 
-                if (!Loose.Entities.IsEmpty())
+                for (UInt32 Local = 0; Local < kLooseCount; ++Local)
                 {
-                    const IntRect NewestIntersect = GetTightCoordinates(Loose.Boundaries.GetXZ());
+                    Ref<HierarchyLooseCell> Loose = Slot.Loose[Local];
 
-                    // Remove from tight cells that are no longer overlapped.
-                    IntRect::ForEachRectDiff(OldestIntersect, NewestIntersect, [&](IntRect Difference)
-                    {
-                        ForEachTightCell(Difference, [LooseKey](Ref<HierarchyTightCell> Tight)
-                        {
-                            Tight.Remove(LooseKey);
-                        });
-                    });
+                    // Refresh loose cell boundaries based on contained entities.
+                    Loose.Refresh(Scene);
 
-                    // Add to tight cells that are newly overlapped  .
-                    IntRect::ForEachRectDiff(NewestIntersect, OldestIntersect, [&](IntRect Difference)
+                    if (!Loose.Entities.IsEmpty())
                     {
-                        ForEachTightCell(Difference, [LooseKey](Ref<HierarchyTightCell> Tight)
-                        {
-                            Tight.Insert(LooseKey);
-                        });
-                    });
+                        Boundaries = IntBox::Union(Boundaries, Loose.Boundaries);
+                        Bounded    = true;
+                    }
                 }
-                else
-                {
-                    // Remove from all previously overlapped tight cells.
-                    ForEachTightCell(OldestIntersect, [LooseKey](Ref<HierarchyTightCell> Tight)
-                    {
-                        Tight.Remove(LooseKey);
-                    });
-                }
+
+                Slot.Boundaries = Bounded ? Boundaries : IntBox::Zero();
+                Slot.Reach      = GetReach(GetKeyCoordinate(Pair.First), Slot.Boundaries);
             }
+
+            // A query widens its walk by the furthest any resident slot spills, the untouched ones included.
+            Reach = IntVector2::Max(Reach, Slot.Reach);
         }
-        mLooseDirty.Clear();
+        mReach = Reach;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -380,16 +300,19 @@ namespace Tileon
     void Supervisor::InsertEntityOnCell(Scene::Entity Actor, Ref<Enclosure> Enclosure, IntVector2 Center)
     {
         const IntVector2 Loose    = GetLooseCoordinate(Center);
-        const UInt32     LooseKey = GetKey(Loose.GetX(), Loose.GetY(), mLooseBoundaries);
+        const UInt64     LooseKey = GetLooseKey(Loose);
 
-        // Link entity to loose cell, and remember the cell so it can be unfiled from the same one.
-        Enclosure.SetCell(Loose);
-
-        if (!mLooseRegistry[LooseKey].Insert(Actor))
+        // An entity whose centre falls outside the resident set stays unfiled, since no query can reach it there.
+        if (const Ptr<Slot> Slot = FindLooseSlot(LooseKey))
         {
-            // Mark cell as dirty for next hierarchy update.
-            Guard Guard(mLooseMutex);
-            mLooseDirty.Append(LooseKey);
+            // Link entity to loose cell, and remember the cell so it can be unfiled from the same one.
+            Enclosure.SetCell(Loose);
+
+            if (!Slot->Loose[static_cast<UInt32>(LooseKey)].Insert(Actor))
+            {
+                // Flag the slot so the next hierarchy update sweeps its cells.
+                Slot->Dirty = true;
+            }
         }
     }
 
@@ -398,19 +321,20 @@ namespace Tileon
 
     void Supervisor::RemoveEntityOnCell(Scene::Entity Actor, Ref<Enclosure> Enclosure)
     {
-        const IntVector2 Loose = Enclosure.GetCell();
-
-        Enclosure.SetCell(Enclosure::kUnlinked);
-
-        if (mLooseBoundaries.Contains(Loose.GetX(), Loose.GetY()))
+        if (Enclosure.IsLinked())
         {
-            const UInt32 LooseKey = GetKey(Loose.GetX(), Loose.GetY(), mLooseBoundaries);
+            const UInt64 LooseKey = GetLooseKey(Enclosure.GetCell());
 
-            if (!mLooseRegistry[LooseKey].Remove(Actor))
+            Enclosure.SetCell(Enclosure::kUnlinked);
+
+            // The region owning the cell may have been evicted while the entity was still filed under it.
+            if (const Ptr<Slot> Slot = FindLooseSlot(LooseKey))
             {
-                // Mark cell as dirty for next hierarchy update.
-                Guard Guard(mLooseMutex);
-                mLooseDirty.Append(LooseKey);
+                if (!Slot->Loose[static_cast<UInt32>(LooseKey)].Remove(Actor))
+                {
+                    // Flag the slot so the next hierarchy update sweeps its cells.
+                    Slot->Dirty = true;
+                }
             }
         }
     }
@@ -424,13 +348,15 @@ namespace Tileon
 
         if (Newest == Enclosure.GetCell())
         {
-            const UInt32 NewestKey = GetKey(Newest.GetX(), Newest.GetY(), mLooseBoundaries);
+            const UInt64 LooseKey = GetLooseKey(Newest);
 
-            if (!mLooseRegistry[NewestKey].Update())
+            if (const Ptr<Slot> Slot = FindLooseSlot(LooseKey))
             {
-                // Mark cell as dirty for next hierarchy update.
-                Guard Guard(mLooseMutex);
-                mLooseDirty.Append(NewestKey);
+                if (!Slot->Loose[static_cast<UInt32>(LooseKey)].Update())
+                {
+                    // Flag the slot so the next hierarchy update sweeps its cells.
+                    Slot->Dirty = true;
+                }
             }
         }
         else
@@ -445,15 +371,37 @@ namespace Tileon
 
     void Supervisor::DetachEntityOnCell(Scene::Entity Root)
     {
-        if (const Ptr<Enclosure> Enclosure = Root.TryGet<Tileon::Enclosure>(); Enclosure && Enclosure->IsLinked())
+        if (const Ptr<Enclosure> Enclosure = Root.TryGet<Tileon::Enclosure>())
         {
-            RemoveEntityOnCell(Root, * Enclosure);
+            if (Enclosure->IsLinked())
+            {
+                RemoveEntityOnCell(Root, * Enclosure);
+            }
         }
 
         Root.Children([this](Scene::Entity Child)
         {
             DetachEntityOnCell(Child);
         });
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Supervisor::Evict(Ref<Slot> Slot)
+    {
+        if (const Scene::Entity Actor = Slot.Actor; Actor.IsValid())
+        {
+            if (Actor.Has<Persist>())
+            {
+                SaveRegion(Actor);
+            }
+
+            {
+                DetachEntityOnCell(Actor);
+            }
+            Actor.Destruct();
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

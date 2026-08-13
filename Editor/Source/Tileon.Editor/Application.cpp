@@ -448,10 +448,10 @@ namespace Tileon::Editor
                     {
                         mViewport.Set(Width, Height);
 
-                        mContext->GetController().Resize(Width, Height);
+                        mContext->GetPresenter().Resize(Width, Height);
                     }
                 }
-                mContext->GetController().Present(Delta);
+                mContext->GetPresenter().Present(Delta);
             }
         }
     }

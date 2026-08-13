@@ -10,7 +10,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Controller.hpp"
+#include "Presenter.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -21,9 +21,8 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Controller::Controller(Ref<Engine::Subsystem::Host> Host, Bool Immediate)
-        : Locator   { Host },
-          mWorld    { Host },
+    Presenter::Presenter(Ref<Engine::Subsystem::Host> Host, Bool Immediate)
+        : Session   { Host },
           mRenderer { Host, Immediate }
     {
     }
@@ -31,15 +30,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Controller::Teardown()
-    {
-        mWorld.Teardown();
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Controller::Init(UInt16 Width, UInt16 Height, UInt16 Density)
+    void Presenter::Init(UInt16 Width, UInt16 Height, UInt16 Density)
     {
         // Initialize the director with the display dimensions and density specified in the configuration.
         mDirector.SetDensity(Density);
@@ -53,10 +44,10 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Controller::Load()
+    void Presenter::Load()
     {
         // Load the world, which includes loading the regions, terrains, and archetypes from their respective files.
-        mWorld.Load();
+        Session::Load();
 
         // Load the renderer, which includes loading the tileset.
         mRenderer.Load();
@@ -65,10 +56,10 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Controller::Save()
+    void Presenter::Save()
     {
         // Save the state of the world, which includes any relevant data such as the regions, terrains, and archetypes.
-        mWorld.Save();
+        Session::Save();
 
         // Save the renderer's state, which includes any relevant data such as the tileset.
         mRenderer.Save();
@@ -77,7 +68,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Controller::Resize(UInt16 Width, UInt16 Height)
+    void Presenter::Resize(UInt16 Width, UInt16 Height)
     {
         // Update the director's viewport dimensions based on the new output size.
         mDirector.SetViewport(
@@ -91,7 +82,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Controller::Present(Real64 Delta)
+    void Presenter::Present(Real64 Delta)
     {
         ZY_PROFILE_SCOPE("Tileon::Present");
 
@@ -99,11 +90,33 @@ namespace Tileon
 
         if (mDirector.Compute())
         {
-            const IntRect Frustum = Coordinate::GetRegionCell(mDirector.GetFrustum());
-
-            mWorld.GetSupervisor().Navigate(Frustum.Expand(1));
+            Navigate(Coordinate::GetRegionCell(mDirector.GetFrustum()).Expand(1));
         }
 
         mRenderer.Present(mDirector);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Presenter::Navigate(IntRect Boundaries)
+    {
+        if (mBoundaries != Boundaries)
+        {
+            mBoundaries = Boundaries;
+
+            // A frustum is a rectangle, so the camera's residency is nothing more than every region it covers.
+            mResident.Clear();
+
+            for (SInt32 Y = Boundaries.GetMinimumY(); Y < Boundaries.GetMaximumY(); ++Y)
+            {
+                for (SInt32 X = Boundaries.GetMinimumX(); X < Boundaries.GetMaximumX(); ++X)
+                {
+                    mResident.Append(X, Y);
+                }
+            }
+
+            mWorld.GetSupervisor().Reside(mResident);
+        }
     }
 }

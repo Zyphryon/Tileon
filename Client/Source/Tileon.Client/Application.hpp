@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Runtime/Controller.hpp"
+#include "Tileon.Session/Presenter.hpp"
 #include <Zyphryon.Runtime/Kernel.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -86,13 +86,13 @@ namespace Tileon::Client
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        State              mState;
-        Str                mTitle;
-        Filesystem::Path   mFolder;
-        UInt16             mDensity;
-        Unique<Controller> mController;
-        Vector2            mCursor;
-        Real64             mSample;
-        UInt32             mFrames;
+        State             mState;
+        Str               mTitle;
+        Filesystem::Path  mFolder;
+        UInt16            mDensity;
+        Unique<Presenter> mPresenter;
+        Vector2           mCursor;
+        Real64            mSample;
+        UInt32            mFrames;
     };
 }

@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Runtime/Controller.hpp"
+#include "Tileon.Session/Presenter.hpp"
 #include "Component/Registry.hpp"
 #include "Masonry/Forge.hpp"
 #include "Project.hpp"
@@ -81,9 +81,9 @@ namespace Tileon::Editor
         /// \brief Gets a reference to the controller associated with the context.
         ///
         /// \return A reference to the controller associated with the context.
-        ZY_INLINE Ref<Controller> GetController()
+        ZY_INLINE Ref<Presenter> GetPresenter()
         {
-            return mController;
+            return mPresenter;
         }
 
         /// \brief Gets a reference to the repository from the world associated with the controller.
@@ -91,7 +91,7 @@ namespace Tileon::Editor
         /// \return A reference to the repository from the world associated with the controller.
         ZY_INLINE Ref<Repository> GetRepository()
         {
-            return mController.GetWorld().GetRepository();
+            return mPresenter.GetWorld().GetRepository();
         }
 
         /// \brief Gets a reference to the supervisor from the world associated with the controller.
@@ -99,7 +99,7 @@ namespace Tileon::Editor
         /// \return A reference to the supervisor from the world associated with the controller.
         ZY_INLINE Ref<Supervisor> GetSupervisor()
         {
-            return mController.GetWorld().GetSupervisor();
+            return mPresenter.GetWorld().GetSupervisor();
         }
 
         /// \brief Gets a reference to the director from the controller.
@@ -107,7 +107,7 @@ namespace Tileon::Editor
         /// \return A reference to the director from the controller.
         ZY_INLINE Ref<Director> GetDirector()
         {
-            return mController.GetDirector();
+            return mPresenter.GetDirector();
         }
 
         /// \brief Gets a reference to the renderer from the controller.
@@ -115,7 +115,7 @@ namespace Tileon::Editor
         /// \return A reference to the renderer from the controller.
         ZY_INLINE Ref<Renderer> GetRenderer()
         {
-            return mController.GetRenderer();
+            return mPresenter.GetRenderer();
         }
 
         /// \brief Gets a reference to the tileset from the renderer associated with the controller.
@@ -123,7 +123,7 @@ namespace Tileon::Editor
         /// \return A reference to the tileset from the renderer associated with the controller.
         ZY_INLINE Ref<Tileset> GetTileset()
         {
-            return mController.GetRenderer().GetTileset();
+            return mPresenter.GetRenderer().GetTileset();
         }
 
         /// \brief Gets a reference to the registry of inspectable components.
@@ -163,7 +163,7 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Controller     mController;
+        Presenter      mPresenter;
         Project        mProject;
         Registry       mRegistry;
         Masonry::Forge mForge;

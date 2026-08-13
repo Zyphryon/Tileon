@@ -125,16 +125,15 @@ namespace Tileon
                 Actor.Add<Stale>();
             });
 
-        // System that migrates dynamic entities to a neighbouring region when they cross a region boundary.
-        // TODO: Revise (Can't be added efficiently until flecs supports direct parent queries in systems).
-        Scene.CreateSystem<Scene::DSL::With<Dynamic>, Scene::DSL::Read<Region>, Scene::DSL::Write<Stale>>(
+        // System that migrates an entity to a neighbouring region once it crosses a region boundary.
+        Scene.CreateSystem<Kinetic, Scene::DSL::Read<Region>, Scene::DSL::Write<Stale>>(
             "World::RegionMigration",
             EcsPreUpdate,
             Scene::Execution::Default,
             [this](Scene::Entity Actor, Ref<Pose> Pose)
             {
                 mSupervisor.Migrate(Actor, Pose);
-            });
+            }, Scene::DSL::Not(ecs_id(EcsParent)));
 
         // System that propagates stale states to all descendants of a stale entity.
         Scene.CreateSystem<Scene::DSL::Not<Stale>, Scene::DSL::Up<Stale>, Scene::DSL::Write<Stale>>(

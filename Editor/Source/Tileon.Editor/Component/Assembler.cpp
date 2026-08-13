@@ -47,7 +47,7 @@ namespace Tileon::Editor
         // Draw the components the entity owns.
         Actor.Each([&](Scene::Entity Component)
         {
-            if (!Component.IsPair() && IsAuthorable(Actor, Component))
+            if (!ecs_id_is_pair(Component.GetID()) && IsAuthorable(Actor, Component))
             {
                 DrawComponent(Actor, Component, false);
             }
@@ -58,7 +58,7 @@ namespace Tileon::Editor
         {
             Archetype.Each([&](Scene::Entity Component)
             {
-                if (!Component.IsPair() && IsAuthorable(Actor, Component) && !Actor.Owns(Component.GetID()))
+                if (!ecs_id_is_pair(Component.GetID()) && IsAuthorable(Actor, Component) && !Actor.Owns(Component.GetID()))
                 {
                     DrawComponent(Actor, Component, true);
                 }

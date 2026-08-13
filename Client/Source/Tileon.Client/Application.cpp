@@ -189,15 +189,15 @@ namespace Tileon::Client
         mTitle = Window.GetTitle();
 
         // Compose straight into the display, as the client has no interface to hand an off-screen image to.
-        mController = Unique<Controller>::Create(* this, true);
-        mController->Init(Window.GetWidth(), Window.GetHeight(), mDensity);
-        mController->Load();
+        mPresenter = Unique<Presenter>::Create(* this, true);
+        mPresenter->Init(Window.GetWidth(), Window.GetHeight(), mDensity);
+        mPresenter->Load();
 
         // A run has to land on content, so the view opens where the world was last authored from.
         ConstRef<Environment> Options = GetEnvironment();
         const Placement       Anchor  = Restore(mFolder);
 
-        Ref<Director> Director = mController->GetDirector();
+        Ref<Director> Director = mPresenter->GetDirector();
         Director.SetPosition(Placement::FromAbsolute(
             Options.GetNumber<Real64>("x", Anchor.GetAbsoluteX()),
             Options.GetNumber<Real64>("y", Anchor.GetAbsoluteY())));
@@ -237,7 +237,7 @@ namespace Tileon::Client
         {
             Navigate(Delta);
 
-            mController->Present(Delta);
+            mPresenter->Present(Delta);
             break;
         }
         }
@@ -250,9 +250,9 @@ namespace Tileon::Client
 
     void Application::OnTerminate()
     {
-        if (mController)
+        if (mPresenter)
         {
-            mController->Teardown();
+            mPresenter->Teardown();
         }
     }
 
@@ -261,9 +261,9 @@ namespace Tileon::Client
 
     Bool Application::OnWindowResize(UInt32 Width, UInt32 Height)
     {
-        if (mController && Width > 0 && Height > 0)
+        if (mPresenter && Width > 0 && Height > 0)
         {
-            mController->Resize(Width, Height);
+            mPresenter->Resize(Width, Height);
         }
         return false;
     }
@@ -274,7 +274,7 @@ namespace Tileon::Client
     void Application::Navigate(Real64 Delta)
     {
         ConstRetainer<Input::Service> Input    = GetService<Input::Service>();
-        Ref<Director>                 Director = mController->GetDirector();
+        Ref<Director>                 Director = mPresenter->GetDirector();
 
         // The service reports where the pointer is and not how far it travelled, so the delta is tracked by hand.
         const Vector2 Cursor(Input->GetMouseX(), Input->GetMouseY());

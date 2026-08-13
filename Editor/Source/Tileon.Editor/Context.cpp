@@ -23,13 +23,13 @@ namespace Tileon::Editor
 
     Context::Context(Ref<Engine::Subsystem::Host> Host, AnyRef<Project> Project)
         : Locator     { Host },
-          mController { Host, false },
+          mPresenter { Host, false },
           mProject    { Move(Project) },
           mRegistry   { GetService<Scene::Service>() },
-          mForge      { Host, mController.GetRenderer().GetTileset() }
+          mForge      { Host, mPresenter.GetRenderer().GetTileset() }
     {
-        mController.Init(320, 200, Project.GetDensity());
-        mController.Load();
+        mPresenter.Init(320, 200, Project.GetDensity());
+        mPresenter.Load();
         Load();
     }
 
@@ -39,7 +39,7 @@ namespace Tileon::Editor
     void Context::Teardown()
     {
         Save();
-        mController.Teardown();
+        mPresenter.Teardown();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -59,7 +59,7 @@ namespace Tileon::Editor
         mForge.Bake(mProject.GetFolder());
 
         // Persist the world and its regions.
-        mController.Save();
+        mPresenter.Save();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -76,7 +76,7 @@ namespace Tileon::Editor
 
         const Real64 X = GetReal("Camera.X", 0.0);
         const Real64 Y = GetReal("Camera.Y", 0.0);
-        mController.GetDirector().SetPosition(Placement::FromAbsolute(X, Y));
+        mPresenter.GetDirector().SetPosition(Placement::FromAbsolute(X, Y));
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -84,7 +84,7 @@ namespace Tileon::Editor
 
     void Context::Save()
     {
-        const Placement Camera = mController.GetDirector().GetPosition();
+        const Placement Camera = mPresenter.GetDirector().GetPosition();
         SetReal("Camera.X", Camera.GetAbsoluteX());
         SetReal("Camera.Y", Camera.GetAbsoluteY());
 

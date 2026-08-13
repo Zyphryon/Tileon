@@ -153,25 +153,9 @@ namespace Tileon::Editor
 
         if (!Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left))
         {
-            // The runtime only migrates Dynamic entities, so the move is handed to the supervisor here, once, when the drag settles.
-            Ref<Supervisor> Supervisor = mContext.GetSupervisor();
-
             for (ConstRef<Snapshot> Snapshot : mSnapshots)
             {
-                const Ptr<Pose>     Pose   = Snapshot.Actor.TryGet<Tileon::Pose>();
-                const Scene::Entity Parent = Snapshot.Actor.GetParent();
-
-                if (!Pose)
-                {
-                    continue;
-                }
-
-                // Both regions change: the one that lost the entity and the one that took it in.
-                if (const Scene::Entity Target = Supervisor.Migrate(Snapshot.Actor, * Pose); Target.IsValid())
-                {
-                    Parent.Add<Tileon::Persist>();
-                    Target.Add<Tileon::Persist>();
-                }
+                Snapshot.Actor.Add<Tileon::Stale>();
             }
 
             mHandle = Handle::None;

@@ -26,11 +26,7 @@ namespace Tileon
     public:
 
         /// \brief Constructs an identity transform at the world origin.
-        ZY_INLINE Transform()
-            : mWorldspace { Matrix4x3::Identity() },
-              mOrigin     { 0, 0, 0 }
-        {
-        }
+        ZY_INLINE Transform() = default;
 
         /// \brief Constructs a transform from a matrix and the origin it is relative to.
         ///
