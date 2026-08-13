@@ -33,7 +33,7 @@ namespace Tileon::Editor
 
     void Registry::OnRegister()
     {
-        mScene.GetComponent<Descriptor>("Descriptor").Grant(Scene::Trait::Final);
+        mScene.Register(Scene::DSL::Declare<Descriptor>(Scene::DSL::Final));
 
         Add<Pose>       ("Pose",        ICON_FA_UP_DOWN_LEFT_RIGHT,     "Kinematic");
         Add<Anchor>     ("Anchor",      ICON_FA_ANCHOR,                 "Kinematic");

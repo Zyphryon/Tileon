@@ -59,18 +59,14 @@ namespace Tileon
 
     void World::OnRegister(Ref<Scene::Service> Scene)
     {
-        Scene.GetComponent<Persist>("Persist");
-        Scene.GetComponent<Dispose>("Dispose");
-        Scene.GetComponent<Stale>("Stale");
-        Scene.GetComponent<Dynamic>("Dynamic");
-        Scene.GetComponent<Unpickable>("Unpickable");
-        Scene.GetComponent<Transform>("Transform");
-        Scene.GetComponent<Pose>("Pose").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Transform>();
-        Scene.GetComponent<Anchor>("Anchor").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Enclosure>("Enclosure");
-        Scene.GetComponent<Extent>("Extent").With<Enclosure>();
-        Scene.GetComponent<Velocity>("Velocity").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable).With<Dynamic>();
-        Scene.GetComponent<Region>("Region").Grant(Scene::Trait::Serializable);
+        Scene.Register(
+            Scene::DSL::Declare<Persist, Dispose, Stale, Dynamic, Unpickable>(),
+            Scene::DSL::Declare<Enclosure, Transform>(),
+            Scene::DSL::Declare<Region>(Scene::DSL::Serializable),
+            Scene::DSL::Declare<Anchor>(Scene::DSL::Authored),
+            Scene::DSL::Declare<Extent>(Scene::DSL::Implies<Enclosure>),
+            Scene::DSL::Declare<Pose>(Scene::DSL::Authored, Scene::DSL::Implies<Transform, Extent>),
+            Scene::DSL::Declare<Velocity>(Scene::DSL::Authored, Scene::DSL::Implies<Dynamic>));
 
         // Observe changes to the local transform and mark entities as stale if they are not kinetic.
         Scene.CreateObserver<Scene::DSL::With<Pose>, Scene::DSL::Not<Dynamic>>(

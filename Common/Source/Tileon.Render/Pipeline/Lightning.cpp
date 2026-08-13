@@ -178,9 +178,9 @@ namespace Tileon::Pipeline
 
     void Lightning::OnRegister(Ref<Scene::Service> Scene)
     {
-        Scene.GetComponent<Glowlight>("Glowlight").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Skylight>("Skylight").Grant(Scene::Trait::Serializable, Scene::Trait::Singleton);
-        Scene.GetComponent<Spotlight>("Spotlight").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
+        Scene.Register(
+            Scene::DSL::Declare<Glowlight, Spotlight>(Scene::DSL::Authored),
+            Scene::DSL::Declare<Skylight>(Scene::DSL::Serializable, Scene::DSL::Singleton));
 
         // Observes changes to the light radial component and updates the corresponding spatial properties of the actor.
         Scene.CreateObserver<>(

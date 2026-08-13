@@ -225,7 +225,7 @@ namespace Tileon::Editor
         {
             GetContext().SetString("Navigate.Panel", "Archetypes");
             GetContext().SetInteger("Selection.Archetype", Target);
-            GetContext().SetInteger("Selection.Archetype.Target", Target);
+            GetContext().SetInteger("Selection.Archetype.Target", Scene::kMinRangeArchetypes + Target);
         }
     }
 

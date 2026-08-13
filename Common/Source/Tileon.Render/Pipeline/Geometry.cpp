@@ -240,17 +240,12 @@ namespace Tileon::Pipeline
 
     void Geometry::OnRegister(Ref<Scene::Service> Scene)
     {
-        Scene.GetComponent<IntColor8>("Tint").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Animator>("Animator");
-        Scene.GetComponent<Appearance>("Appearance");
-        Scene.GetComponent<Transparent>("Transparent").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Unlit>("Unlit").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Animation>("Animation").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Sprite>("Sprite").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Label>("Label").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Lettering>("Lettering").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Decoration>("Decoration").Grant(Scene::Trait::Serializable, Scene::Trait::Inheritable);
-        Scene.GetComponent<Mosaic>("Mosaic");
+
+        Scene.Register(
+            Scene::DSL::Declare<Animator, Appearance, Mosaic>(),
+            Scene::DSL::Declare<IntColor8>("Tint", Scene::DSL::Authored),
+            Scene::DSL::Declare<Transparent, Unlit>(Scene::DSL::Authored),
+            Scene::DSL::Declare<Animation, Decoration, Label, Lettering, Sprite>(Scene::DSL::Authored));
 
         // Observe when a region is attached, and automatically give it the mosaic its tiles are drawn from.
         Scene.CreateObserver<Scene::DSL::With<Region>>(
