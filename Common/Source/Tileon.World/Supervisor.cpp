@@ -199,7 +199,12 @@ namespace Tileon
         ZY_ASSERT(Source.IsValid(), "A migrating entity must be parented to the region that owns it");
 
         // A part follows the root it belongs to, so only an entity a region owns outright may move by itself.
-        ConstRef<Region> Origin = Source.Get<const Tileon::Region>();
+        const ConstPtr<Region> Origin = Source.TryGet<const Tileon::Region>();
+
+        if (Origin == nullptr)
+        {
+            return Scene::Entity();
+        }
 
         // A pose is local to its region, so anything outside the region's own span belongs to a neighbour.
         const Vector3 Position = Pose.GetTranslation();
@@ -212,10 +217,10 @@ namespace Tileon
         }
 
         // The world ends somewhere, so a step past its edge is refused rather than wrapped to the far side.
-        const SInt32 TargetX = Clamp(Origin.GetX() + static_cast<SInt32>(Distance.GetX()),
+        const SInt32 TargetX = Clamp(Origin->GetX() + static_cast<SInt32>(Distance.GetX()),
             static_cast<SInt32>(Placement::kMinRegion),
             static_cast<SInt32>(Placement::kMaxRegion));
-        const SInt32 TargetY = Clamp(Origin.GetY() + static_cast<SInt32>(Distance.GetY()),
+        const SInt32 TargetY = Clamp(Origin->GetY() + static_cast<SInt32>(Distance.GetY()),
             static_cast<SInt32>(Placement::kMinRegion),
             static_cast<SInt32>(Placement::kMaxRegion));
 
