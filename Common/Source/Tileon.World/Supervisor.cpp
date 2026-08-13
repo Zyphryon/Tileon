@@ -238,10 +238,6 @@ namespace Tileon
             // Cascades Stale to all static children, making them Kinetic this frame.
             Actor.Attach(Target, Scene::Hierarchy::Open);
             Actor.Add<Stale>();
-
-            // Both regions changed, the one that lost the entity and the one that took it in.
-            Source.Add<Persist>();
-            Target.Add<Persist>();
         }
         else
         {

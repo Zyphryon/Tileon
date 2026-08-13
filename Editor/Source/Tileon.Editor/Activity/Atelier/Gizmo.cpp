@@ -279,6 +279,27 @@ namespace Tileon::Editor
             if (const Scene::Entity Region = Snapshot.Actor.GetParent(); Region.IsValid())
             {
                 Region.Add<Tileon::Persist>();
+
+                // A drag can carry the entity into a neighbour, which migration re-parents it to later.
+                // The pose still reads against this region, so the one it is heading for is flagged now.
+                if (const ConstPtr<Tileon::Region> Origin = Region.TryGet<const Tileon::Region>())
+                {
+                    const Vector2 Ground   = Snapshot.Actor.Get<const Pose>().GetTranslation().GetXZ();
+                    const Vector2 Distance = Vector2::Floor(
+                        Ground / Vector2(Tileon::Region::kTilesPerX, Tileon::Region::kTilesPerY));
+
+                    if (!Distance.IsAlmostZero())
+                    {
+                        const Scene::Entity Neighbour = mContext.GetSupervisor().GetRegion(
+                            static_cast<SInt16>(Origin->GetX() + static_cast<SInt32>(Distance.GetX())),
+                            static_cast<SInt16>(Origin->GetY() + static_cast<SInt32>(Distance.GetY())));
+
+                        if (Neighbour.IsValid())
+                        {
+                            Neighbour.Add<Tileon::Persist>();
+                        }
+                    }
+                }
             }
         }
         return true;
