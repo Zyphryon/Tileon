@@ -884,6 +884,33 @@ namespace Tileon::Editor::Toolkit
             ImGui::EndCombo();
         }
 
+        template<IsEnum Type>
+        ZY_INLINE static Bool Combo(Text ID, Ref<Type> Value)
+        {
+            Bool Dirty = false;
+
+            if (BeginCombo(ID, Enum::GetName(Value)))
+            {
+                for (const Type Option : Enum::GetValues<Type>())
+                {
+                    const Bool Selected = (Option == Value);
+
+                    if (Selectable(Enum::GetName(Option), Selected))
+                    {
+                        Value = Option;
+                        Dirty = true;
+                    }
+
+                    if (Selected)
+                    {
+                        SetItemDefaultFocus();
+                    }
+                }
+                EndCombo();
+            }
+            return Dirty;
+        }
+
         ZY_INLINE static Bool BeginTable(Text ID, SInt32 Columns, ImGuiTableFlags Flags = ImGuiTableFlags_None, ImVec2 Size = ImVec2(0, 0))
         {
             return ImGui::BeginTable(ID.GetData(), Columns, Flags, Size);
@@ -1130,6 +1157,8 @@ namespace Tileon::Editor::Toolkit
             InputText(ID, TextValue, TextAction, Flags);
 
             ImGui::SameLine();
+            ImGui::PushID(ID.GetData());
+
             if (ImGui::SmallButton(FirstLabel.GetData()))
             {
                 FirstAction();
@@ -1143,6 +1172,7 @@ namespace Tileon::Editor::Toolkit
                 SecondAction();
             }
             ImGui::EndDisabled();
+            ImGui::PopID();
         }
 
         template<typename InputCallback, typename ButtonCallback>
@@ -1159,10 +1189,14 @@ namespace Tileon::Editor::Toolkit
             InputText(ID, TextValue, TextAction, Flags);
 
             ImGui::SameLine();
+            ImGui::PushID(ID.GetData());
+
             if (ImGui::SmallButton(ButtonLabel.GetData()))
             {
                 ButtonAction();
             }
+
+            ImGui::PopID();
         }
 
         template<typename Tint>

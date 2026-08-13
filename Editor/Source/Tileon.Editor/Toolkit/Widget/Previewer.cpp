@@ -35,7 +35,8 @@ namespace Tileon::Editor::Toolkit
         const ImVec2 Origin    = Toolkit::Composer::GetCursorScreenPos();
 
         // Reserve the entire content area so ImGui tracks hover / active state.
-        Toolkit::Composer::InvisibleButton("##viewer_area", Available);
+        Toolkit::Composer::InvisibleButton("##viewer_area", Available,
+            ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonMiddle);
 
         const Bool   Hovered = Toolkit::Composer::IsItemHovered();
         const ImVec2 Mouse   = Toolkit::Composer::GetMousePos();
@@ -74,8 +75,8 @@ namespace Tileon::Editor::Toolkit
             }
         }
 
-        // Pan with middle mouse button, moving the image in the direction of the mouse movement.
-        if (Hovered && Toolkit::Composer::IsMouseDragging(ImGuiMouseButton_Middle))
+        // Dragging moves the image with the cursor, and holds on even once the drag leaves the viewer.
+        if (Toolkit::Composer::IsItemActive())
         {
             const ImVec2 Delta = Toolkit::Composer::GetMouseDelta();
             mPan += Vector2(Delta.x, Delta.y);
@@ -135,11 +136,11 @@ namespace Tileon::Editor::Toolkit
             const Real32 PX = Clamp((Mouse.x - ImageTL.x) / mZoom, 0.0f, Size.GetX() - 1.0f);
             const Real32 PY = Clamp((Mouse.y - ImageTL.y) / mZoom, 0.0f, Size.GetY() - 1.0f);
 
-            CoordLabel = String<128>::Print<"X: {0:.0f}  Y: {1:.0f}    {2}    R to reset">(PX, PY, ZoomLabel);
+            CoordLabel = String<128>::Print<"X: {0:.0f}  Y: {1:.0f}    {2}    drag to pan, R to reset">(PX, PY, ZoomLabel);
         }
         else
         {
-            CoordLabel = String<128>::Print<"{0}    R to reset">(ZoomLabel);
+            CoordLabel = String<128>::Print<"{0}    drag to pan, R to reset">(ZoomLabel);
         }
 
         const ImVec2 LabelSize = Toolkit::Composer::CalcTextSize(CoordLabel);

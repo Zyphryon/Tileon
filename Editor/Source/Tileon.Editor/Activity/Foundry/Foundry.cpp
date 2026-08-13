@@ -250,18 +250,9 @@ namespace Tileon::Editor
 
         Toolkit::Composer::Field("Easing");
         Toolkit::Composer::PushItemWidth(-1);
-        if (Toolkit::Composer::BeginCombo("##easing", Enum::GetName(Motif.GetEasing())))
+        if (Easing Option = Motif.GetEasing(); Toolkit::Composer::Combo("##easing", Option))
         {
-            for (const Easing Option : Enum::GetValues<Easing>())
-            {
-                const Bool Selected = (Motif.GetEasing() == Option);
-
-                if (Toolkit::Composer::Selectable(Enum::GetName(Option), Selected))
-                {
-                    Motif.SetEasing(Option);
-                }
-            }
-            Toolkit::Composer::EndCombo();
+            Motif.SetEasing(Option);
         }
         Toolkit::Composer::PopItemWidth();
         Toolkit::Composer::Spacing();

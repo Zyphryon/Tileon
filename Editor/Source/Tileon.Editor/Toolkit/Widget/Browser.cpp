@@ -130,6 +130,7 @@ namespace Tileon::Editor::Toolkit
         if (Toolkit::Composer::TreeNode("Content", ImGuiTreeNodeFlags_SpanFullWidth))
         {
             DrawSidebarTree("Resources://");  // TODO: Specify Schema?
+
             Toolkit::Composer::TreePop();
         }
         Toolkit::Composer::EndChild();
@@ -150,7 +151,11 @@ namespace Tileon::Editor::Toolkit
         mSelection = "";
 
         // Drop the cache so the next time the browser is shown it re-enumerates and reflects on-disk changes.
-        mEntries.Clear();
+        {
+            Guard Lock(mMutex);
+
+            mEntries.Clear();
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -250,25 +255,40 @@ namespace Tileon::Editor::Toolkit
     {
         const UInt64 Key = Hash(Uri.GetPath());
 
-        // Decide whether a (re)enumeration is due without holding a reference across the request.
-        Ref<Directory> Slot = mEntries.FindOrInsert(Key);
+        // Decide whether a (re)enumeration is due without holding a reference (or the lock) across the request.
+        Bool WasRequested = false;
 
-        if (const Real64 Now = Toolkit::Composer::GetTime(); !Slot.Pending && Now >= Slot.Refresh)
         {
-            Slot.Pending = true;
-            Slot.Refresh = Now + kInterval;
+            Guard Lock(mMutex);
 
-            // The enumeration runs asynchronously and its completion is delivered on the main thread, so the cache can
-            // be updated here without any synchronization.
+            Ref<Directory> Slot = mEntries.FindOrInsert(Key);
+
+            if (const Real64 Now = Toolkit::Composer::GetTime(); !Slot.Pending && Now >= Slot.Refresh)
+            {
+                Slot.Pending = true;
+                Slot.Refresh = Now + kInterval;
+
+                WasRequested = true;
+            }
+        }
+
+        // A synchronous mount completes inline on this thread, so the request is issued unlocked to avoid deadlocking
+        // against the callback below, which otherwise runs on an I/O worker.
+        if (WasRequested)
+        {
             mService.Enumerate(Uri, [this, Key](Filesystem::Result Result, Sequence<Filesystem::Record> Records)
             {
+                Guard Lock(mMutex);
+
                 Ref<Directory> Entry = mEntries.FindOrInsert(Key);
                 Entry.Records = Move(Records);
                 Entry.Pending = false;
             });
         }
 
-        // Re-fetch after the request, since a synchronous completion may have already mutated the table.
+        // Copy under the lock, since the worker may replace the records while the caller iterates them.
+        Guard Lock(mMutex);
+
         return mEntries.FindOrInsert(Key).Records;
     }
 }

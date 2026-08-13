@@ -222,64 +222,34 @@ namespace Tileon::Editor
         Toolkit::Composer::SetCursorPosX(Toolkit::Composer::GetWindowWidth() - 200.0f);
         Toolkit::Composer::SetNextItemWidth(96.0f);
 
-        const Perspective CurrentMode = GetContext().GetEnum("Atelier.Perspective", Perspective::Ortho);
+        Perspective CurrentMode = GetContext().GetEnum("Atelier.Perspective", Perspective::Ortho);
 
-        if (Toolkit::Composer::BeginCombo("##projection", Enum::GetName(CurrentMode)))
+        if (Toolkit::Composer::Combo("##projection", CurrentMode))
         {
-            for (const Perspective Type : Enum::GetValues<Perspective>())
+            GetContext().SetEnum("Atelier.Perspective", CurrentMode);
+
+            switch (CurrentMode)
             {
-                const Bool Selected = (CurrentMode == Type);
-
-                if (Toolkit::Composer::Selectable(Enum::GetName(Type), Selected))
-                {
-                    GetContext().SetEnum("Atelier.Perspective", Type);
-
-                    switch (Type)
-                    {
-                    case Perspective::Isometric:
-                        GetContext().GetDirector().SetProjection(Tileon::Projection::Isometric());
-                        break;
-                    case Perspective::Axonometric:
-                        GetContext().GetDirector().SetProjection(
-                            Tileon::Projection::Axonometric(Angle::FromDegrees(mYaw), mTilt));
-                        break;
-                    default:
-                        GetContext().GetDirector().SetProjection(Tileon::Projection::Ortho());
-                        break;
-                    }
-                }
-
-                if (Selected)
-                {
-                    Toolkit::Composer::SetItemDefaultFocus();
-                }
+            case Perspective::Isometric:
+                GetContext().GetDirector().SetProjection(Tileon::Projection::Isometric());
+                break;
+            case Perspective::Axonometric:
+                GetContext().GetDirector().SetProjection(
+                    Tileon::Projection::Axonometric(Angle::FromDegrees(mYaw), mTilt));
+                break;
+            default:
+                GetContext().GetDirector().SetProjection(Tileon::Projection::Ortho());
+                break;
             }
-            Toolkit::Composer::EndCombo();
         }
         Toolkit::Composer::Tooltip("Projection mode");
 
         Toolkit::Composer::SameLine();
         Toolkit::Composer::SetNextItemWidth(96.0f);
 
-        if (Toolkit::Composer::BeginCombo("##target", Enum::GetName(mTarget)))
+        if (Toolkit::Composer::Combo("##target", mTarget))
         {
-            for (const Renderer::Target Type : Enum::GetValues<Renderer::Target>())
-            {
-                const Bool Selected = (mTarget == Type);
-
-                if (Toolkit::Composer::Selectable(Enum::GetName(Type), Selected))
-                {
-                    mTarget = Type;
-
-                    GetContext().GetRenderer().SetOutput(Type);
-                }
-
-                if (Selected)
-                {
-                    Toolkit::Composer::SetItemDefaultFocus();
-                }
-            }
-            Toolkit::Composer::EndCombo();
+            GetContext().GetRenderer().SetOutput(mTarget);
         }
         Toolkit::Composer::Tooltip("Displayed render target");
 

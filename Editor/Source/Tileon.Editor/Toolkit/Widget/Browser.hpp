@@ -67,22 +67,6 @@ namespace Tileon::Editor::Toolkit
 
     private:
 
-        /// \brief Draws the browser as a popup window, providing a dedicated interface for browsing content items.
-        ///
-        /// \return `true` if the popup is still open, `false` if it was closed.
-        Bool DrawPopup();
-
-        /// \brief Draws the main body of the browser, which includes the sidebar tree view and the content gallery.
-        void DrawBody();
-
-        /// \brief Recursively draws one level of the directory tree for the given content URI.
-        ///
-        /// \param Parent The content URI of the directory to draw, whose children will be enumerated.
-        void DrawSidebarTree(ConstRef<Content::Uri> Parent);
-
-        /// \brief Draws the right content area using the gallery widget.
-        void DrawContent();
-
         /// \brief Defines the type for a list of content entries.
         using Entries = Sequence<Filesystem::Record>;
 
@@ -99,6 +83,22 @@ namespace Tileon::Editor::Toolkit
             Real64  Refresh = 0.0;
         };
 
+        /// \brief Draws the browser as a popup window, providing a dedicated interface for browsing content items.
+        ///
+        /// \return `true` if the popup is still open, `false` if it was closed.
+        Bool DrawPopup();
+
+        /// \brief Draws the main body of the browser, which includes the sidebar tree view and the content gallery.
+        void DrawBody();
+
+        /// \brief Recursively draws one level of the directory tree for the given content URI.
+        ///
+        /// \param Parent The content URI of the directory to draw, whose children will be enumerated.
+        void DrawSidebarTree(ConstRef<Content::Uri> Parent);
+
+        /// \brief Draws the right content area using the gallery widget.
+        void DrawContent();
+
         /// \brief Returns a snapshot of the cached entries for the given URI.
         ///
         /// \param Uri The content URI of the directory to enumerate.
@@ -111,7 +111,8 @@ namespace Tileon::Editor::Toolkit
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         Ref<Content::Service>    mService;
-        Table<UInt64, Directory> mEntries;        // TODO: Use LastTimeUpdated to reduce queries.
+        Mutex                    mMutex;
+        Table<UInt64, Directory> mEntries;
         Content::Uri             mPath;
         Toolkit::Gallery         mGallery;
 
