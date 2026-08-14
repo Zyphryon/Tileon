@@ -63,16 +63,61 @@ namespace Tileon::Editor::Toolkit
 
     private:
 
+        /// \brief Identifies the listing column the entries are ordered by, matching the table's column indices.
+        enum class Column : UInt8
+        {
+            Name,   ///< Ordered by entry name.
+            Size,   ///< Ordered by file size.
+            Type,   ///< Ordered by the described entry type.
+        };
+
         /// \brief Refreshes \ref mEntries from the current \ref mDirectory.
         void Refresh();
 
-        /// \brief Navigates into a subdirectory or up to the parent, then refreshes the listing.
+        /// \brief Orders \ref mEntries by the active column, keeping directories ahead of files either way.
+        void Sort();
+
+        /// \brief Browses to a directory and records it, discarding any trail the user had moved back from.
         ///
         /// \param Directory The directory to navigate to.
         void Navigate(Text Directory);
 
-        /// \brief Confirms the current selection/filename and invokes the result callback.
-        void Confirm();
+        /// \brief Steps through the visited directories without disturbing the trail.
+        ///
+        /// \param Steps How many entries to move, negative to go back and positive to go forward.
+        void Travel(SInt32 Steps);
+
+        /// \brief Browses to the parent of the directory currently shown.
+        void Ascend();
+
+        /// \brief Browses to a path typed into the address bar, which may name a directory or a file.
+        ///
+        /// \param Address The path as typed, in either separator style and with or without a trailing one.
+        /// \return `true` if the path resolved and the picker moved there, otherwise `false`.
+        Bool Locate(Text Address);
+
+        /// \brief Confirms the current filename and invokes the result callback.
+        ///
+        /// \return `true` if a filename was present and the callback ran, otherwise `false`.
+        Bool Confirm();
+
+        /// \brief Draws the history buttons, the address bar and the search box.
+        void DrawToolbar();
+
+        /// \brief Draws the breadcrumb trail, shedding leading crumbs that do not fit the given width.
+        ///
+        /// \param Width The horizontal room the trail has to lay itself out in.
+        void DrawTrail(Real32 Width);
+
+        /// \brief Draws the sortable listing of directories and files.
+        ///
+        /// \return `true` if an entry was double clicked to confirm the dialog.
+        Bool DrawListing();
+
+        /// \brief Draws the filename row, the type filter and the confirm / cancel buttons.
+        ///
+        /// \return `true` if the dialog was confirmed or cancelled and its popup should close.
+        Bool DrawFooter();
 
     private:
 
@@ -81,11 +126,17 @@ namespace Tileon::Editor::Toolkit
 
         Bool                         mOpen;
         Mode                         mMode;
+        Column                       mColumn;
+        Bool                         mAscending;
+        Bool                         mEditing;
+        Filesystem::Path             mAddress;
         Filesystem::Path             mDirectory;
         Filesystem::Name             mExtension;
         Filesystem::Name             mFilename;
-        SInt32                       mSelection;
+        Filesystem::Name             mSearch;
         Sequence<Filesystem::Record> mEntries;
+        Sequence<Filesystem::Path>   mHistory;
+        SInt32                       mCursor;
         OnResult                     mCallback;
     };
 }
