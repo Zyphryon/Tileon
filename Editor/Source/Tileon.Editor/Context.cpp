@@ -22,11 +22,10 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Context::Context(Ref<Engine::Subsystem::Host> Host, AnyRef<Project> Project)
-        : Locator     { Host },
+        : Locator    { Host },
           mPresenter { Host, false },
-          mProject    { Move(Project) },
-          mRegistry   { GetService<Scene::Service>() },
-          mForge      { Host, mPresenter.GetRenderer().GetTileset() }
+          mProject   { Move(Project) },
+          mCatalog   { GetService<Scene::Service>() }
     {
         mPresenter.Init(320, 200, Project.GetDensity());
         mPresenter.Load();
@@ -45,20 +44,8 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Context::Prepare()
-    {
-        return mForge.Prepare();
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
     void Context::Commit()
     {
-        // Bake the tileset so every motif points at up-to-date runs.
-        mForge.Bake(mProject.GetFolder());
-
-        // Persist the world and its regions.
         mPresenter.Save();
     }
 

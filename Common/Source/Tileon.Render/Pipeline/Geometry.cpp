@@ -384,7 +384,9 @@ namespace Tileon::Pipeline
 
                 // A keyframe cropping the same rectangle as the one before it leaves the quad alone, so a
                 // sprite whose frames share a size measures once and never again.
-                if (const Rect Source = Animation.GetFrameData(Animator.GetKeyframe()); Source != Appearance.GetSource())
+                const Rect Source = Animation.GetFlipbook().GetData(Animator.GetKeyframe());
+
+                if (Source != Appearance.GetSource())
                 {
                     Appearance.SetSource(Source);
 

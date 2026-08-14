@@ -142,23 +142,6 @@ namespace Tileon
             return Clamp(Math::Ease(mEasing, Delta / Duration), 0.0, 1.0) * Duration;
         }
 
-    public:
-
-        /// \brief Samples the keyframe of the animation sequence at a specific time, using the provided timestamp and easing function.
-        ///
-        /// \param Sequence  The animation sequence to sample from, providing frame count and duration.
-        /// \param Time      The total elapsed time since the animator started.
-        /// \param Timestamp The initial timestamp to use for the animator (default is 0.0).
-        /// \param Easing    The easing function to use for keyframe interpolation (default is linear).
-        /// \return The keyframe index corresponding to the sampled time in the animation sequence.
-        template<Status Status = Status::Repeat>
-        ZY_INLINE static UInt8 Sample(ConstRef<Animation> Sequence, Real64 Time, Real64 Timestamp = 0.0, Easing Easing = Easing::Linear)
-        {
-            Animator Animator(Timestamp, Status, Easing);
-            Animator.Advance(Time, Sequence);
-            return Animator.GetKeyframe();
-        }
-
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

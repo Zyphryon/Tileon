@@ -43,7 +43,21 @@ namespace Tileon
 
     void Tileset::Save()
     {
-        SaveDatabase();
+        Writer Output;
+
+        Archive Archive(Output);
+        Sequence<Content::Uri> Urls;
+
+        for (ConstRetainer<Graphic::Image> Atlas : mAtlases)
+        {
+            Urls.Append(Atlas->GetKey());
+        }
+
+        Archive.Serialize(mRegistry);
+        Archive.Serialize(Urls);
+        Archive.Serialize(mPlacements);
+
+        GetService<Content::Service>().Write(Text(kFilename), Output.Detach(), { });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -51,8 +65,8 @@ namespace Tileon
 
     void Tileset::Tick(Real64 Time)
     {
-        // The baked arrays arrive asynchronously like any other resource, so they are updated on the first tick.
-        if (mDirty && !mAtlases.IsEmpty())
+        // The baked arrays arrive asynchronously like any other resource, so binding waits for the tick they land on.
+        if (mDirty)
         {
             Update();
         }
@@ -61,40 +75,18 @@ namespace Tileon
         {
             Ref<Glyph> Glyph = mGlyphs[Motif.GetID()];
 
+            // The glyph is what a draw reads, so it follows whatever the motif was authored with.
+            Glyph.Period = Motif.GetPeriod();
+            Glyph.Tint   = Motif.GetTint();
+
             // The frames sit in consecutive slices, so playing the animation is a step along the array.
             if (Glyph.Count > 0)
             {
-                const UInt8 Keyframe = Animator::Sample(Motif.GetAnimation(), Time, 0, Motif.GetEasing());
+                const UInt32 Keyframe = Motif.GetFlipbook().Locate(Time, Motif.GetEasing());
 
                 Glyph.Slice = Glyph.Start + Min<UInt16>(Keyframe, Glyph.Count - 1);
             }
         });
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Tileset::Preload()
-    {
-        mRegistry.ForEach([this](ConstRef<Motif> Motif)
-        {
-            Refresh(Motif);
-        });
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Tileset::Refresh(ConstRef<Motif> Motif)
-    {
-        Ref<Glyph> Glyph = mGlyphs[Motif.GetID()];
-
-        Glyph.Period  = Motif.GetPeriod();
-        Glyph.Tint    = Motif.GetTint();
-        Glyph.Texture = 0;
-        Glyph.Start   = 0;
-        Glyph.Slice   = 0;
-        Glyph.Count   = 0;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -105,13 +97,11 @@ namespace Tileon
         ConstRef<Motif> SourceMotif = GetMotif(Source);
         Ref<Motif>      TargetMotif = GetMotif(Target);
 
-        TargetMotif.SetMaterial(Content::Uri(SourceMotif.GetMaterial()));
         TargetMotif.SetPeriod(SourceMotif.GetPeriod());
         TargetMotif.SetTint(SourceMotif.GetTint());
         TargetMotif.SetEasing(SourceMotif.GetEasing());
-        TargetMotif.SetAnimation(Animation(SourceMotif.GetAnimation()));
-
-        Refresh(TargetMotif);
+        TargetMotif.SetOrigin(Content::Uri(SourceMotif.GetOrigin()));
+        TargetMotif.SetFlipbook(SourceMotif.GetFlipbook());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -135,30 +125,38 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    UInt16 Tileset::GetOrInsertAtlas(AnyRef<Content::Uri> Url)
+    {
+        for (UInt16 Index = 0; Index < mAtlases.GetSize(); ++Index)
+        {
+            if (mAtlases[Index]->GetKey().GetUrl() == Url.GetUrl())
+            {
+                return Index;
+            }
+        }
+
+        // The atlas holds the url from here on, whether or not anything has been written under it yet.
+        mAtlases.Append(GetService<Content::Service>().Load<Graphic::Image>(Move(Url)));
+        return static_cast<UInt16>(mAtlases.GetSize() - 1);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void Tileset::Request()
     {
         Ref<Content::Service> Content = GetService<Content::Service>();
 
-        UInt16 Count = 0;
-
-        for (ConstRef<Placement> Placement : mPlacements)
-        {
-            Count = Max<UInt16>(Count, Placement.Atlas + 1);
-        }
-
         mDirty = true;
-        mAtlases.Resize(Count);
 
-        for (UInt16 Index = 0; Index < Count; ++Index)
+        for (Ref<Retainer<Graphic::Image>> Atlas : mAtlases)
         {
-            if (Ref<Retainer<Graphic::Image>> Atlas = mAtlases[Index]; Atlas)
-            {
-                Content.Reload(Atlas);
-            }
-            else
-            {
-                Atlas = Content.Load<Graphic::Image>(Str::Print<kAtlas>(Index));
-            }
+            const Content::Uri Url = Atlas->GetKey();
+
+            // An atlas still arriving refuses a reload, so it is dropped outright and asked for again.
+            Content.Unload(Atlas);
+
+            Atlas = Content.Load<Graphic::Image>(Url);
         }
     }
 
@@ -169,7 +167,7 @@ namespace Tileon
     {
         for (ConstRetainer<Graphic::Image> Atlas : mAtlases)
         {
-            if (!Atlas || !Atlas->HasFinished())
+            if (!Atlas->HasFinished())
             {
                 return;
             }
@@ -198,29 +196,21 @@ namespace Tileon
             Reader  Input(Data.GetData(), Data.GetSize());
 
             Archive Archive(Input);
+            Sequence<Content::Uri> Urls;
+
             Archive.Serialize(mRegistry);
+            Archive.Serialize(Urls);
             Archive.Serialize(mPlacements);
 
-            Preload();
-            Request();
+            for (Ref<Content::Uri> Url : Urls)
+            {
+                mAtlases.Append(GetService<Content::Service>().Load<Graphic::Image>(Move(Url)));
+            }
+            mDirty = true;
         }
         else
         {
             LOG_W("Failed to load tileset from '{0}'", Text(kFilename));
         }
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Tileset::SaveDatabase()
-    {
-        Writer Output;
-
-        Archive Archive(Output);
-        Archive.Serialize(mRegistry);
-        Archive.Serialize(mPlacements);
-
-        GetService<Content::Service>().Write(Text(kFilename), Output.Detach(), { });
     }
 }

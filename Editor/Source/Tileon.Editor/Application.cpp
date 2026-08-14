@@ -11,14 +11,14 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Application.hpp"
-#include "Activity/Archetypes/Archetypes.hpp"
-#include "Activity/Atelier/Atelier.hpp"
-#include "Activity/Foundry/Foundry.hpp"
-#include "Activity/Hierarchy/Hierarchy.hpp"
-#include "Activity/Inspector/Inspector.hpp"
-#include "Activity/Palette/Palette.hpp"
-#include "Activity/Universe/Universe.hpp"
-#include "Activity/Vault/Vault.hpp"
+#include "Panel/Archetypes.hpp"
+#include "Panel/Viewport/Viewport.hpp"
+#include "Panel/Terrains.hpp"
+#include "Panel/Hierarchy.hpp"
+#include "Panel/Inspector.hpp"
+#include "Panel/Palette.hpp"
+#include "Panel/Environment.hpp"
+#include "Panel/Resources.hpp"
 #include "Tileon.Editor/Toolkit/Theme.hpp"
 #include "Tileon_Editor.Modules.hpp"
 #include "Tileon_Editor.Embedded.hpp"
@@ -151,7 +151,10 @@ namespace Tileon::Editor
         mFrontend.Initialize(* this, Plugin::Colorspace::sRGB);
         Toolkit::Theme::Initialize(* Content);
 
-        // TODO: Manage ImGUI configuration file manually
+        // Point ImGui at the layout beside the editor configuration.
+        const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor");
+        ImGui::GetIO().IniFilename = (Path + "/Layout.ini").GetData();
+
         return true;
     }
 
@@ -206,12 +209,12 @@ namespace Tileon::Editor
                 switch (mState)
                 {
                 case State::Idle:
-                    switch (mBootstrap.Draw())
+                    switch (mLauncher.Draw())
                     {
-                    case Bootstrap::Result::Done:
-                        Launch(Move(mBootstrap.GetProject()));
+                    case Launcher::Result::Done:
+                        Launch(Move(mLauncher.GetProject()));
                         break;
-                    case Bootstrap::Result::Exit:
+                    case Launcher::Result::Exit:
                         Quit();
                         break;
                     default:
@@ -266,14 +269,14 @@ namespace Tileon::Editor
         mContext = Unique<Context>::Create(* this, Move(Project));
 
         // Add editor activities to the list of activities, which will be rendered in the interface.
-        mActivities.Append(Retainer<Foundry>::Create(* mContext));
-        mActivities.Append(Retainer<Archetypes>::Create(* mContext));
-        mActivities.Append(Retainer<Inspector>::Create(* mContext));
-        mActivities.Append(Retainer<Hierarchy>::Create(* mContext));
-        mActivities.Append(Retainer<Palette>::Create(* mContext));
-        mActivities.Append(Retainer<Universe>::Create(* mContext));
-        mActivities.Append(Retainer<Vault>::Create(* mContext));
-        mActivities.Append(Retainer<Atelier>::Create(* mContext));
+        mPanels.Append(Retainer<Terrains>::Create(* mContext));
+        mPanels.Append(Retainer<Archetypes>::Create(* mContext));
+        mPanels.Append(Retainer<Inspector>::Create(* mContext));
+        mPanels.Append(Retainer<Hierarchy>::Create(* mContext));
+        mPanels.Append(Retainer<Palette>::Create(* mContext));
+        mPanels.Append(Retainer<Environment>::Create(* mContext));
+        mPanels.Append(Retainer<Resources>::Create(* mContext));
+        mPanels.Append(Retainer<Viewport>::Create(* mContext));
 
         // Signal that we are waiting for the content service to finish loading all queued assets.
         mState = State::Loading;
@@ -308,13 +311,13 @@ namespace Tileon::Editor
             // Draw the "View" menu.
             if (Toolkit::Composer::BeginMenu("View"))
             {
-                for (ConstRetainer<Activity> Activity : mActivities)
+                for (ConstRetainer<Panel> Panel : mPanels)
                 {
-                    Bool Visibility = Activity->IsVisible();
+                    Bool Visibility = Panel->IsVisible();
 
-                    if (Toolkit::Composer::Checkbox(Activity->GetTitle(), Visibility))
+                    if (Toolkit::Composer::Checkbox(Panel->GetTitle(), Visibility))
                     {
-                        Activity->SetVisible(Visibility);
+                        Panel->SetVisible(Visibility);
                     }
                 }
 
@@ -388,22 +391,22 @@ namespace Tileon::Editor
             ImGuiID       LeftTop    = Left;
             const ImGuiID LeftBottom = Layout.Split(LeftTop, ImGuiDir_Down, 0.5f);
 
-            Layout.Attach("Palette",   LeftTop);
-            Layout.Attach("Hierarchy", LeftBottom);
-            Layout.Attach("Inspector", Right);
-            Layout.Attach("Universe",  Right);
-            Layout.Attach("Scene",     Center);
-            Layout.Attach("Content",   Bottom);
+            Layout.Attach("Palette",     LeftTop);
+            Layout.Attach("Hierarchy",   LeftBottom);
+            Layout.Attach("Inspector",   Right);
+            Layout.Attach("Environment", Right);
+            Layout.Attach("Scene",       Center);
+            Layout.Attach("Resources",   Bottom);
         });
 
         // Honour a pending navigation request from another panel.
         if (const Text Target = mContext->GetString("Navigate.Panel"); !Target.IsEmpty())
         {
-            for (ConstRetainer<Activity> Activity : mActivities)
+            for (ConstRetainer<Panel> Panel : mPanels)
             {
-                if (Activity->GetTitle() == Target)
+                if (Panel->GetTitle() == Target)
                 {
-                    Activity->SetVisible(true);
+                    Panel->SetVisible(true);
                     break;
                 }
             }
@@ -411,11 +414,11 @@ namespace Tileon::Editor
         }
 
         // Draw each visible activity, allowing them to render their respective user interfaces.
-        for (ConstRetainer<Activity> Activity : mActivities)
+        for (ConstRetainer<Panel> Panel : mPanels)
         {
-            if (Activity->IsVisible())
+            if (Panel->IsVisible())
             {
-                Activity->OnDraw();
+                Panel->OnDraw();
             }
         }
     }
@@ -425,14 +428,11 @@ namespace Tileon::Editor
 
     void Application::DrawGame(Real64 Delta)
     {
-        // A motif authored since the last bake has no frames on the GPU, so the editor copies its own.
-        mContext->GetForge().Tick();
-
-        // Render the game view to an off-screen buffer, which will be displayed in the atelier activity's viewport.
-        if (const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(Atelier::kTitle.GetData()); Parent && Parent->Active)
+        // Render the game view to an off-screen buffer, which will be displayed in the viewport.
+        if (const Ptr<ImGuiWindow> Parent = ImGui::FindWindowByName(Viewport::kTitle.GetData()); Parent && Parent->Active)
         {
             const UInt32 ViewportID   = Parent->GetID("##viewport");
-            const Text   ViewportName = String<64>::Print<"{0}/##viewport_{1:08X}">(Atelier::kTitle, ViewportID);
+            const Text   ViewportName = String<64>::Print<"{0}/##viewport_{1:08X}">(Viewport::kTitle, ViewportID);
 
             if (const ConstPtr<ImGuiWindow> Child = ImGui::FindWindowByName(ViewportName.GetData()); Child)
             {

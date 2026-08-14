@@ -30,9 +30,6 @@ namespace Tileon
         /// \brief The maximum number of motif a tileset can hold (must match the limit in repository).
         static constexpr UInt32 kLimit    = 1'024;
 
-        /// \brief The filename of the baked arrays, one per distinct frame extent the tileset holds.
-        static constexpr Symbol kAtlas    = "Resources://Material/Tileset.{0}.tex";
-
         /// \brief The filename of the tileset data file.
         static constexpr Symbol kFilename = "Resources://Data/Tileset.bin";
 
@@ -87,33 +84,10 @@ namespace Tileon
         /// \brief Saves the tile data to the tileset file.
         void Save();
 
-        /// \brief Checks whether a bake is on its way in and has yet to be bound to the motifs it covers.
-        ///
-        /// \return `true` while a baked array is still loading, `false` otherwise.
-        ZY_INLINE Bool IsLoading() const
-        {
-            for (ConstRef<Retainer<Graphic::Image>> Atlas : mAtlases)
-            {
-                if (!Atlas || !Atlas->HasFinished())
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         /// \brief Advances every motif's animation, and binds any bake that has finished arriving.
         ///
         /// \param Time The absolute time of the scene, in seconds.
         void Tick(Real64 Time);
-
-        /// \brief Rebuilds the glyph of every motif the tileset holds.
-        void Preload();
-
-        /// \brief Rebuilds the glyph of a single motif, dropping whatever run it was bound to.
-        ///
-        /// \param Motif The motif whose glyph should be rebuilt.
-        void Refresh(ConstRef<Motif> Motif);
 
         /// \brief Replaces the runs the motifs draw from, as a fresh bake laid them out.
         ///
@@ -148,13 +122,19 @@ namespace Tileon
             return mGlyphs[ID];
         }
 
-        /// \brief Gets a writable reference to the glyph a terrain draws with.
+        /// \brief Gets the atlas a run names, adding it to the tileset when it is not held yet.
         ///
-        /// \param ID The unique identifier of the terrain to retrieve the glyph of.
-        /// \return A reference to the glyph associated with the terrain.
-        ZY_INLINE Ref<Glyph> GetGlyph(UInt16 ID)
+        /// \param Url The url of the atlas.
+        /// \return The index the runs name the atlas by.
+        UInt16 GetOrInsertAtlas(AnyRef<Content::Uri> Url);
+
+        /// \brief Gets one of the atlases the motifs are fired into.
+        ///
+        /// \param Index The atlas to read.
+        /// \return The atlas, or nothing when no run names it.
+        ZY_INLINE Retainer<Graphic::Image> GetAtlas(UInt16 Index) const
         {
-            return mGlyphs[ID];
+            return (Index < mAtlases.GetSize()) ? mAtlases[Index] : nullptr;
         }
 
         /// \brief Iterates over every motif a project authored.
@@ -164,6 +144,18 @@ namespace Tileon
         ZY_INLINE void ForEachMotif(AnyRef<Function> Callback) const
         {
             mRegistry.ForEach(Callback);
+        }
+
+        /// \brief Iterates over the run of slices every placed motif draws its frames from.
+        ///
+        /// \param Callback The callback function to apply to each placement.
+        template<typename Function>
+        ZY_INLINE void ForEachPlacement(AnyRef<Function> Callback) const
+        {
+            for (ConstRef<Placement> Placement : mPlacements)
+            {
+                Callback(Placement);
+            }
         }
 
     private:
@@ -177,9 +169,6 @@ namespace Tileon
         /// \brief Loads the tileset database from file.
         void LoadDatabase(Filesystem::Result Result, Blob Data);
 
-        /// \brief Saves the tileset database to file.
-        void SaveDatabase();
-
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -187,8 +176,8 @@ namespace Tileon
 
         Pool<Motif, kLimit, 0>             mRegistry;
         Array<Glyph, kLimit>               mGlyphs;
-        Sequence<Placement>                mPlacements;
         Sequence<Retainer<Graphic::Image>> mAtlases;
+        Sequence<Placement>                mPlacements;
         Bool                               mDirty;
     };
 }

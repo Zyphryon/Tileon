@@ -12,8 +12,8 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Activity.hpp"
-#include "Activity/Bootstrap/Bootstrap.hpp"
+#include "Panel.hpp"
+#include "Panel/Launcher.hpp"
 #include <ImGuiSystem.hpp>
 #include <Zyphryon.Runtime/Kernel.hpp>
 
@@ -84,11 +84,11 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        State                        mState;
-        Bootstrap                    mBootstrap;
-        Unique<Context>              mContext;
-        Plugin::ImGuiSystem          mFrontend;
-        Sequence<Retainer<Activity>> mActivities;
-        IntVector2                   mViewport;
+        State                     mState;
+        Launcher                  mLauncher;
+        Unique<Context>           mContext;
+        Plugin::ImGuiSystem       mFrontend;
+        Sequence<Retainer<Panel>> mPanels;
+        IntVector2                mViewport;
     };
 }

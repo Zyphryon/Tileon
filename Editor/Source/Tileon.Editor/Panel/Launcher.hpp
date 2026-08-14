@@ -1,0 +1,126 @@
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Copyright (C) 2025-2026 Tileon contributors (see AUTHORS.md)
+//
+// This work is licensed under the terms of the MIT license.
+//
+// For a copy, see <https://opensource.org/licenses/MIT>.
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#pragma once
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// [  HEADER  ]
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#include "Tileon.Editor/Project.hpp"
+#include "Tileon.Editor/Toolkit/Composer.hpp"
+#include "Tileon.Editor/Toolkit/Theme.hpp"
+#include "Tileon.Editor/Widget/Explorer.hpp"
+#include <Zyphryon.Base/Container/Sequence.hpp>
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// [   CODE   ]
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+namespace Tileon::Editor
+{
+    /// \brief Represents the bootstrap activity, provides an entry point for launching projects.
+    class Launcher final
+    {
+    public:
+
+        /// \brief The result of the bootstrap activity, indicating the next action to take after drawing the interface.
+        enum class Result : UInt8
+        {
+            None,   ///< No action, continue drawing the bootstrap interface.
+            Done,   ///< A project was launched, exit the bootstrap and transition to the editor view.
+            Exit,   ///< The user chose to exit the application, signal to terminate the editor.
+        };
+
+    public:
+
+        /// \brief Constructs the bootstrap activity, initializing its state to the main menu.
+        Launcher();
+
+        /// \brief Gets the project associated with the bootstrap activity.
+        ///
+        /// \return The project associated with the bootstrap activity.
+        ZY_INLINE AnyRef<Project> GetProject()
+        {
+            return Move(mProject);
+        }
+
+        /// \brief Draws the bootstrap activity, rendering the user interface for launching projects.
+        ///
+        /// \return The result of the operation, indicating whether to continue, exit, or launch a project.
+        Result Draw();
+
+    private:
+
+        /// \brief The maximum number of projects kept in the recent list.
+        static constexpr UInt32 kMaxRecent = 5;
+
+        /// \brief Represents the current state of the bootstrap activity, determining which interface to display.
+        enum class State : UInt8
+        {
+            Menu,   ///< The main menu state, where the user can choose to create a new project or open an existing one.
+            Wizard, ///< The project creation wizard state, where the user can configure settings for a new project.
+            Done,   ///< The done state, indicating that a project has been launched.
+        };
+
+        /// \brief Draws the main menu interface of the bootstrap activity.
+        ///
+        /// \return The result of the operation, indicating whether to continue, exit, or launch a project.
+        Result DrawInMenu();
+
+        /// \brief Draws the project creation wizard interface of the bootstrap activity.
+        ///
+        /// \return The result of the operation, indicating whether to continue, exit, or launch a project.
+        Result DrawInWizard();
+
+        /// \brief Opens the explorer so the user can select an existing project file to open.
+        void BrowseToOpen();
+
+        /// \brief Opens the explorer so the user can name a location to save a new project to.
+        void BrowseToSave();
+
+        /// \brief Handles the path the explorer settled on.
+        ///
+        /// \param Path The file path the explorer returned.
+        void OnBrowseResult(Text Path);
+
+        /// \brief Prepare the project directory by copying necessary bootstrap files.
+        ///
+        /// \param Path The file path of the project to prepare.
+        /// \return `true` if the project directory was successfully prepared, otherwise `false`.
+        Bool Scaffold(Text Path);
+
+        /// \brief Loads an existing project directly from a recent-list entry, launching it on success.
+        ///
+        /// A missing or unreadable file is dropped from the recent list so it stops appearing.
+        ///
+        /// \param Path The full path of the project file to open.
+        void OpenRecent(Text Path);
+
+        /// \brief Loads the recent-projects list from disk.
+        void LoadRecent();
+
+        /// \brief Saves the recent-projects list to disk.
+        void SaveRecent();
+
+        /// \brief Promotes a project path to the front of the recent list, capped to \ref kMaxRecent entries.
+        ///
+        /// \param Path The project path that was just opened.
+        void PushRecent(Text Path);
+
+    private:
+
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        State           mState;
+        Project         mProject;
+        Explorer        mExplorer;
+        Sequence<Str>   mRecent;
+    };
+}

@@ -13,8 +13,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Session/Presenter.hpp"
-#include "Component/Registry.hpp"
-#include "Masonry/Forge.hpp"
+#include "Inspect/ComponentCatalog.hpp"
 #include "Project.hpp"
 #include "Session.hpp"
 
@@ -37,11 +36,6 @@ namespace Tileon::Editor
 
         /// \brief Tears down the context, releasing any resources it holds.
         void Teardown();
-
-        /// \brief Requests every sheet the bake cuts from, reporting whether they have all settled.
-        ///
-        /// \return `true` once every sheet has settled, `false` while any is still loading.
-        Bool Prepare();
 
         /// \brief Writes the project to disk, baking the tileset's arrays before its database names them.
         void Commit();
@@ -129,9 +123,9 @@ namespace Tileon::Editor
         /// \brief Gets a reference to the registry of inspectable components.
         ///
         /// \return A reference to the registry associated with the context.
-        ZY_INLINE Ref<Registry> GetRegistry()
+        ZY_INLINE Ref<ComponentCatalog> GetCatalog()
         {
-            return mRegistry;
+            return mCatalog;
         }
 
         /// \brief Gets a reference to the project the editor has open.
@@ -140,14 +134,6 @@ namespace Tileon::Editor
         ZY_INLINE Ref<Project> GetProject()
         {
             return mProject;
-        }
-
-        /// \brief Gets a reference to the forge that authors the tileset.
-        ///
-        /// \return A reference to the forge associated with the context.
-        ZY_INLINE Ref<Masonry::Forge> GetForge()
-        {
-            return mForge;
         }
 
     private:
@@ -163,9 +149,8 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Presenter      mPresenter;
-        Project        mProject;
-        Registry       mRegistry;
-        Masonry::Forge mForge;
+        Presenter        mPresenter;
+        Project          mProject;
+        ComponentCatalog mCatalog;
     };
 }

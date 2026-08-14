@@ -12,9 +12,10 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Component/Animator.hpp"
+#include "Component/Animation.hpp"
 #include <Zyphryon.Content/Uri.hpp>
 #include <Zyphryon.Math/Color.hpp>
+#include <Zyphryon.Math/Motion/Flipbook.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -25,6 +26,14 @@ namespace Tileon
     /// \brief Represents the art a terrain draws with.
     class Motif final
     {
+    public:
+
+        /// \brief The maximum number of frames a motif's run can hold.
+        static constexpr UInt kMaxFrames = 10;
+
+        /// \brief The run of frames a motif plays, one baked slice each and no data of its own.
+        using Flipbook = Flipbook<Empty, kMaxFrames>;
+
     public:
 
         /// \brief Constructs an empty motif.
@@ -55,22 +64,6 @@ namespace Tileon
         ZY_INLINE UInt16 GetID() const
         {
             return mID;
-        }
-
-        /// \brief Sets the URI of the material resource the motif's frames are cut from.
-        ///
-        /// \param Material The URI of the material resource.
-        ZY_INLINE void SetMaterial(AnyRef<Content::Uri> Material)
-        {
-            mMaterial = Move(Material);
-        }
-
-        /// \brief Gets the URI of the material resource the motif's frames are cut from.
-        ///
-        /// \return The URI of the material resource.
-        ZY_INLINE ConstRef<Content::Uri> GetMaterial() const
-        {
-            return mMaterial;
         }
 
         /// \brief Sets the extent of the motif's art, in whole tiles.
@@ -121,20 +114,36 @@ namespace Tileon
             return mEasing;
         }
 
-        /// \brief Sets the animation data for the motif.
+        /// \brief Sets the art the motif's frames were last fired from.
         ///
-        /// \param Animation The new animation data to set for the motif.
-        ZY_INLINE void SetAnimation(AnyRef<Animation> Animation)
+        /// \param Origin The url of the image the frames were cut from.
+        ZY_INLINE void SetOrigin(AnyRef<Content::Uri> Origin)
         {
-            mAnimation = Move(Animation);
+            mOrigin = Move(Origin);
         }
 
-        /// \brief Gets the animation data for the motif.
+        /// \brief Gets the art the motif's frames were last fired from.
         ///
-        /// \return The animation data for the motif.
-        ZY_INLINE ConstRef<Animation> GetAnimation() const
+        /// \return The url of the image the frames were cut from.
+        ZY_INLINE ConstRef<Content::Uri> GetOrigin() const
         {
-            return mAnimation;
+            return mOrigin;
+        }
+
+        /// \brief Sets the run of frames the motif plays.
+        ///
+        /// \param Flipbook The run to play, each frame holding for as long as it says.
+        ZY_INLINE void SetFlipbook(ConstRef<Flipbook> Flipbook)
+        {
+            mFlipbook = Flipbook;
+        }
+
+        /// \brief Gets the run of frames the motif plays.
+        ///
+        /// \return The run the motif plays, which holds nothing when the motif never animates.
+        ZY_INLINE ConstRef<Flipbook> GetFlipbook() const
+        {
+            return mFlipbook;
         }
 
         /// \brief Serializes the state of the object to or from the specified archive.
@@ -144,11 +153,11 @@ namespace Tileon
         ZY_INLINE void Serialize(Serializer Archive)
         {
             Archive.Serialize(mID);
-            Archive.Serialize(mMaterial);
             Archive.Serialize(mPeriod);
             Archive.Serialize(mTint);
             Archive.Serialize(mEasing);
-            Archive.Serialize(mAnimation);
+            Archive.Serialize(mOrigin);
+            Archive.Serialize(mFlipbook);
         }
 
     private:
@@ -157,10 +166,10 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         UInt16       mID;
-        Content::Uri mMaterial;
-        IntVector2   mPeriod;
-        IntColor8    mTint;
         Easing       mEasing;
-        Animation    mAnimation;
+        IntColor8    mTint;
+        IntVector2   mPeriod;
+        Content::Uri mOrigin;
+        Flipbook     mFlipbook;
     };
 }

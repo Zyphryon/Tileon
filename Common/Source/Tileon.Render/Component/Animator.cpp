@@ -28,10 +28,12 @@ namespace Tileon
             return;
         }
 
-        if (const UInt32 Count = Sequence.GetCount(); Count > 1)
+        ConstRef<Animation::Flipbook> Flipbook = Sequence.GetFlipbook();
+
+        if (const UInt32 Count = Flipbook.GetCount(); Count > 1)
         {
             const Real64 Delta    = Time - mTimestamp;
-            const Real64 Duration = Sequence.GetDuration();
+            const Real64 Duration = Flipbook.GetDuration();
 
             switch (mStatus)
             {
@@ -44,7 +46,7 @@ namespace Tileon
                 if (Delta < Duration)
                 {
                     const Real64 Frame = ApplyEasing(Delta, Duration);
-                    mKeyframe = Sequence.GetKeyframe(static_cast<Real32>(Frame));
+                    mKeyframe = static_cast<UInt8>(Flipbook.Locate(Frame));
                 }
                 else
                 {
@@ -58,7 +60,7 @@ namespace Tileon
                 if (Delta < Duration)
                 {
                     const Real64 Frame = ApplyEasing(Duration - Delta, Duration);
-                    mKeyframe = Sequence.GetKeyframe(static_cast<Real32>(Frame));
+                    mKeyframe = static_cast<UInt8>(Flipbook.Locate(Frame));
                 }
                 else
                 {
@@ -72,7 +74,7 @@ namespace Tileon
                 const Real64 Absolute = Mod(Delta, Duration);
                 const Real64 Frame    = ApplyEasing(Absolute, Duration);
 
-                mKeyframe = Sequence.GetKeyframe(static_cast<Real32>(Frame));
+                mKeyframe = static_cast<UInt8>(Flipbook.Locate(Frame));
 
                 if (Delta >= Duration)
                 {
@@ -86,7 +88,7 @@ namespace Tileon
                 const Real64 Absolute = Mod(Delta, Cycle);
 
                 const Real64 Frame = ApplyEasing(Absolute > Duration ? Cycle - Absolute : Absolute, Duration);
-                mKeyframe = Sequence.GetKeyframe(static_cast<Real32>(Frame));
+                mKeyframe = static_cast<UInt8>(Flipbook.Locate(Frame));
 
                 if (Delta >= Cycle)
                 {
