@@ -431,6 +431,11 @@ namespace Tileon::Editor::Toolkit
             return ImGui::IsMouseClicked(Button, Repeat);
         }
 
+        ZY_INLINE static Bool IsMouseDoubleClicked(ImGuiMouseButton Button = ImGuiMouseButton_Left)
+        {
+            return ImGui::IsMouseDoubleClicked(Button);
+        }
+
         ZY_INLINE static Bool IsMouseDragging(ImGuiMouseButton Button = ImGuiMouseButton_Left, Real32 LockThreshold = -1.0f)
         {
             return ImGui::IsMouseDragging(Button, LockThreshold);
@@ -651,6 +656,11 @@ namespace Tileon::Editor::Toolkit
             return ImGui::GetCursorPosX();
         }
 
+        ZY_INLINE static void AlignTextToFramePadding()
+        {
+            ImGui::AlignTextToFramePadding();
+        }
+
         ZY_INLINE static Real32 GetCursorPosY()
         {
             return ImGui::GetCursorPosY();
@@ -783,6 +793,21 @@ namespace Tileon::Editor::Toolkit
             return ImGui::IsItemHovered(Flags);
         }
 
+        ZY_INLINE static Bool IsAnyItemActive()
+        {
+            return ImGui::IsAnyItemActive();
+        }
+
+        ZY_INLINE static void SetKeyboardFocusHere(SInt32 Offset = 0)
+        {
+            ImGui::SetKeyboardFocusHere(Offset);
+        }
+
+        ZY_INLINE static Bool IsItemDeactivated()
+        {
+            return ImGui::IsItemDeactivated();
+        }
+
         ZY_INLINE static Bool IsItemDeactivatedAfterEdit()
         {
             return ImGui::IsItemDeactivatedAfterEdit();
@@ -791,6 +816,11 @@ namespace Tileon::Editor::Toolkit
         ZY_INLINE static Bool IsKeyPressed(ImGuiKey Key, Bool Repeat = false)
         {
             return ImGui::IsKeyPressed(Key, Repeat);
+        }
+
+        ZY_INLINE static Bool IsKeyChordPressed(ImGuiKeyChord Chord)
+        {
+            return ImGui::IsKeyChordPressed(Chord);
         }
 
         ZY_INLINE static Bool IsKeyDown(ImGuiKey Key)
@@ -931,9 +961,19 @@ namespace Tileon::Editor::Toolkit
             ImGui::TableNextColumn();
         }
 
+        ZY_INLINE static void TableSetupScrollFreeze(SInt32 Columns, SInt32 Rows)
+        {
+            ImGui::TableSetupScrollFreeze(Columns, Rows);
+        }
+
         ZY_INLINE static void TableHeadersRow()
         {
             ImGui::TableHeadersRow();
+        }
+
+        ZY_INLINE static Ptr<ImGuiTableSortSpecs> TableGetSortSpecs()
+        {
+            return ImGui::TableGetSortSpecs();
         }
 
         ZY_INLINE static void TableNextRow(ImGuiTableRowFlags Flags = ImGuiTableRowFlags_None, Real32 MinHeight = 0.0f)

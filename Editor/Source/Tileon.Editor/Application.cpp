@@ -18,6 +18,7 @@
 #include "Activity/Inspector/Inspector.hpp"
 #include "Activity/Palette/Palette.hpp"
 #include "Activity/Universe/Universe.hpp"
+#include "Activity/Vault/Vault.hpp"
 #include "Tileon.Editor/Toolkit/Theme.hpp"
 #include "Tileon_Editor.Modules.hpp"
 #include "Tileon_Editor.Embedded.hpp"
@@ -101,8 +102,7 @@ namespace Tileon::Editor
         JsonObject Graphic = Root.SetObject("Graphic");
         Graphic.SetBool("tearless", Config.IsGraphicsTearless());
 
-        const Str Data = JsonDocument::Dump(Document);
-        Filesystem::Write(Path, ConstSpan(reinterpret_cast<ConstPtr<Byte>>(Data.GetData()), Data.GetSize()));
+        Filesystem::Write(Path, JsonDocument::Dump(Document));
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -178,11 +178,7 @@ namespace Tileon::Editor
         }
         case State::Preparing:
         {
-            // A bake refuses to write while a sheet it cuts from is still arriving, so they are awaited first.
-            if (mContext->Prepare())
-            {
-                mState = State::Saving;
-            }
+            mState = State::Saving;
             break;
         }
         case State::Saving:
@@ -276,6 +272,7 @@ namespace Tileon::Editor
         mActivities.Append(Retainer<Hierarchy>::Create(* mContext));
         mActivities.Append(Retainer<Palette>::Create(* mContext));
         mActivities.Append(Retainer<Universe>::Create(* mContext));
+        mActivities.Append(Retainer<Vault>::Create(* mContext));
         mActivities.Append(Retainer<Atelier>::Create(* mContext));
 
         // Signal that we are waiting for the content service to finish loading all queued assets.
@@ -385,6 +382,7 @@ namespace Tileon::Editor
             ImGuiID       Center = Layout.GetRoot();
             const ImGuiID Left   = Layout.Split(Center, ImGuiDir_Left,  0.20f);
             const ImGuiID Right  = Layout.Split(Center, ImGuiDir_Right, 0.25f);
+            const ImGuiID Bottom = Layout.Split(Center, ImGuiDir_Down, 0.25f);
 
             // Stack the left column vertically: Palette on top, Hierarchy below.
             ImGuiID       LeftTop    = Left;
@@ -395,6 +393,7 @@ namespace Tileon::Editor
             Layout.Attach("Inspector", Right);
             Layout.Attach("Universe",  Right);
             Layout.Attach("Scene",     Center);
+            Layout.Attach("Content",   Bottom);
         });
 
         // Honour a pending navigation request from another panel.
@@ -419,8 +418,6 @@ namespace Tileon::Editor
                 Activity->OnDraw();
             }
         }
-
-        // TODO: Draw bottom bar
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

@@ -89,7 +89,6 @@ namespace Tileon::Editor
         SetReal("Camera.Y", Camera.GetAbsoluteY());
 
         const Str Data = Session::Save();
-        Filesystem::Write(Filesystem::Path(mProject.GetFolder()) + "/Session.json",
-            ConstSpan(reinterpret_cast<ConstPtr<Byte>>(Data.GetData()), Data.GetSize()));
+        Filesystem::Write(Filesystem::Path(mProject.GetFolder()) + "/Session.json", Data);
     }
 }

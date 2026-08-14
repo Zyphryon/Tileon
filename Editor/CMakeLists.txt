@@ -31,7 +31,7 @@ LIST(APPEND PROJECT_DEPENDENCIES "Tileon_Common")
 ## Dependency (Zyphryon Image Baker)
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-LIST(APPEND PROJECT_DEPENDENCIES "ZyBakerTexture")
+LIST(APPEND PROJECT_DEPENDENCIES "ZyBakerTexture" "ZyBakerFont")
 
 ## -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 ## Dependency (Zyphryon ImGui)

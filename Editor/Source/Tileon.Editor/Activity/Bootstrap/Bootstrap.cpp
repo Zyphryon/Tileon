@@ -317,9 +317,7 @@ namespace Tileon::Editor
 
             if (Scaffold(StrBeforeLast(mProject.GetPath(), '/')))
             {
-                const Str Data = JsonDocument::Dump(Parser);
-                Filesystem::Write(mProject.GetPath(),
-                    ConstSpan(reinterpret_cast<ConstPtr<Byte>>(Data.GetData()), Data.GetSize()));
+                Filesystem::Write(mProject.GetPath(), JsonDocument::Dump(Parser));
 
                 PushRecent(mProject.GetPath());
 
@@ -441,9 +439,7 @@ namespace Tileon::Editor
             Items.AddString(Path);
         }
 
-        const Str Data = JsonDocument::Dump(Document);
-        Filesystem::Write(Filesystem::GetDataFolder("Tileon", "Editor") + "Recent.json",
-            ConstSpan(reinterpret_cast<ConstPtr<Byte>>(Data.GetData()), Data.GetSize()));
+        Filesystem::Write(Filesystem::GetDataFolder("Tileon", "Editor") + "Recent.json", JsonDocument::Dump(Document));
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
