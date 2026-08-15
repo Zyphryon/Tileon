@@ -37,12 +37,14 @@ namespace Tileon::Pipeline
     {
         ZY_PROFILE_SCOPE("Pipeline::Composite::Run");
 
-        // The scene authors its exposure alongside the rest of the environment, so the stage follows it.
-        Real32 Exposure = 1.0f;
+        // The scene authors its exposure and its curve alongside the rest of the environment.
+        Real32            Exposure = 1.0f;
+        Skylight::Tonemap Tonemap  = Skylight::Tonemap::GT7;
 
         if (const ConstPtr<Skylight> Environment = mWorld.TryGet<const Skylight>())
         {
             Exposure = Environment->GetExposure();
+            Tonemap  = Environment->GetTonemap();
         }
 
         // The tone map's knee sits at a fixed place in the range, so exposure is what moves the scene into it.
@@ -50,10 +52,18 @@ namespace Tileon::Pipeline
             .Exposure = Vector4(Exposure, 0.0f, 0.0f, 0.0f)
         });
 
+        ConstRetainer<Graphic::Technique> Technique = mTechniques[Enum::Cast(Kind::Composite)];
+
+        // The base variant carries the Gran Turismo curve, so only another operator names a feature to compile in.
+        const Graphic::Technique::Key Variant = Tonemap == Skylight::Tonemap::GT7
+            ? 0
+            : Technique->ResolveByName(Enum::GetName(Tonemap));
+
         // Each buffer binds under the name the signature declares it by, rather than by the order it is passed in.
-        Encoder.Begin(* mTechniques[Enum::Cast(Kind::Composite)])
+        Encoder.Begin(* Technique)
                .SetImage("Albedo"_Hash,   mAlbedo->GetTexture())
                .SetImage("Radiance"_Hash, mRadiance->GetTexture())
+               .SetVariant(Variant)
                .DrawFullscreen();
     }
 

@@ -36,5 +36,16 @@
         { "Path": "Composite.glsl", "Stage": "Fragment" }
       ]
     }
-  }
+  },
+  "Features": [
+    {
+      "Name": "ACES",
+      "Program": {
+        "Defines": ["ENABLE_TONEMAP_ACES"]
+      }
+    }
+  ],
+  "Preload": [
+    ["ACES"]
+  ]
 }

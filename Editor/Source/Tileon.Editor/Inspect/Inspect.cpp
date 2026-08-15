@@ -146,6 +146,22 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    template<IsEnum Type>
+    static Bool InspectEnum(Text Label, Ref<Type> Value)
+    {
+        Toolkit::Composer::FieldInline(Label);
+        Toolkit::Composer::PushID(Label);
+
+        const Bool Dirty = Toolkit::Composer::Combo("##value", Value);
+
+        Toolkit::Composer::PopID();
+
+        return Dirty;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     static Bool InspectRect(Text Label, Ref<Rect> Value, Real32 ScaleX = 1.0f, Real32 ScaleY = 1.0f, Real32 Speed = 1.0f)
     {
         Real32 MinimumX = Value.GetMinimumX() * ScaleX;
@@ -631,6 +647,14 @@ namespace Tileon::Editor
         if (Real32 Exposure = Component.GetExposure(); InspectScalar("Exposure", Exposure))
         {
             Component.SetExposure(Exposure);
+            Dirty = true;
+        }
+
+        Toolkit::Composer::Spacing();
+
+        if (Skylight::Tonemap Tonemap = Component.GetTonemap(); InspectEnum("Tonemap", Tonemap))
+        {
+            Component.SetTonemap(Tonemap);
             Dirty = true;
         }
         return Dirty;

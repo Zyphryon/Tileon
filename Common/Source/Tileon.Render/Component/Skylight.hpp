@@ -29,17 +29,25 @@ namespace Tileon
         /// \brief The direction the sun points at when none is given, matching a high afternoon sun.
         static constexpr Vector3 kDefaultDirection = Vector3(0.0f, 1.0f, 0.5f);
 
+        /// \brief Names the curve the composed scene is compressed into the display range with.
+        enum class Tonemap : UInt8
+        {
+            GT7,        ///< Uchimura's Gran Turismo curve, which leaves the midtones where they were authored.
+            ACES,       ///< The ACES filmic curve, which contrast and rolls highlights further.
+        };
+
     public:
 
         /// \brief Default constructor initializing the skylight with default values.
         ZY_INLINE Skylight()
-            : mSunTint    { IntColor8(255, 244, 224) },
-              mSkyTint    { IntColor8(160, 190, 255) },
-              mGroundTint { IntColor8( 90,  85,  80) },
-              mBrightness { 0.5f },
-              mExposure   { 1.0f }
+            : mSunDirection { kDefaultDirection },
+              mSunTint      { IntColor8(255, 244, 224) },
+              mSkyTint      { IntColor8(160, 190, 255) },
+              mGroundTint   { IntColor8( 90,  85,  80) },
+              mBrightness   { 0.5f },
+              mExposure     { 1.0f },
+              mTonemap      { Tonemap::GT7 }
         {
-            SetSunDirection(kDefaultDirection);
         }
 
         /// \brief Constructs a skylight with the specified parameters.
@@ -50,12 +58,14 @@ namespace Tileon
         /// \param GroundTint   The tint of ambient light reflected from the ground in the scene.
         /// \param Brightness   The overall brightness of the environment, defining the intensity of all lighting effects in the scene.
         /// \param Exposure     The exposure the composed scene is scaled by before the tone map compresses it.
-        ZY_INLINE Skylight(Vector3 SunDirection, IntColor8 SunTint, IntColor8 SkyTint, IntColor8 GroundTint, Real32 Brightness, Real32 Exposure)
+        /// \param Tonemap      The curve the composed scene is compressed into the display range with.
+        ZY_INLINE Skylight(Vector3 SunDirection, IntColor8 SunTint, IntColor8 SkyTint, IntColor8 GroundTint, Real32 Brightness, Real32 Exposure, Tonemap Tonemap)
             : mSunTint    { SunTint },
               mSkyTint    { SkyTint },
               mGroundTint { GroundTint },
               mBrightness { Brightness },
-              mExposure   { Exposure }
+              mExposure   { Exposure },
+              mTonemap    { Tonemap }
         {
             SetSunDirection(SunDirection);
         }
@@ -156,6 +166,37 @@ namespace Tileon
             return mExposure;
         }
 
+        /// \brief Sets the curve the composed scene is compressed into the display range with.
+        ///
+        /// \param Tonemap The new curve for the environment.
+        ZY_INLINE void SetTonemap(Tonemap Tonemap)
+        {
+            mTonemap = Tonemap;
+        }
+
+        /// \brief Gets the curve the composed scene is compressed into the display range with.
+        ///
+        /// \return The current curve of the environment.
+        ZY_INLINE Tonemap GetTonemap() const
+        {
+            return mTonemap;
+        }
+
+        /// \brief Serializes the state of the object to or from the specified archive.
+        ///
+        /// \param Archive The archive to serialize the object with.
+        template<typename Serializer>
+        ZY_INLINE void Serialize(Serializer Archive)
+        {
+            Archive.Serialize(mSunDirection);
+            Archive.Serialize(mSunTint);
+            Archive.Serialize(mSkyTint);
+            Archive.Serialize(mGroundTint);
+            Archive.Serialize(mBrightness);
+            Archive.Serialize(mExposure);
+            Archive.Serialize(mTonemap);
+        }
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -167,5 +208,6 @@ namespace Tileon
         IntColor8 mGroundTint;
         Real32    mBrightness;
         Real32    mExposure;
+        Tonemap   mTonemap;
     };
 }

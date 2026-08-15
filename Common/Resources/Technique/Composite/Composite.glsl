@@ -36,32 +36,37 @@ in vec2 v_Texture;
 
 layout(location = 0) out vec4 out_Color;
 
-// Khronos PBR Neutral
+#if defined(ENABLE_TONEMAP_ACES)
+
 vec3 Tonemap(vec3 Color)
 {
-    const float kStartCompression = 0.8 - 0.04;
-    const float kDesaturation     = 0.15;
+    const mat3 kInput  = mat3(0.59719,  0.07600,  0.02840,  0.35458, 0.90834,  0.13383,  0.04823,  0.01566, 0.83777);
+    const mat3 kOutput = mat3(1.60475, -0.10208, -0.00327, -0.53108, 1.10813, -0.07276, -0.07367, -0.00605, 1.07602);
 
-    // Lift the darkest channel off the floor, which keeps blacks neutral rather than tinting them.
-    float Darkest = min(Color.r, min(Color.g, Color.b));
-    float Offset  = Darkest < 0.08 ? Darkest - 6.25 * Darkest * Darkest : 0.04;
-    Color -= Offset;
+    Color = kInput   * Color;
 
-    float Peak = max(Color.r, max(Color.g, Color.b));
-
-    if (Peak < kStartCompression)
-    {
-        return Color;
-    }
-
-    // Roll the peak into the range hyperbolically, then bleed the excess toward white.
-    float Range   = 1.0 - kStartCompression;
-    float NewPeak = 1.0 - Range * Range / (Peak + Range - kStartCompression);
-    Color *= NewPeak / Peak;
-
-    float Blend = 1.0 - 1.0 / (kDesaturation * (Peak - NewPeak) + 1.0);
-    return mix(Color, vec3(NewPeak, NewPeak, NewPeak), Blend);
+    vec3 Numerator   = Color * (Color + 0.0245786) - 0.000090537;
+    vec3 Denominator = Color * (0.983729 * Color + 0.4329510) + 0.238081;
+    return clamp(kOutput * (Numerator / Denominator), 0.0, 1.0);
 }
+
+#else
+
+vec3 Tonemap(vec3 Color)
+{
+    const float kMiddle   = 0.22;
+    const float kToe      = 1.33;
+    const float kShoulder = 0.532;
+    const float kDecay    = -1.0 / (1.0 - kShoulder);
+
+    vec3 Toe      = kMiddle * pow(Color / kMiddle, vec3(kToe));
+    vec3 Shoulder = 1.0 - (1.0 - kShoulder) * exp(kDecay * (Color - kShoulder));
+
+    vec3 Lower = mix(Toe, Color, smoothstep(0.0, kMiddle, Color));
+    return mix(Lower, Shoulder, step(kShoulder, Color));
+}
+
+#endif // ENABLE_TONEMAP_ACES
 
 void main()
 {

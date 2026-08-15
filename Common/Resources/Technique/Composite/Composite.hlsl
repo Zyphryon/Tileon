@@ -49,32 +49,37 @@ SamplerState s_Albedo   : register(s0);
 Texture2D    t_Radiance : register(t1);
 SamplerState s_Radiance : register(s1);
 
-// Khronos PBR Neutral
+#if defined(ENABLE_TONEMAP_ACES)
+
 float3 Tonemap(float3 Color)
 {
-    const float kStartCompression = 0.8 - 0.04;
-    const float kDesaturation     = 0.15;
+    const float3x3 kInput  = float3x3(0.59719,  0.35458,  0.04823,  0.07600, 0.90834,  0.01566,  0.02840,  0.13383, 0.83777);
+    const float3x3 kOutput = float3x3(1.60475, -0.53108, -0.07367, -0.10208, 1.10813, -0.00605, -0.00327, -0.07276, 1.07602);
 
-    // Lift the darkest channel off the floor, which keeps blacks neutral rather than tinting them.
-    const float Darkest = min(Color.r, min(Color.g, Color.b));
-    const float Offset  = Darkest < 0.08 ? Darkest - 6.25 * Darkest * Darkest : 0.04;
-    Color -= Offset;
+    Color = mul(kInput, Color);
 
-    const float Peak = max(Color.r, max(Color.g, Color.b));
-
-    if (Peak < kStartCompression)
-    {
-        return Color;
-    }
-
-    // Roll the peak into the range hyperbolically, then bleed the excess toward white.
-    const float Range   = 1.0 - kStartCompression;
-    const float NewPeak = 1.0 - Range * Range / (Peak + Range - kStartCompression);
-    Color *= NewPeak / Peak;
-
-    const float Blend = 1.0 - 1.0 / (kDesaturation * (Peak - NewPeak) + 1.0);
-    return lerp(Color, float3(NewPeak, NewPeak, NewPeak), Blend);
+    const float3 Numerator   = Color * (Color + 0.0245786) - 0.000090537;
+    const float3 Denominator = Color * (0.983729 * Color + 0.4329510) + 0.238081;
+    return saturate(mul(kOutput, Numerator / Denominator));
 }
+
+#else
+
+float3 Tonemap(float3 Color)
+{
+    const float kMiddle   = 0.22;
+    const float kToe      = 1.33;
+    const float kShoulder = 0.532;
+    const float kDecay    = -1.0 / (1.0 - kShoulder);
+
+    const float3 Toe      = kMiddle * pow(Color / kMiddle, kToe);
+    const float3 Shoulder = 1.0 - (1.0 - kShoulder) * exp(kDecay * (Color - kShoulder));
+
+    const float3 Lower = lerp(Toe, Color, smoothstep(0.0, kMiddle, Color));
+    return lerp(Lower, Shoulder, step(kShoulder, Color));
+}
+
+#endif // ENABLE_TONEMAP_ACES
 
 float4 main(fs_Input Input) : SV_Target
 {
