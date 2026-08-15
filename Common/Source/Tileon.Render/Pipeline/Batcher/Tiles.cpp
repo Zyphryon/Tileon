@@ -23,6 +23,7 @@ namespace Tileon
 
     Tiles::Tiles(ConstRetainer<Graphic::Service> Service)
         : mService { Service },
+          mVariant { 0 },
           mCount   { 0 }
     {
     }
@@ -30,9 +31,10 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Tiles::SetTechnique(ConstRetainer<Graphic::Technique> Technique)
+    void Tiles::SetTechnique(ConstRetainer<Graphic::Technique> Technique, Graphic::Technique::Key Variant)
     {
         mTechnique = Technique;
+        mVariant   = Variant;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -42,14 +44,13 @@ namespace Tileon
     {
         ZY_ASSERT(mTechnique, "A technique must be set before recording a tile");
 
-        const ConstPtr<Graphic::Technique> Pipeline = AddressOf(* mTechnique);
-        const Graphic::Object              Surface  = Glyph.Texture;
+        const Graphic::Object Surface = Glyph.Texture;
 
         Ptr<TileBatch> Batch = nullptr;
 
         for (UInt32 Element = 0; Element < mCount; ++Element)
         {
-            if (mBatches[Element].Technique == Pipeline && mBatches[Element].Texture == Surface)
+            if (mBatches[Element].Texture == Surface)
             {
                 Batch = AddressOf(mBatches[Element]);
                 break;
@@ -64,10 +65,9 @@ namespace Tileon
                 mBatches.Append();
             }
 
-            // Batches drain in the order they open, so the layer the caller draws first is the layer drawn first.
+            // Batches drain in the order they open, so the array the caller draws first is the array drawn first.
             Batch = AddressOf(mBatches[mCount++]);
-            Batch->Technique = Pipeline;
-            Batch->Texture   = Surface;
+            Batch->Texture = Surface;
         }
 
         Ref<TileLayout> Layout = Batch->Layouts.Append();
@@ -97,6 +97,7 @@ namespace Tileon
         }
         mCount     = 0;
         mTechnique = nullptr;
+        mVariant   = 0;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -121,7 +122,7 @@ namespace Tileon
                 .Instances = static_cast<UInt32>(Batch.Layouts.GetSize())
             };
             const Graphic::Object Textures[] = { Batch.Texture };
-            Encoder.Draw(* Batch.Technique, ConstSpan(Textures), Instances.GetStream(), Invocation);
+            Encoder.Draw(* mTechnique, ConstSpan(Textures), Instances.GetStream(), Invocation, mVariant);
         }
     }
 }

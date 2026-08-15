@@ -27,10 +27,12 @@
     },
     "Signature": {
         "Textures": [
-            { "Name": "Albedo" }
+            { "Name": "Albedo" },
+            { "Name": "Normal" }
         ],
         "Samplers": [
-            { "Name": "Albedo", "Filter": "PointMipLinear" }
+            { "Name": "Albedo", "Filter": "PointMipLinear" },
+            { "Name": "Normal", "Filter": "PointMipLinear" }
         ]
     },
     "Program": {
@@ -44,5 +46,19 @@
                 { "Path": "Sprite.hlsl", "Stage": "Fragment" }
             ]
         }
-    }
+    },
+    "Features": [
+        {
+            "Name": "Lit",
+            "Enable": { "Texture": "Normal" },
+            "Program": {
+                "Defines": [
+                    "ENABLE_NORMAL_MAPPING"
+                ]
+            }
+        }
+    ],
+    "Preload": [
+        ["Lit"]
+    ]
 }

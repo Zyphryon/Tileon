@@ -108,12 +108,8 @@ namespace Tileon::Pipeline
         enum class Overlay : UInt8
         {
             Grid,           ///< Technique for rendering the infinite tile grid.
-            Boundary,       ///< Technique for rendering the bounding box of an entity.
-            Boundary_Flat,  ///< Technique for rendering that box as the screen rectangle it covers.
+            Boundary,       ///< Technique for rendering the bounding box of an entity, flat when the view is aligned.
         };
-
-        /// \brief Defines a type alias for the techniques that resolve a buffer, indexed by \ref Kind.
-        using Techniques = Array<Retainer<Graphic::Technique>, Enum::Count<Kind>()>;
 
         /// \brief Defines a type alias for the techniques that annotate one, indexed by \ref Overlay.
         using Overlays   = Array<Retainer<Graphic::Technique>, Enum::Count<Overlay>()>;
@@ -173,13 +169,13 @@ namespace Tileon::Pipeline
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Techniques                  mTechniques;
-        Overlays                    mOverlays;
-        Sources                     mSources;
-        Sequence<GpuBoundaryLayout> mBoundaries;
-        ConstPtr<Director>          mDirector;
-        Kind                        mSource;
-        UInt8                       mProperties;
+        Retainer<Graphic::Technique> mTechnique;
+        Overlays                     mOverlays;
+        Sources                      mSources;
+        Sequence<GpuBoundaryLayout>  mBoundaries;
+        ConstPtr<Director>           mDirector;
+        Kind                         mSource;
+        UInt8                        mProperties;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

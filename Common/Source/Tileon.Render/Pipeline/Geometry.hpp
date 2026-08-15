@@ -66,13 +66,10 @@ namespace Tileon::Pipeline
         /// \remark Each value names the technique file the stage loads it from.
         enum class Kind : UInt8
         {
-            Sprite_Opaque,         ///< Technique for rendering opaque sprites without normal mapping.
-            Sprite_Opaque_Lit,     ///< Technique for rendering opaque sprites with normal mapping.
-            Sprite_Transparent,    ///< Technique for rendering transparent sprites without normal mapping.
-            Sprite_Transparent_Lit,///< Technique for rendering transparent sprites with normal mapping.
-            Tile_Opaque,           ///< Technique for rendering the base layer, whose art covers the ground whole.
-            Tile_Masked,           ///< Technique for rendering the layers above the base, whose art cuts out.
-            Text,                  ///< Technique for rendering text glyphs from a font atlas.
+            Sprite_Opaque,      ///< Technique for opaque sprites, lit when their material carries a normal map.
+            Sprite_Transparent, ///< Technique for transparent sprites, lit when their material carries a normal map.
+            Tile,               ///< Technique for the ground, masked on every layer above the base.
+            Text,               ///< Technique for rendering text glyphs from a font atlas.
         };
 
         /// \brief Defines a type alias for a collection of rendering techniques.
@@ -123,10 +120,8 @@ namespace Tileon::Pipeline
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Scene::Query       mQrDrawOpaqueUnlitSprites;
-        Scene::Query       mQrDrawOpaqueLitSprites;
-        Scene::Query       mQrDrawTransparentUnlitSprites;
-        Scene::Query       mQrDrawTransparentLitSprites;
+        Scene::Query       mQrDrawOpaqueSprites;
+        Scene::Query       mQrDrawTransparentSprites;
         Scene::Query       mQrDrawTexts;
         Scene::Query       mQrDrawRegions;
     };

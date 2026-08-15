@@ -122,7 +122,7 @@ fs_Output main(fs_Input Input)
     float3 Normal  = normalize(Tangent.x * Input.AxisX + Tangent.y * Input.AxisY - Tangent.z * Input.AxisZ);
 
     // The sprite plane faces +Z, so the tangent-space Z carries over to world space unchanged.
-#if defined(ENABLE_TRANSLUCENCY)
+#if   defined(ENABLE_TRANSLUCENCY)
     const float Opacity = Sampled.a;
 #elif defined(ENABLE_ALPHA_TEST)
     const float Opacity = 1.0;
@@ -132,6 +132,7 @@ fs_Output main(fs_Input Input)
 
     Result.Normal = float4(Normal * 0.5 + 0.5, Opacity);
 #else
+
 #if defined(ENABLE_ALPHA_TEST)
     const float Opacity = 1.0;
 #else

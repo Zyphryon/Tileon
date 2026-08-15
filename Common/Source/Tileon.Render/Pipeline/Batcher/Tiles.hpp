@@ -34,8 +34,9 @@ namespace Tileon
 
         /// \brief Sets the technique subsequent tiles are recorded under.
         ///
-        /// \param Technique The technique to set for subsequent tiles.
-        void SetTechnique(ConstRetainer<Graphic::Technique> Technique);
+        /// \param Technique The technique every tile up to the next flush is drawn with.
+        /// \param Variant   The bitmask of the features they are drawn with.
+        void SetTechnique(ConstRetainer<Graphic::Technique> Technique, Graphic::Technique::Key Variant = 0);
 
         /// \brief Records a tile lying flat on the ground plane.
         ///
@@ -75,17 +76,14 @@ namespace Tileon
             IntColor8        Color;
         };
 
-        /// \brief Gathers every tile drawn with one technique and sampling one material into a single instanced draw.
+        /// \brief Gathers every tile sampling one array into a single instanced draw.
         struct TileBatch final
         {
-            /// The technique every tile of the batch is drawn with.
-            ConstPtr<Graphic::Technique> Technique;
-
             /// The array texture every tile of the batch samples, each from its own slice.
-            Graphic::Object              Texture;
+            Graphic::Object      Texture;
 
             /// The per-instance input data of the batch's tiles.
-            Sequence<TileLayout>         Layouts;
+            Sequence<TileLayout> Layouts;
         };
 
     private:
@@ -95,6 +93,7 @@ namespace Tileon
 
         Retainer<Graphic::Service>   mService;
         Retainer<Graphic::Technique> mTechnique;
+        Graphic::Technique::Key      mVariant;
         Sequence<TileBatch>          mBatches;
         UInt32                       mCount;
     };

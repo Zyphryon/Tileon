@@ -66,26 +66,9 @@ namespace Tileon::Pipeline
 
             mSprites.Reset();
 
-            // Draw opaque unlit sprite entities.
+            // Draw opaque sprite entities.
             mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Opaque)]);
-            mQrDrawOpaqueUnlitSprites.Run<>([&](
-                ConstRef<Transform>  Transform,
-                ConstRef<Extent>     Extent,
-                ConstRef<Enclosure>  Enclosure,
-                ConstRef<Appearance> Appearance,
-                ConstPtr<IntColor8>  Tint)
-            {
-                if (ConstRef<IntBox> AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
-                {
-                    const Matrix4x3 Matrix = Transform.Rebase(Origin);
-
-                    mSprites.Draw(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
-                }
-            });
-
-            // Draw opaque lit sprite entities.
-            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Opaque_Lit)]);
-            mQrDrawOpaqueLitSprites.Run<>([&](
+            mQrDrawOpaqueSprites.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
                 ConstRef<Enclosure>  Enclosure,
@@ -103,20 +86,22 @@ namespace Tileon::Pipeline
         Drain(Encoder);
 
         // The ground follows, drawn front to back so the layers above reject the base layer they cover.
-        mTiles.Reset();
         {
             ZY_PROFILE_SCOPE("Pipeline::Geometry::Tiles");
 
             constexpr auto kLayers = Enum::GetValues<Tile::Layer>();
 
+            // Only the base layer is guaranteed to cover the ground whole, so only it can skip the alpha test.
+            ConstRetainer<Graphic::Technique> Technique = mTechniques[Enum::Cast(Kind::Tile)];
+            const Graphic::Technique::Key     Masked    = Technique->Resolve("Masked");
+
             for (UInt32 Index = kLayers.GetSize(); Index > 0; --Index)
             {
                 const Tile::Layer Layer = kLayers[Index - 1];
 
-                // Only the base layer is guaranteed to cover the ground whole, so only it can skip the alpha test.
-                mTiles.SetTechnique(Layer == Tile::Layer::Base
-                    ? mTechniques[Enum::Cast(Kind::Tile_Opaque)]
-                    : mTechniques[Enum::Cast(Kind::Tile_Masked)]);
+                // Each layer is drained on its own, so the one above is on the target before the one below is drawn.
+                mTiles.Reset();
+                mTiles.SetTechnique(Technique, Layer == Tile::Layer::Base ? 0 : Masked);
 
                 // Draw region entities.
                 mQrDrawRegions.Run<>([&](ConstRef<Region> Region, Ref<Mosaic> Mosaic)
@@ -137,9 +122,10 @@ namespace Tileon::Pipeline
                         DrawRegion(Region, Mosaic, Origin, Tiles, Layer);
                     }
                 });
+
+                mTiles.Flush(Encoder);
             }
         }
-        mTiles.Flush(Encoder);
 
         // Everything that blends comes last, drained back to front by the collector.
         mCollector.Begin(Render::Collector::Priority::Transparent);
@@ -148,26 +134,9 @@ namespace Tileon::Pipeline
 
             mSprites.Reset();
 
-            // Draw transparent unlit sprite entities.
+            // Draw transparent sprite entities, each lit by the normal map its own material carries.
             mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Transparent)]);
-            mQrDrawTransparentUnlitSprites.Run<>([&](
-                ConstRef<Transform>  Transform,
-                ConstRef<Extent>     Extent,
-                ConstRef<Enclosure>  Enclosure,
-                ConstRef<Appearance> Appearance,
-                ConstPtr<IntColor8>  Tint)
-            {
-                if (ConstRef<IntBox> AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
-                {
-                    const Matrix4x3 Matrix = Transform.Rebase(Origin);
-
-                    mSprites.Draw(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
-                }
-            });
-
-            // Draw transparent lit sprite entities.
-            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Transparent_Lit)]);
-            mQrDrawTransparentLitSprites.Run<>([&](
+            mQrDrawTransparentSprites.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
                 ConstRef<Enclosure>  Enclosure,
@@ -244,7 +213,7 @@ namespace Tileon::Pipeline
         Scene.Register(
             Scene::DSL::Declare<Animator, Appearance, Mosaic>(),
             Scene::DSL::Declare<IntColor8>("Tint", Scene::DSL::Authored),
-            Scene::DSL::Declare<Transparent, Unlit>(Scene::DSL::Authored),
+            Scene::DSL::Declare<Transparent>(Scene::DSL::Authored),
             Scene::DSL::Declare<Animation, Decoration, Label, Lettering, Sprite>(Scene::DSL::Authored));
 
         // Observe when a region is attached, and automatically give it the mosaic its tiles are drawn from.
@@ -394,27 +363,15 @@ namespace Tileon::Pipeline
                 }
             });
 
-        mQrDrawOpaqueUnlitSprites = Scene.CreateQuery<
+        mQrDrawOpaqueSprites = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
-            Scene::DSL::With<Unlit>,
             Scene::DSL::Not<Transparent>
-        >("Render::Geometry::DrawOpaqueUnlitSprites", Scene::Cache::Auto);
+        >("Render::Geometry::DrawOpaqueSprites", Scene::Cache::Auto);
 
-        mQrDrawOpaqueLitSprites = Scene.CreateQuery<
+        mQrDrawTransparentSprites = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
-            Scene::DSL::Not<Transparent, Unlit>
-        >("Render::Geometry::DrawOpaqueLitSprites", Scene::Cache::Auto);
-
-        mQrDrawTransparentUnlitSprites = Scene.CreateQuery<
-            Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
-            Scene::DSL::With<Transparent, Unlit>
-        >("Render::Geometry::DrawTransparentUnlitSprites", Scene::Cache::Auto);
-
-        mQrDrawTransparentLitSprites = Scene.CreateQuery<
-            Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
-            Scene::DSL::With<Transparent>,
-            Scene::DSL::Not<Unlit>
-        >("Render::Geometry::DrawTransparentLitSprites", Scene::Cache::Auto);
+            Scene::DSL::With<Transparent>
+        >("Render::Geometry::DrawTransparentSprites", Scene::Cache::Auto);
 
         mQrDrawTexts = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Enclosure, const Lettering, const Label, ConstPtr<IntColor8>, ConstPtr<Decoration>>

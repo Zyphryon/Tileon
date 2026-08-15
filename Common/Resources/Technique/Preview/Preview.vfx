@@ -24,7 +24,6 @@
     ]
   },
   "Program": {
-    "Defines": ["PREVIEW_DEPTH", "ELEVATION_SCALE=8.0", "PREVIEW_MIDGROUND=0.10", "PREVIEW_BACKGROUND=0.90"],
     "Shaders": {
       "HLSL": [
         { "Path": "Preview.hlsl", "Stage": "Vertex"   },
@@ -35,5 +34,22 @@
         { "Path": "Preview.glsl", "Stage": "Fragment" }
       ]
     }
-  }
+  },
+  "Features": [
+    {
+      "Name": "Normal",
+      "Program": {
+        "Defines": ["PREVIEW_NORMAL"]
+      }
+    },
+    {
+      "Name": "Depth",
+      "Program": {
+        "Defines": ["PREVIEW_DEPTH", "ELEVATION_SCALE=8.0", "PREVIEW_MIDGROUND=0.10", "PREVIEW_BACKGROUND=0.90"]
+      }
+    }
+  ],
+  "Preload": [
+    ["Normal"], ["Depth"]
+  ]
 }

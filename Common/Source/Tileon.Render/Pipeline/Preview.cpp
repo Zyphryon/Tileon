@@ -59,7 +59,7 @@ namespace Tileon::Pipeline
             .Offset    = 0,
             .Instances = 1
         };
-        Encoder.Draw(* mTechniques[Enum::Cast(mSource)], Textures, Invocation);
+        Encoder.Draw(* mTechnique, Textures, Invocation, mTechnique->Resolve(Enum::GetName(mSource)));
 
         if (mSource == Kind::Albedo && HasProperty(Property::Grid))
         {
@@ -144,16 +144,16 @@ namespace Tileon::Pipeline
                 = Graphics.AllocateInFlightVertices<GpuBoundaryLayout>(Data.GetSize());
             Instances.Copy(Data);
 
-            const Bool    Aligned   = mDirector->GetProjection().IsAxisAligned();
-            const Overlay Technique = Aligned ? Overlay::Boundary_Flat : Overlay::Boundary;
+            const Bool Flat = mDirector->GetProjection().IsAxisAligned();
 
             const Graphic::Invocation Invocation = {
-                .Count     = Aligned ? 8u : 24u,
+                .Count     = Flat ? 8u : 24u,
                 .Base      = 0,
                 .Offset    = 0,
                 .Instances = static_cast<UInt32>(Data.GetSize())
             };
-            Encoder.Draw(* mOverlays[Enum::Cast(Technique)], { }, Instances.GetStream(), Invocation);
+            ConstRetainer<Graphic::Technique> Technique = mOverlays[Enum::Cast(Overlay::Boundary)];
+            Encoder.Draw(* Technique, { }, Instances.GetStream(), Invocation, Flat ? Technique->Resolve("Flat") : 0);
         }
     }
 
@@ -178,12 +178,7 @@ namespace Tileon::Pipeline
 
     void Preview::OnLoad(Ref<Content::Service> Content)
     {
-        for (const Kind Type : Enum::GetValues<Kind>())
-        {
-            Str Path = Str::Print<"Resources://Technique/Preview/Preview_{0}.vfx">(Enum::GetName(Type));
-
-            mTechniques[Enum::Cast(Type)] = Content.Load<Graphic::Technique>(Move(Path));
-        }
+        mTechnique = Content.Load<Graphic::Technique>("Resources://Technique/Preview/Preview.vfx");
 
         for (const Overlay Type : Enum::GetValues<Overlay>())
         {
