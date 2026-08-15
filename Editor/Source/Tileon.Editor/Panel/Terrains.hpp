@@ -25,15 +25,12 @@
 namespace Tileon::Editor
 {
     /// \brief Provides tools and functionality for managing and editing the tileset in the editor.
-    ///
-    /// \note Every change rebuilds a sheet and renumbers every run in the same breath, so a placement can
-    ///       never name a slice that has moved out from under it.
     class Terrains final : public Panel
     {
     public:
 
         /// \brief The sheet a motif is fired into when the project has not named another.
-        static constexpr Symbol kSheet = "Resources://Tileset/Tileset{0}.{1}.tex";
+        static constexpr Symbol kSheet = "Resources://Tileset/Tileset-{0}-{1}.tex";
 
     public:
 
@@ -53,47 +50,39 @@ namespace Tileon::Editor
         /// \brief Names the art one motif takes on at the next firing.
         struct Change final
         {
-            /// \brief Constructs a change that takes a motif's art away.
-            ZY_INLINE Change()
-                : Motif  { 0 },
-                  Sheet  { 0 },
-                  Fired  { false },
-                  Frames { 0 },
-                  Width  { 0 },
-                  Height { 0 }
-            {
-            }
-
             /// The motif the change applies to.
-            UInt16     Motif;
+            UInt16                         Motif    = 0;
 
             /// The sheet its frames are fired into.
-            UInt16     Sheet;
+            UInt16                         Sheet    = 0;
 
             /// Whether the change names a sheet at all, which a discard does not.
-            Bool       Fired;
+            Bool                           Fired    = false;
 
-            /// The image its frames are cut from, which is empty when the art is taken away.
-            Str        Source;
+            /// The image each texture's frames are cut from, empty where the motif names none.
+            Array<Str, Motif::kMaxSources> Sources;
 
             /// The number of frames it takes.
-            UInt16     Frames;
+            UInt16                         Frames   = 0;
 
             /// The corner of the first frame on the source, in texels.
-            IntVector2 Origin;
+            IntVector2                     Origin;
 
             /// The width of a frame, in texels.
-            UInt16     Width;
+            UInt16                         Width    = 0;
 
             /// The height of a frame, in texels.
-            UInt16     Height;
+            UInt16                         Height   = 0;
         };
 
         /// \brief One sheet's worth of frames, gathered in the order the motifs hold them.
         struct Batch final
         {
-            /// The frames the sheet holds, one entry per slice.
-            Sequence<Entry> Entries;
+            /// The frames the sheet holds for each texture, one entry per slice.
+            Array<Sequence<Entry>, Enum::Count<Motif::Source>()> Entries;
+
+            /// Whether any motif of the sheet named a normal map, which is what earns it a normal array.
+            Bool                                                 Lit = false;
         };
 
     private:
@@ -132,7 +121,8 @@ namespace Tileon::Editor
         /// \param Folder The project folder the sheets are rooted at.
         /// \param Motif  The motif taking the art.
         /// \param Sheet  The url of the sheet the frames are fired into, which the project authored.
-        /// \param Source The image the frames are cut from, laid out left to right from the offset.
+        /// \param Source The image the albedo frames are cut from, laid out left to right from the offset.
+        /// \param Normal The image the normal frames are cut from, empty when the motif has none.
         /// \param Frames The number of frames to take from the source.
         /// \param Origin The corner of the first frame on the source, in texels.
         /// \param Width  The width of a frame, in texels.
@@ -143,6 +133,7 @@ namespace Tileon::Editor
             UInt16     Motif,
             Text       Sheet,
             Text       Source,
+            Text       Normal,
             UInt16     Frames,
             IntVector2 Origin,
             UInt16     Width,
@@ -197,6 +188,7 @@ namespace Tileon::Editor
 
         UInt16                   mAuthored;
         Str                      mSource;
+        Str                      mNormal;
         Bool                     mMeasured;
         UInt16                   mOriginX;
         UInt16                   mOriginY;

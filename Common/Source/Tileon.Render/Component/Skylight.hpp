@@ -36,7 +36,7 @@ namespace Tileon
             : mSunTint    { IntColor8(255, 244, 224) },
               mSkyTint    { IntColor8(160, 190, 255) },
               mGroundTint { IntColor8( 90,  85,  80) },
-              mBrightness { 1.0f },
+              mBrightness { 0.5f },
               mExposure   { 1.0f }
         {
             SetSunDirection(kDefaultDirection);

@@ -94,7 +94,7 @@ namespace Tileon
 
         // Depth reserves a band of the buffer so the layers either side of the world keep their own room.
         const Vector2 Ground = mProjection.GetGroundExtent(Vector2(HalfWidth, HalfHeight));
-        const Real32  Extent = mProjection.GetDepthExtent(Ground, kMaxElevation);
+        const Real32  Extent = mProjection.GetDepthExtent(Ground, kMaxHeight);
         const Real32  Span   = (2.0f * Extent) / (kMaxDepth - kMinDepth);
         const Real32  Near   = -Extent - kMinDepth * Span;
 

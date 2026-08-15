@@ -22,7 +22,7 @@
 
 namespace Tileon
 {
-    /// \brief Records the tiles of a pass and drains them as one instanced draw per technique and texture.
+    /// \brief Records the tiles of a pass and drains them as one instanced draw per variant and array.
     class Tiles final
     {
     public:
@@ -34,8 +34,8 @@ namespace Tileon
 
         /// \brief Sets the technique subsequent tiles are recorded under.
         ///
-        /// \param Technique The technique every tile up to the next flush is drawn with.
-        /// \param Variant   The bitmask of the features they are drawn with.
+        /// \param Technique The technique every tile up to the next reset is drawn with.
+        /// \param Variant   The bitmask of the features they are drawn with, before their own art adds to it.
         void SetTechnique(ConstRetainer<Graphic::Technique> Technique, Graphic::Technique::Key Variant = 0);
 
         /// \brief Records a tile lying flat on the ground plane.
@@ -76,14 +76,14 @@ namespace Tileon
             IntColor8        Color;
         };
 
-        /// \brief Gathers every tile sampling one array into a single instanced draw.
+        /// \brief Gathers every tile drawn with one variant and sampling one array into a single instanced draw.
         struct TileBatch final
         {
-            /// The array texture every tile of the batch samples, each from its own slice.
-            Graphic::Object      Texture;
+            /// The array of each texture every tile of the batch samples, each from its own slice.
+            Array<Graphic::Object, Motif::kMaxSources> Textures;
 
             /// The per-instance input data of the batch's tiles.
-            Sequence<TileLayout> Layouts;
+            Sequence<TileLayout>                       Layouts;
         };
 
     private:
@@ -94,6 +94,10 @@ namespace Tileon
         Retainer<Graphic::Service>   mService;
         Retainer<Graphic::Technique> mTechnique;
         Graphic::Technique::Key      mVariant;
+
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
         Sequence<TileBatch>          mBatches;
         UInt32                       mCount;
     };

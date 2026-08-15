@@ -45,6 +45,14 @@ namespace Tileon
         {
         }
 
+        /// \brief Checks whether the entity is filed under a spatial cell.
+        ///
+        /// \return `true` if the entity belongs to a cell, `false` otherwise.
+        ZY_INLINE Bool IsLinked() const
+        {
+            return mCell != kUnlinked;
+        }
+
         /// \brief Sets the world-space volume that encloses the entity.
         ///
         /// \param Volume The absolute world-space volume, in tiles.
@@ -75,14 +83,6 @@ namespace Tileon
         ZY_INLINE IntVector2 GetCell() const
         {
             return mCell;
-        }
-
-        /// \brief Checks whether the entity is filed under a spatial cell.
-        ///
-        /// \return `true` if the entity belongs to a cell, `false` otherwise.
-        ZY_INLINE Bool IsLinked() const
-        {
-            return mCell != kUnlinked;
         }
 
     private:

@@ -11,7 +11,6 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Terrains.hpp"
-#include "Tileon.Editor/Utility.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -232,6 +231,7 @@ namespace Tileon::Editor
     void Terrains::DrawLeftPanelArt(Ref<Motif> Motif)
     {
         constexpr UInt64 kSourceKey = "Terrains.Source"_Hash;
+        constexpr UInt64 kNormalKey = "Terrains.Normal"_Hash;
 
         Toolkit::Composer::Section("Art");
 
@@ -242,7 +242,8 @@ namespace Tileon::Editor
         {
             mAuthored = Motif.GetID();
             mFault    = Str();
-            mSource   = Motif.GetOrigin().GetUrl();
+            mSource   = Motif.GetSource(Motif::Source::Albedo).GetUrl();
+            mNormal   = Motif.GetSource(Motif::Source::Normal).GetUrl();
             mMeasured = false;
             mOriginX  = 0;
             mOriginY  = 0;
@@ -256,6 +257,11 @@ namespace Tileon::Editor
             mMeasured = false;
             mWidth    = 0;
             mHeight   = 0;
+        }
+
+        if (Str Selection; mBrowser.Consume(kNormalKey, Selection))
+        {
+            mNormal = Move(Selection);
         }
 
         // The art is loaded as soon as it is named, which is what lets the extent follow from it.
@@ -278,6 +284,19 @@ namespace Tileon::Editor
                 mBrowser.Open(kSourceKey, ".tex");
             },
             ImGuiInputTextFlags_EnterReturnsTrue);
+
+        Toolkit::Composer::Field("Normal");
+        Toolkit::Composer::InputTextWithButton("##normal", mNormal,
+            [&](Text Value)
+            {
+                mNormal = Str(Value);
+            },
+            "...",
+            [&]
+            {
+                mBrowser.Open(kNormalKey, ".tex");
+            },
+            ImGuiInputTextFlags_EnterReturnsTrue);
         Toolkit::Composer::Spacing();
 
         Text   Baked = Text();
@@ -288,8 +307,8 @@ namespace Tileon::Editor
         {
             if (Placement.Motif == Motif.GetID())
             {
-                Baked = mTileset.GetAtlas(Placement.Atlas)
-                    ? mTileset.GetAtlas(Placement.Atlas)->GetKey().GetUrl()
+                Baked = mTileset.GetAtlas(Placement.Atlas, Motif::Source::Albedo)
+                    ? mTileset.GetAtlas(Placement.Atlas, Motif::Source::Albedo)->GetKey().GetUrl()
                     : Text();
                 Cut   = Placement.Frames;
                 Atlas = Placement.Atlas;
@@ -303,7 +322,7 @@ namespace Tileon::Editor
         // An authored terrain is not measured at all: its extent is whatever its sheet was cut with.
         if (!mMeasured && mWidth == 0 && Cut > 0)
         {
-            if (ConstRetainer<Graphic::Image> Sheet = mTileset.GetAtlas(Atlas); Sheet && Sheet->HasFinished())
+            if (ConstRetainer<Graphic::Image> Sheet = mTileset.GetAtlas(Atlas, Motif::Source::Albedo); Sheet && Sheet->HasFinished())
             {
                 mWidth    = Sheet->GetWidth();
                 mHeight   = Sheet->GetHeight();
@@ -398,7 +417,9 @@ namespace Tileon::Editor
 
         // A bake is pending while what the motif asks for differs from what its run was cut with.
         const Bool Pending = Ready
-            && (Cut != Flipbook.GetCount() || Baked != Sheet || Motif.GetOrigin().GetUrl() != mSource);
+            && (Cut != Flipbook.GetCount() || Baked != Sheet
+                || Motif.GetSource(Motif::Source::Albedo).GetUrl() != mSource
+                || Motif.GetSource(Motif::Source::Normal).GetUrl() != mNormal);
 
         if (Toolkit::Composer::DisabledButton(Pending ? "Bake (Pending)"_Text : "Bake"_Text, !Ready, -1.0f))
         {
@@ -408,8 +429,14 @@ namespace Tileon::Editor
                 ? Content::Uri(Str(mSource))
                 : Content::Uri(Str::Print<"Resources://{0}">(mSource));
 
+            const Content::Uri Surface = mNormal.IsEmpty() ? Content::Uri()
+                : Content::Uri(mNormal).HasSchema()
+                    ? Content::Uri(Str(mNormal))
+                    : Content::Uri(Str::Print<"Resources://{0}">(mNormal));
+
             // The baker reads from disk, which is where the mount roots the url it was given.
-            const Str Art = Str::Print<"{0}/{1}">(Folder, Origin.GetPath());
+            const Str Art  = Str::Print<"{0}/{1}">(Folder, Origin.GetPath());
+            const Str Bump = Surface.GetUrl().IsEmpty() ? Str() : Str::Print<"{0}/{1}">(Folder, Surface.GetPath());
 
             // A frame covers as many tiles as its extent holds, which is what the span means.
             const Real32 Density = GetContext().GetDirector().GetDensity();
@@ -419,10 +446,11 @@ namespace Tileon::Editor
                 static_cast<SInt32>(Round(mHeight / Density))));
 
             // The art is remembered so the motif can be fired again without naming it a second time.
-            Motif.SetOrigin(Content::Uri(Origin));
+            Motif.SetSource(Motif::Source::Albedo, Content::Uri(Origin));
+            Motif.SetSource(Motif::Source::Normal, Content::Uri(Surface));
 
             const Bool Fired = Adopt(
-                Folder, Motif.GetID(), Target.GetUrl(), Art, static_cast<UInt16>(Flipbook.GetCount()),
+                Folder, Motif.GetID(), Target.GetUrl(), Art, Bump, static_cast<UInt16>(Flipbook.GetCount()),
                 IntVector2(mOriginX, mOriginY), mWidth, mHeight);
 
             // A bake that fails says so where it was asked for, rather than only in the log.
@@ -508,7 +536,7 @@ namespace Tileon::Editor
 
         const Bool Settled = mArt && mArt->HasFinished();
 
-        if (Glyph.Texture == 0 && !Settled)
+        if (Glyph.GetTexture(Motif::Source::Albedo) == 0 && !Settled)
         {
             DrawEmptyPanel(mSource.IsEmpty()
                 ? "No art assigned to this terrain"_Text
@@ -519,7 +547,7 @@ namespace Tileon::Editor
         if (Toolkit::Composer::BeginTabBar("##right_tabs"))
         {
             // The preview shows the tile as the world draws it, which is one slice of the array it was promoted into.
-            if (Glyph.Texture)
+            if (Glyph.GetTexture(Motif::Source::Albedo))
             {
                 if (Toolkit::Composer::BeginTabItem("Preview"))
                 {
@@ -535,7 +563,7 @@ namespace Tileon::Editor
                     const Real32 Offset = Slice * Plugin::ImGuiRenderer::kSliceStride;
 
                     mPreview.Draw(
-                        Plugin::ImGuiRenderer::GetLayeredTextureID(Glyph.Texture),
+                        Plugin::ImGuiRenderer::GetLayeredTextureID(Glyph.GetTexture(Motif::Source::Albedo)),
                         Size, Rect(Offset, 0.0f, Offset + 1.0f, 1.0f), Color::FromColor8(Glyph.Tint));
 
                     Toolkit::Composer::EndTabItem();
@@ -599,7 +627,7 @@ namespace Tileon::Editor
                     ImVec4(0.90f, 0.30f, 0.30f, 1.0f)
                 };
 
-                const UInt32 Status  = (Glyph.Count == 0) ? 0u : (Glyph.Texture ? 2u : 1u);
+                const UInt32 Status  = (Glyph.Count == 0) ? 0u : (Glyph.GetTexture(Motif::Source::Albedo) ? 2u : 1u);
                 const Real32 StatusW = Toolkit::Composer::CalcTextSize(kStatusLabel[Status]).x + Toolkit::Composer::GetStyle().ItemSpacing.x * 2.0f;
 
                 Toolkit::Composer::SameLine(Toolkit::Composer::GetWindowWidth() - StatusW);
@@ -624,6 +652,7 @@ namespace Tileon::Editor
         UInt16     Motif,
         Text       Sheet,
         Text       Source,
+        Text       Normal,
         UInt16     Frames,
         IntVector2 Origin,
         UInt16     Width,
@@ -633,11 +662,13 @@ namespace Tileon::Editor
         Change.Motif  = Motif;
         Change.Sheet  = mTileset.GetOrInsertAtlas(Content::Uri(Str(Sheet)));
         Change.Fired  = true;
-        Change.Source = Str(Source);
         Change.Frames = Frames;
         Change.Origin = Origin;
         Change.Width  = Width;
         Change.Height = Height;
+
+        Change.Sources[Enum::Cast(Motif::Source::Albedo)] = Str(Source);
+        Change.Sources[Enum::Cast(Motif::Source::Normal)] = Str(Normal);
 
         return Fire(Folder, Change);
     }
@@ -675,11 +706,6 @@ namespace Tileon::Editor
 
         Gather(Folder, Change, Batches, Placements);
 
-        // Tile art is authored in sRGB, so it fires to an sRGB format and the GPU decodes it on sample.
-        ::Pipeline::Baker::Texture::Profile Settings;
-        Settings.Linear  = false;
-        Settings.Mipmaps = true;
-
         const ::Pipeline::Baker::Texture::Baker Assembler(mScheduler);
 
         for (UInt32 Index = 0; Index < Batches.GetSize(); ++Index)
@@ -690,29 +716,45 @@ namespace Tileon::Editor
                 continue;
             }
 
-            const Str Path = Str::Print<"{0}/{1}">(
-                Folder, mTileset.GetAtlas(static_cast<UInt16>(Index))->GetKey().GetPath());
+            ConstRef<Batch> Batch = Batches[Index];
 
             // A atlas nothing is fired into is left where it is, since no run names it any more.
-            if (Batches[Index].Entries.IsEmpty())
+            if (Batch.Entries[Enum::Cast(Motif::Source::Albedo)].IsEmpty())
             {
                 continue;
             }
 
-            const Blob Output = Assembler.Assemble(Batches[Index].Entries, Settings);
+            const Text Albedo = mTileset.GetAtlas(static_cast<UInt16>(Index), Motif::Source::Albedo)->GetKey().GetPath();
 
-            if (Output == nullptr)
+            for (const Motif::Source Slot : Enum::GetValues<Motif::Source>())
             {
-                LOG_E("Terrains: failed to assemble '{0}'", Path);
-                return false;
-            }
+                // A sheet no motif gave a normal map to is left without a normal array altogether.
+                if (Slot == Motif::Source::Normal && !Batch.Lit)
+                {
+                    continue;
+                }
 
-            Filesystem::Ensure(Path);
+                // Albedo is authored in sRGB and decoded on sample, while normals are already vectors.
+                ::Pipeline::Baker::Texture::Profile Settings;
+                Settings.Linear  = (Slot != Motif::Source::Albedo);
+                Settings.Mipmaps = true;
 
-            if (Filesystem::Write(Path, Output) != Filesystem::Result::Success)
-            {
-                LOG_E("Terrains: failed to write '{0}'", Path);
-                return false;
+                const Str Path = Str::Print<"{0}/{1}">(Folder, mTileset.GetAtlasUrl(Albedo, Slot));
+                const Blob Output = Assembler.Assemble(Batch.Entries[Enum::Cast(Slot)], Settings);
+
+                if (Output == nullptr)
+                {
+                    LOG_E("Terrains: failed to assemble '{0}'", Path);
+                    return false;
+                }
+
+                Filesystem::Ensure(Path);
+
+                if (Filesystem::Write(Path, Output) != Filesystem::Result::Success)
+                {
+                    LOG_E("Terrains: failed to write '{0}'", Path);
+                    return false;
+                }
             }
         }
 
@@ -738,7 +780,7 @@ namespace Tileon::Editor
                 return;
             }
 
-            ConstRetainer<Graphic::Image> Atlas = mTileset.GetAtlas(Placement.Atlas);
+            ConstRetainer<Graphic::Image> Atlas = mTileset.GetAtlas(Placement.Atlas, Motif::Source::Albedo);
 
             if (!Atlas || !Atlas->HasFinished())
             {
@@ -754,24 +796,37 @@ namespace Tileon::Editor
 
             Ref<Batch> Destination = Batches[Placement.Atlas];
 
+            // A sheet fired before its motifs had normal maps has no normal array to re-cut from, so the
+            // ones already in it stay flat until each is fired again with a map of its own.
+            ConstRetainer<Graphic::Image> Normal = mTileset.GetAtlas(Placement.Atlas, Motif::Source::Normal);
+            const Bool                    Lit    = Normal && Normal->HasFinished() && !Normal->HasFailed();
+
             Ref<Tileset::Placement> Assigned = Placements.Append();
             Assigned.Motif  = Placement.Motif;
-            Assigned.Base   = static_cast<UInt16>(Destination.Entries.GetSize());
+            Assigned.Base   = static_cast<UInt16>(Destination.Entries[Enum::Cast(Motif::Source::Albedo)].GetSize());
             Assigned.Frames = Placement.Frames;
             Assigned.Atlas  = Placement.Atlas;
+
+            Destination.Lit = Destination.Lit || Lit;
 
             // A frame that is already fired sources the very slice of the atlas it sits in today.
             for (UInt16 Frame = 0; Frame < Placement.Frames; ++Frame)
             {
-                Ref<Entry> Record = Destination.Entries.Append();
-                Record.Source = Str::Print<"{0}/{1}">(Folder, Atlas->GetKey().GetPath());
-                Record.Slice  = Placement.Base + Frame;
-                Record.Width  = Atlas->GetWidth();
-                Record.Height = Atlas->GetHeight();
+                Ref<Entry> Albedo = Destination.Entries[Enum::Cast(Motif::Source::Albedo)].Append();
+                Albedo.Source = Str::Print<"{0}/{1}">(Folder, Atlas->GetKey().GetPath());
+                Albedo.Slice  = Placement.Base + Frame;
+                Albedo.Width  = Atlas->GetWidth();
+                Albedo.Height = Atlas->GetHeight();
+
+                Ref<Entry> Surface = Destination.Entries[Enum::Cast(Motif::Source::Normal)].Append();
+                Surface.Source = Lit ? Str::Print<"{0}/{1}">(Folder, Normal->GetKey().GetPath()) : "";
+                Surface.Slice  = Lit ? Placement.Base + Frame : 0;
+                Surface.Width  = Atlas->GetWidth();
+                Surface.Height = Atlas->GetHeight();
             }
         });
 
-        if (!Change.Fired || Change.Source.IsEmpty() || Change.Frames == 0)
+        if (!Change.Fired || Change.Sources[Enum::Cast(Motif::Source::Albedo)].IsEmpty() || Change.Frames == 0)
         {
             return;
         }
@@ -783,21 +838,30 @@ namespace Tileon::Editor
 
         Ref<Batch> Destination = Batches[Change.Sheet];
 
+        ConstRef<Str> Surface = Change.Sources[Enum::Cast(Motif::Source::Normal)];
+
         Ref<Tileset::Placement> Assigned = Placements.Append();
         Assigned.Motif  = Change.Motif;
-        Assigned.Base   = static_cast<UInt16>(Destination.Entries.GetSize());
+        Assigned.Base   = static_cast<UInt16>(Destination.Entries[Enum::Cast(Motif::Source::Albedo)].GetSize());
         Assigned.Frames = Change.Frames;
         Assigned.Atlas  = Change.Sheet;
+
+        Destination.Lit = Destination.Lit || !Surface.IsEmpty();
 
         // The frames of a run sit side by side on the source, starting at the corner the author named.
         for (UInt16 Frame = 0; Frame < Change.Frames; ++Frame)
         {
-            Ref<Entry> Record = Destination.Entries.Append();
-            Record.Source = Change.Source;
-            Record.X      = static_cast<UInt16>(Change.Origin.GetX()) + Frame * Change.Width;
-            Record.Y      = static_cast<UInt16>(Change.Origin.GetY());
-            Record.Width  = Change.Width;
-            Record.Height = Change.Height;
+            for (const Motif::Source Slot : Enum::GetValues<Motif::Source>())
+            {
+                const Bool Named = (Slot == Motif::Source::Albedo) || !Surface.IsEmpty();
+
+                Ref<Entry> Record = Destination.Entries[Enum::Cast(Slot)].Append();
+                Record.Source = Named ? Change.Sources[Enum::Cast(Slot)] : "";
+                Record.X      = Named ? static_cast<UInt16>(Change.Origin.GetX()) + Frame * Change.Width : 0;
+                Record.Y      = Named ? static_cast<UInt16>(Change.Origin.GetY()) : 0;
+                Record.Width  = Change.Width;
+                Record.Height = Change.Height;
+            }
         }
     }
 }

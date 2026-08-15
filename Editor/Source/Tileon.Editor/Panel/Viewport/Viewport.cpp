@@ -1100,10 +1100,10 @@ namespace Tileon::Editor
 
                     ConstRef<Tileset::Glyph> Glyph = mContext.GetTileset().GetGlyph(Selection);
 
-                    if (Selection != 0 && !IsBucket && Glyph.Texture)
+                    if (Selection != 0 && !IsBucket && Glyph.GetTexture(Motif::Source::Albedo))
                     {
                         // Every slice shares one identifier, so which of them is drawn rides in the coordinates.
-                        const ImTextureID Slice  = Plugin::ImGuiRenderer::GetLayeredTextureID(Glyph.Texture);
+                        const ImTextureID Slice  = Plugin::ImGuiRenderer::GetLayeredTextureID(Glyph.GetTexture(Motif::Source::Albedo));
                         const auto        Sample = [&](Real32 U, Real32 V)
                         {
                             return Plugin::ImGuiRenderer::GetLayeredTextureUV(Glyph.Slice, ImVec2(U, V));

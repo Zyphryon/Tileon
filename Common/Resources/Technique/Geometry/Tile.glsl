@@ -68,6 +68,10 @@ void main()
 
 uniform sampler2DArray t_Albedo;
 
+#ifdef ENABLE_NORMAL_MAPPING
+uniform sampler2DArray t_Normal;
+#endif
+
 in vec2 v_Texture;
 in vec4 v_Color;
 flat in uint v_Slice;
@@ -88,9 +92,22 @@ void main()
 
     out_Albedo = v_Color * Texel;
 
+#ifdef ENABLE_NORMAL_MAPPING
+
+    // A tile never tilts, so tangent space maps onto the ground with a fixed swizzle: the map's own
+    // up axis becomes the world's, and a flat map lands back on the constant an unlit tile writes.
+    vec3 Tangent = texture(t_Normal, vec3(v_Texture, float(v_Slice))).xyz * 2.0 - 1.0;
+    vec3 Normal  = normalize(vec3(Tangent.x, Tangent.z, Tangent.y));
+
+    out_Normal = vec4(Normal * 0.5 + 0.5, 1.0);
+
+#else
+
     // A tile lies flat on the ground, so its normal is the world's up axis rather than the viewer's.
     // The ground faces the sky and passes no light through, so it is solid in the opacity channel.
     out_Normal = vec4(0.5, 1.0, 0.5, 1.0);
+
+#endif
 }
 
 #endif // FRAGMENT_SHADER

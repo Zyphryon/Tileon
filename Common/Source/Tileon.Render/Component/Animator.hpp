@@ -132,12 +132,12 @@ namespace Tileon
 
     private:
 
-        /// \brief Applies the easing function to the given delta time based on the duration of the animation.
+        /// \brief Ease the given delta time based on the duration of the animation.
         ///
         /// \param Delta    The time delta to apply easing to.
         /// \param Duration The total duration of the animation.
         /// \return The eased time delta, clamped to the range [0, Duration].
-        ZY_INLINE Real64 ApplyEasing(Real64 Delta, Real64 Duration) const
+        ZY_INLINE Real64 Ease(Real64 Delta, Real64 Duration) const
         {
             return Clamp(Math::Ease(mEasing, Delta / Duration), 0.0, 1.0) * Duration;
         }

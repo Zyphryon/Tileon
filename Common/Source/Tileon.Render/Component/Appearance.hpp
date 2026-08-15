@@ -14,7 +14,6 @@
 
 #include <Zyphryon.Graphic/Material.hpp>
 #include <Zyphryon.Math/Geometry/Rect.hpp>
-#include <Zyphryon.Scene/Tag.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -28,21 +27,17 @@ namespace Tileon
     public:
 
         /// \brief Default constructor.
-        ZY_INLINE Appearance()
-            : mSource { },
-              mSheet  { Vector2::Zero() }
-        {
-        }
+        ZY_INLINE Appearance() = default;
 
         /// \brief Constructs an appearance with the specified material and source rectangle.
         ///
-        /// \param Material The material to use for rendering the sprite.
-        /// \param Source   The source rectangle for the sprite.
-        /// \param Sheet    The dimensions of the material's albedo.
-        ZY_INLINE Appearance(ConstRetainer<Graphic::Material> Material, Rect Source, Vector2 Sheet)
-            : mMaterial { Material },
-              mSource   { Source },
-              mSheet    { Sheet }
+        /// \param Material   The material to use for rendering the sprite.
+        /// \param Source     The source rectangle for the sprite.
+        /// \param Resolution The pixel dimensions of the material's albedo, which the source rect is a fraction of.
+        ZY_INLINE Appearance(ConstRetainer<Graphic::Material> Material, Rect Source, Vector2 Resolution)
+            : mMaterial   { Material },
+              mSource     { Source },
+              mResolution { Resolution }
         {
         }
 
@@ -78,20 +73,20 @@ namespace Tileon
             return mSource;
         }
 
-        /// \brief Sets the size of the sheet the source crops out of, in pixels.
+        /// \brief Sets the pixel dimensions of the albedo the source crops out of.
         ///
-        /// \param Sheet The dimensions of the material's albedo.
-        ZY_INLINE void SetSheet(Vector2 Sheet)
+        /// \param Resolution The pixel dimensions of the material's albedo, which the source rect is a fraction of.
+        ZY_INLINE void SetResolution(Vector2 Resolution)
         {
-            mSheet = Sheet;
+            mResolution = Resolution;
         }
 
-        /// \brief Gets the size of the sheet the source crops out of, in pixels.
+        /// \brief Gets the pixel dimensions of the albedo the source crops out of.
         ///
         /// \return The dimensions of the material's albedo, or zero while it is still loading.
-        ZY_INLINE Vector2 GetSheet() const
+        ZY_INLINE Vector2 GetResolution() const
         {
-            return mSheet;
+            return mResolution;
         }
 
     private:
@@ -101,6 +96,6 @@ namespace Tileon
 
         Retainer<Graphic::Material> mMaterial;
         Rect                        mSource;
-        Vector2                     mSheet;
+        Vector2                     mResolution;
     };
 }

@@ -12,8 +12,8 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Component/Animation.hpp"
 #include <Zyphryon.Content/Uri.hpp>
+#include <Zyphryon.Graphic/Types.hpp>
 #include <Zyphryon.Math/Color.hpp>
 #include <Zyphryon.Math/Motion/Flipbook.hpp>
 
@@ -28,8 +28,18 @@ namespace Tileon
     {
     public:
 
+        /// \brief Names the art a motif is fired from, in the order the tile signature declares it.
+        enum class Source : UInt8
+        {
+            Albedo, ///< The base color the tile shows.
+            Normal, ///< The tangent-space normal map that gives its surface relief, when it has one.
+        };
+
         /// \brief The maximum number of frames a motif's run can hold.
-        static constexpr UInt kMaxFrames = 10;
+        static constexpr UInt kMaxFrames  = 11;
+
+        /// \brief TODO_DOC
+        static constexpr UInt kMaxSources = Enum::Count<Source>();
 
         /// \brief The run of frames a motif plays, one baked slice each and no data of its own.
         using Flipbook = Flipbook<Empty, kMaxFrames>;
@@ -113,21 +123,22 @@ namespace Tileon
         {
             return mEasing;
         }
-
-        /// \brief Sets the art the motif's frames were last fired from.
+        /// \brief Sets the art the motif's frames of a source were last fired from.
         ///
-        /// \param Origin The url of the image the frames were cut from.
-        ZY_INLINE void SetOrigin(AnyRef<Content::Uri> Origin)
+        /// \param Slot   The source the art is fired into.
+        /// \param Url    The url of the image the frames were cut from.
+        ZY_INLINE void SetSource(Source Slot, AnyRef<Content::Uri> Url)
         {
-            mOrigin = Move(Origin);
+            mSources[Enum::Cast(Slot)] = Move(Url);
         }
 
-        /// \brief Gets the art the motif's frames were last fired from.
+        /// \brief Gets the art the motif's frames of a source were last fired from.
         ///
-        /// \return The url of the image the frames were cut from.
-        ZY_INLINE ConstRef<Content::Uri> GetOrigin() const
+        /// \param Slot The source to look up.
+        /// \return The url of the image the frames were cut from, empty when the motif has none.
+        ZY_INLINE ConstRef<Content::Uri> GetSource(Source Slot) const
         {
-            return mOrigin;
+            return mSources[Enum::Cast(Slot)];
         }
 
         /// \brief Sets the run of frames the motif plays.
@@ -156,7 +167,7 @@ namespace Tileon
             Archive.Serialize(mPeriod);
             Archive.Serialize(mTint);
             Archive.Serialize(mEasing);
-            Archive.Serialize(mOrigin);
+            Archive.Serialize(mSources);
             Archive.Serialize(mFlipbook);
         }
 
@@ -165,11 +176,11 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        UInt16       mID;
-        Easing       mEasing;
-        IntColor8    mTint;
-        IntVector2   mPeriod;
-        Content::Uri mOrigin;
-        Flipbook     mFlipbook;
+        UInt16                           mID;
+        Easing                           mEasing;
+        IntColor8                        mTint;
+        IntVector2                       mPeriod;
+        Array<Content::Uri, kMaxSources> mSources;
+        Flipbook                         mFlipbook;
     };
 }

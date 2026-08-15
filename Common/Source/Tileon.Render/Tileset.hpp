@@ -52,23 +52,32 @@ namespace Tileon
         /// \brief Everything a draw needs to put a terrain on the ground.
         struct Glyph final
         {
-            /// The array texture holding the motif's frames, or zero until its bake arrives.
-            Graphic::Object Texture = 0;
+            /// The array holding the motif's frames of each texture, zero where the sheet has none.
+            Array<Graphic::Object, Motif::kMaxSources> Textures;
 
             /// The first slice of the run holding the motif's frames.
-            UInt16          Start   = 0;
+            UInt16                                     Start  = 0;
 
             /// The slice the motif shows right now, which is \ref Start plus the active keyframe.
-            UInt16          Slice   = 0;
+            UInt16                                     Slice  = 0;
 
             /// The number of slices the run occupies, one per animation frame.
-            UInt16          Count   = 0;
+            UInt16                                     Count  = 0;
 
             /// Copy of \c Motif::GetPeriod — the tiles the art covers before it repeats.
-            IntVector2      Period  = IntVector2::One();
+            IntVector2                                 Period = IntVector2::One();
 
             /// Copy of \c Motif::GetTint — color multiplier applied at render time.
-            IntColor8       Tint    = IntColor8::Transparent();
+            IntColor8                                  Tint   = IntColor8::Transparent();
+
+            /// \brief Gets the array holding the motif's frames of a texture.
+            ///
+            /// \param Slot The texture to read.
+            /// \return The array, or zero when the sheet was fired without that texture.
+            ZY_INLINE Graphic::Object GetTexture(Motif::Source Slot) const
+            {
+                return Textures[Enum::Cast(Slot)];
+            }
         };
 
     public:
@@ -128,13 +137,14 @@ namespace Tileon
         /// \return The index the runs name the atlas by.
         UInt16 GetOrInsertAtlas(AnyRef<Content::Uri> Url);
 
-        /// \brief Gets one of the atlases the motifs are fired into.
+        /// \brief Gets the array one of the atlases was fired into for a texture.
         ///
         /// \param Index The atlas to read.
-        /// \return The atlas, or nothing when no run names it.
-        ZY_INLINE Retainer<Graphic::Image> GetAtlas(UInt16 Index) const
+        /// \param Slot  The texture whose array is wanted.
+        /// \return The array, or nothing when no run names it or the sheet was fired without that texture.
+        ZY_INLINE Retainer<Graphic::Image> GetAtlas(UInt16 Index, Motif::Source Slot) const
         {
-            return (Index < mAtlases.GetSize()) ? mAtlases[Index] : nullptr;
+            return (Index < mAtlases.GetSize()) ? mAtlases[Index][Enum::Cast(Slot)] : nullptr;
         }
 
         /// \brief Iterates over every motif a project authored.
@@ -158,7 +168,32 @@ namespace Tileon
             }
         }
 
+    public:
+
+        /// \brief Gets the url the array of a texture is baked to, derived from the albedo array's own.
+        ///
+        /// \param Albedo The url of the albedo array the sheet was fired into.
+        /// \param Slot   The texture whose array is wanted.
+        /// \return The url of that texture's array, which is the albedo one for \ref Motif::Source::Albedo.
+        ZY_INLINE Str GetAtlasUrl(Text Albedo, Motif::Source Slot)
+        {
+            if (Slot == Motif::Source::Albedo)
+            {
+                return Albedo;
+            }
+
+            // The suffix sits before the extension, so the array keeps the type the loader picks it up by.
+            const SInt32 Dot = StrFindLast(Albedo, '.');
+
+            return Dot == -1
+                ? Str::Print<"{0}_n">(Albedo)
+                : Str::Print<"{0}_n{1}">(Albedo.Slice(0, Dot), Albedo.Slice(Dot));
+        }
+
     private:
+
+        /// \brief The arrays one sheet was fired into, one per texture and all sharing its slice layout.
+        using Atlases = Array<Retainer<Graphic::Image>, Motif::kMaxSources>;
 
         /// \brief Requests the baked array each placement names, dropping whatever a previous bake left.
         void Request();
@@ -174,10 +209,10 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Pool<Motif, kLimit, 0>             mRegistry;
-        Array<Glyph, kLimit>               mGlyphs;
-        Sequence<Retainer<Graphic::Image>> mAtlases;
-        Sequence<Placement>                mPlacements;
-        Bool                               mDirty;
+        Pool<Motif, kLimit, 0> mRegistry;
+        Array<Glyph, kLimit>   mGlyphs;
+        Sequence<Atlases>      mAtlases;
+        Sequence<Placement>    mPlacements;
+        Bool                   mDirty;
     };
 }

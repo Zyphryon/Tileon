@@ -14,6 +14,7 @@
 
 #include <Tileon.World/Region.hpp>
 #include <Tileon.World/Component/Lifecycle.hpp>
+#include <Zyphryon.Graphic/Types.hpp>
 #include <Zyphryon.Scene/Entity.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -21,24 +22,17 @@
 
 namespace Tileon::Editor
 {
-    /// \brief Names the textures a material may bind for Tileon techniques.
-    enum class Texture : UInt8
-    {
-        Albedo, ///< Base color map, sampled by the sprite, model and font techniques.
-        Normal, ///< Tangent-space normal map, sampled by the sprite techniques that light their surface.
-    };
-
     /// \brief Gets the hash a technique's reflection stores for a texture name.
     ///
     /// \param Slot The texture to resolve.
     /// \return The hash of the texture's name.
-    ZY_INLINE static constexpr UInt64 GetTextureID(Texture Slot)
+    ZY_INLINE static constexpr UInt64 GetTextureID(Graphic::TextureSlot Slot)
     {
         switch (Slot)
         {
-        case Texture::Albedo:
+        case Graphic::TextureSlot::Albedo:
             return "Albedo"_Hash;
-        case Texture::Normal:
+        case Graphic::TextureSlot::Normal:
             return "Normal"_Hash;
         default:
             return 0;

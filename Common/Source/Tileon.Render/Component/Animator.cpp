@@ -45,7 +45,7 @@ namespace Tileon
             {
                 if (Delta < Duration)
                 {
-                    const Real64 Frame = ApplyEasing(Delta, Duration);
+                    const Real64 Frame = Ease(Delta, Duration);
                     mKeyframe = static_cast<UInt8>(Flipbook.Locate(Frame));
                 }
                 else
@@ -59,7 +59,7 @@ namespace Tileon
             {
                 if (Delta < Duration)
                 {
-                    const Real64 Frame = ApplyEasing(Duration - Delta, Duration);
+                    const Real64 Frame = Ease(Duration - Delta, Duration);
                     mKeyframe = static_cast<UInt8>(Flipbook.Locate(Frame));
                 }
                 else
@@ -72,7 +72,7 @@ namespace Tileon
             case Status::Repeat:
             {
                 const Real64 Absolute = Mod(Delta, Duration);
-                const Real64 Frame    = ApplyEasing(Absolute, Duration);
+                const Real64 Frame    = Ease(Absolute, Duration);
 
                 mKeyframe = static_cast<UInt8>(Flipbook.Locate(Frame));
 
@@ -87,7 +87,7 @@ namespace Tileon
                 const Real64 Cycle    = Duration * 2.0;
                 const Real64 Absolute = Mod(Delta, Cycle);
 
-                const Real64 Frame = ApplyEasing(Absolute > Duration ? Cycle - Absolute : Absolute, Duration);
+                const Real64 Frame = Ease(Absolute > Duration ? Cycle - Absolute : Absolute, Duration);
                 mKeyframe = static_cast<UInt8>(Flipbook.Locate(Frame));
 
                 if (Delta >= Cycle)

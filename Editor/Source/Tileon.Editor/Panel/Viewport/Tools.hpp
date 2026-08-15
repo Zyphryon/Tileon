@@ -27,7 +27,7 @@ namespace Tileon::Editor
     public:
 
         /// \brief How far above and below the ground a pick ray sweeps, in tiles.
-        static constexpr Real32 kPickElevation  = Director::kMaxElevation;
+        static constexpr Real32 kPickElevation  = Director::kMaxHeight;
 
         /// \brief The share of its own reach a light is lifted by when it is placed without an elevation.
         static constexpr Real32 kLightElevation = 0.5f;

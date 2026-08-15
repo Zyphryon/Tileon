@@ -30,22 +30,22 @@ namespace Tileon
     public:
 
         /// \brief The delay duration for camera movements and zoom transitions, in seconds.
-        static constexpr Real32 kDelay        = 0.25f;
+        static constexpr Real32 kDelay     = 0.25f;
 
         /// \brief The minimum zoom value, representing the furthest the camera can zoom in.
-        static constexpr Real32 kMinZoom      = 0.125f;
+        static constexpr Real32 kMinZoom   = 0.125f;
 
         /// \brief The maximum zoom value, representing the furthest the camera can zoom out.
-        static constexpr Real32 kMaxZoom      = 16.0f;
+        static constexpr Real32 kMaxZoom   = 16.0f;
 
         /// \brief The greatest height the view keeps, in tiles.
-        static constexpr Real32 kMaxElevation = 64.0f;
+        static constexpr Real32 kMaxHeight = 64.0f;
 
         /// \brief The depth the world begins at, reserving the range in front of it for content drawn over it.
-        static constexpr Real32 kMinDepth     = 0.10f;
+        static constexpr Real32 kMinDepth  = 0.10f;
 
         /// \brief The depth the world ends at, reserving the range behind it for content drawn under it.
-        static constexpr Real32 kMaxDepth     = 0.90f;
+        static constexpr Real32 kMaxDepth  = 0.90f;
 
     public:
 

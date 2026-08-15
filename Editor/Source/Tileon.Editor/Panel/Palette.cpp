@@ -139,10 +139,10 @@ namespace Tileon::Editor
             Bool WasSelected;
 
             // Draw the terrain item in the gallery, showing the array slice its motif was promoted into.
-            if (Glyph.Texture)
+            if (Glyph.GetTexture(Motif::Source::Albedo))
             {
                 // Every slice shares one identifier, so which of them is drawn rides in the coordinates.
-                const ImTextureID Thumbnail = Plugin::ImGuiRenderer::GetLayeredTextureID(Glyph.Texture);
+                const ImTextureID Thumbnail = Plugin::ImGuiRenderer::GetLayeredTextureID(Glyph.GetTexture(Motif::Source::Albedo));
                 const Real32      Offset    = Glyph.Slice * Plugin::ImGuiRenderer::kSliceStride;
 
                 WasSelected = mTerrains.DrawItem(
@@ -199,7 +199,7 @@ namespace Tileon::Editor
 
                 if (Material && Material->HasCompleted())
                 {
-                    if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(Texture::Albedo)))
+                    if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(Graphic::TextureSlot::Albedo)))
                     {
                         Thumbnail = Albedo->GetHandle();
                         Crop      = Visual->GetSource();

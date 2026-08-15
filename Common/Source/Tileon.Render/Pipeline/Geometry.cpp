@@ -25,10 +25,10 @@ namespace Tileon::Pipeline
 
     static Vector3 Measure(Ref<Appearance> Appearance, UInt16 Density)
     {
-        const Rect    Source = Appearance.GetSource();
-        const Vector2 Sheet  = Appearance.GetSheet();
+        const Rect    Source     = Appearance.GetSource();
+        const Vector2 Resolution = Appearance.GetResolution();
 
-        return Vector3(Source.GetWidth() * Sheet.GetX() / Density, Source.GetHeight() * Sheet.GetY() / Density, 0.0f);
+        return Vector3(Source.GetWidth() * Resolution.GetX() / Density, Source.GetHeight() * Resolution.GetY() / Density, 0.0f);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -89,17 +89,17 @@ namespace Tileon::Pipeline
         {
             ZY_PROFILE_SCOPE("Pipeline::Geometry::Tiles");
 
-            constexpr auto kLayers = Enum::GetValues<Tile::Layer>();
-
             // Only the base layer is guaranteed to cover the ground whole, so only it can skip the alpha test.
             ConstRetainer<Graphic::Technique> Technique = mTechniques[Enum::Cast(Kind::Tile)];
             const Graphic::Technique::Key     Masked    = Technique->Resolve("Masked");
+
+            constexpr auto kLayers = Enum::GetValues<Tile::Layer>();
 
             for (UInt32 Index = kLayers.GetSize(); Index > 0; --Index)
             {
                 const Tile::Layer Layer = kLayers[Index - 1];
 
-                // Each layer is drained on its own, so the one above is on the target before the one below is drawn.
+                // Each layer drains on its own, so its own variant is the one every batch of it is drawn with.
                 mTiles.Reset();
                 mTiles.SetTechnique(Technique, Layer == Tile::Layer::Base ? 0 : Masked);
 
@@ -272,17 +272,17 @@ namespace Tileon::Pipeline
                     }
                     else
                     {
-                        Vector2 Sheet = Vector2::Zero();
+                        Vector2 Resolution = Vector2::Zero();
 
                         if (Material->HasCompleted())
                         {
                             if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage("Albedo"_Hash))
                             {
-                                Sheet = Vector2(Albedo->GetWidth(), Albedo->GetHeight());
+                                Resolution = Vector2(Albedo->GetWidth(), Albedo->GetHeight());
                             }
                         }
 
-                        Appearance Appearance(Material, Component.GetSource(), Sheet);
+                        Appearance Appearance(Material, Component.GetSource(), Resolution);
 
                         Actor.Set(Extent(Vector3::Zero(), Measure(Appearance, mDensity)));
                         Actor.Set(Move(Appearance));
@@ -421,7 +421,9 @@ namespace Tileon::Pipeline
             }
 
             // Draw all merged tiles as a single tile instance, once its image has reached the atlas.
-            if (ConstRef<Tileset::Glyph> Glyph = mTileset.GetGlyph(Block.Handle); Glyph.Texture)
+            ConstRef<Tileset::Glyph> Glyph = mTileset.GetGlyph(Block.Handle);
+
+            if (Glyph.GetTexture(Motif::Source::Albedo))
             {
                 const IntVector2 Position(RegionX + Block.X, RegionY + Block.Y);
                 const IntVector2 Span(Block.Width, Block.Height);

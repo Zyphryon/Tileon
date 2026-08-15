@@ -44,13 +44,14 @@ namespace Tileon
     {
         ZY_ASSERT(mTechnique, "A technique must be set before recording a tile");
 
-        const Graphic::Object Surface = Glyph.Texture;
+        // Both arrays follow the sheet, so the albedo alone says which batch a tile belongs to.
+        const Graphic::Object Surface = Glyph.GetTexture(Motif::Source::Albedo);
 
         Ptr<TileBatch> Batch = nullptr;
 
         for (UInt32 Element = 0; Element < mCount; ++Element)
         {
-            if (mBatches[Element].Texture == Surface)
+            if (mBatches[Element].Textures[Enum::Cast(Motif::Source::Albedo)] == Surface)
             {
                 Batch = AddressOf(mBatches[Element]);
                 break;
@@ -65,9 +66,9 @@ namespace Tileon
                 mBatches.Append();
             }
 
-            // Batches drain in the order they open, so the array the caller draws first is the array drawn first.
+            // Batches drain in the order they open, so the layer the caller draws first is the layer drawn first.
             Batch = AddressOf(mBatches[mCount++]);
-            Batch->Texture = Surface;
+            Batch->Textures = Glyph.Textures;
         }
 
         Ref<TileLayout> Layout = Batch->Layouts.Append();
@@ -105,6 +106,8 @@ namespace Tileon
 
     void Tiles::Flush(Ref<Render::Encoder> Encoder)
     {
+        const Graphic::Technique::Key Lit = mTechnique->Resolve("Lit");
+
         for (UInt32 Element = 0; Element < mCount; ++Element)
         {
             ConstRef<TileBatch> Batch = mBatches[Element];
@@ -114,15 +117,18 @@ namespace Tileon
                 continue;
             }
 
-            Graphic::Transient<TileLayout> Instances = mService->AllocateInFlightVertices<TileLayout>(Batch.Layouts.GetSize());
+            Graphic::Transient<TileLayout> Instances
+                = mService->AllocateInFlightVertices<TileLayout>(Batch.Layouts.GetSize());
             Instances.Copy<TileLayout>(Batch.Layouts);
 
             const Graphic::Invocation Invocation {
                 .Count     = 4,
                 .Instances = static_cast<UInt32>(Batch.Layouts.GetSize())
             };
-            const Graphic::Object Textures[] = { Batch.Texture };
-            Encoder.Draw(* mTechnique, ConstSpan(Textures), Instances.GetStream(), Invocation, mVariant);
+
+            const Graphic::Technique::Key Variant
+                = mVariant | (Batch.Textures[Enum::Cast(Motif::Source::Normal)] ? Lit : 0);
+            Encoder.Draw(* mTechnique, Batch.Textures, Instances.GetStream(), Invocation, Variant);
         }
     }
 }

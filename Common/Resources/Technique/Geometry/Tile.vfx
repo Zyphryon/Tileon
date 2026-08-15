@@ -26,10 +26,12 @@
     },
     "Signature": {
         "Textures": [
-            { "Name": "Albedo" }
+            { "Name": "Albedo" },
+            { "Name": "Normal" }
         ],
         "Samplers": [
-            { "Name": "Albedo", "AddressModeU": "Repeat", "AddressModeV": "Repeat", "Filter": "PointMipLinear" }
+            { "Name": "Albedo", "AddressModeU": "Repeat", "AddressModeV": "Repeat", "Filter": "PointMipLinear" },
+            { "Name": "Normal", "AddressModeU": "Repeat", "AddressModeV": "Repeat", "Filter": "PointMipLinear" }
         ]
     },
     "Program": {
@@ -53,9 +55,15 @@
             "Program": {
                 "Defines": ["ENABLE_ALPHA_TEST"]
             }
+        },
+        {
+            "Name": "Lit",
+            "Program": {
+                "Defines": ["ENABLE_NORMAL_MAPPING"]
+            }
         }
     ],
     "Preload": [
-        ["Masked"]
+        ["Lit"], ["Masked"], ["Masked", "Lit"]
     ]
 }

@@ -93,6 +93,11 @@ fs_Input main(vs_Input Input)
 Texture2DArray t_Albedo : register(t0);
 SamplerState   s_Albedo : register(s0);
 
+#ifdef ENABLE_NORMAL_MAPPING
+Texture2DArray t_Normal : register(t1);
+SamplerState   s_Normal : register(s1);
+#endif
+
 fs_Output main(fs_Input Input)
 {
     fs_Output Result;
@@ -105,9 +110,22 @@ fs_Output main(fs_Input Input)
 
     Result.Albedo = Input.Color * Texel;
 
+#ifdef ENABLE_NORMAL_MAPPING
+
+    // A tile never tilts, so tangent space maps onto the ground with a fixed swizzle: the map's own
+    // up axis becomes the world's, and a flat map lands back on the constant an unlit tile writes.
+    const float3 Tangent = t_Normal.Sample(s_Normal, float3(Input.Texture, Input.Slice)).xyz * 2.0 - 1.0;
+    const float3 Normal  = normalize(float3(Tangent.x, Tangent.z, Tangent.y));
+
+    Result.Normal = float4(Normal * 0.5 + 0.5, 1.0);
+
+#else
+
     // A tile lies flat on the ground, so its normal is the world's up axis rather than the viewer's.
     // The ground faces the sky and passes no light through, so it is solid in the opacity channel.
     Result.Normal = float4(0.5, 1.0, 0.5, 1.0);
+
+#endif
 
     return Result;
 }
