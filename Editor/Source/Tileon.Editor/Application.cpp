@@ -146,8 +146,10 @@ namespace Tileon::Editor
         Toolkit::Theme::Initialize(* Content);
 
         // Point ImGui at the layout beside the editor configuration.
-        const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor");
-        ImGui::GetIO().IniFilename = (Path + "/Layout.ini").GetData();
+        ImGui::GetIO().IniFilename = nullptr;
+
+        const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor") + "/Layout.ini";
+        ImGui::LoadIniSettingsFromDisk(Path.GetData());
 
         return true;
     }
@@ -240,6 +242,9 @@ namespace Tileon::Editor
     {
         SyncConfig(mStartup, * this);
         SaveConfig(mStartup, Filesystem::GetDataFolder("Tileon", "Editor") + "/Config.json");
+
+        const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor") + "/Layout.ini";
+        ImGui::SaveIniSettingsToDisk(Path.GetData());
 
         if (mContext)
         {
