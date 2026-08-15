@@ -55,6 +55,7 @@ namespace Tileon::Editor
           mTilt         { kMaxTilt },
           mMarquee      { false },
           mMarqueeMoved { false },
+          mStroke       { false },
           mPaintTileX   { INT32_MIN },
           mPaintTileY   { INT32_MIN }
     {
@@ -79,6 +80,16 @@ namespace Tileon::Editor
     void Viewport::OnDraw()
     {
         mTools.Tick();
+
+        // A stroke ends wherever the button is let go, which may well be outside the viewport it started in.
+        if (mStroke
+            && !Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left)
+            && !Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Right))
+        {
+            mStroke = false;
+
+            GetContext().GetHistory().Close();
+        }
 
         Toolkit::Composer::SetNextWindowPos(Toolkit::Composer::GetViewportCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
         Toolkit::Composer::SetNextWindowSize(800.0f, 600.0f, ImGuiCond_FirstUseEver);
@@ -1167,6 +1178,14 @@ namespace Tileon::Editor
 
                 const Bool Erase = RightClick || (Continuous && RightHeld && NewTile);
                 const Bool Paint = (LeftClick || (Continuous && LeftHeld && NewTile)) && Selection != 0;
+
+                // A stroke held across many tiles is one edit, so it keeps a single step open until it is let go.
+                if ((LeftHeld || RightHeld) && !mStroke)
+                {
+                    mStroke = true;
+
+                    GetContext().GetHistory().Open("Paint");
+                }
 
                 if (Erase)
                 {

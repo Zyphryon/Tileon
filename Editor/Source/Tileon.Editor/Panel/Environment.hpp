@@ -54,6 +54,9 @@ namespace Tileon::Editor
         /// \brief Applies the change a row asked for.
         void Apply();
 
+        /// \brief Opens a step while a field is being edited, so the whole edit is taken back in one go.
+        void TrackEdit();
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -63,5 +66,6 @@ namespace Tileon::Editor
         Browser               mBrowser;
         Action                mAction;
         Scene::Entity         mSubject;
+        Bool                  mEditing;
     };
 }

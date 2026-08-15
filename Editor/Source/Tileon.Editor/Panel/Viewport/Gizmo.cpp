@@ -110,6 +110,12 @@ namespace Tileon::Editor
 
         if (!Primary.IsValid() || !Primary.Has<Pose>())
         {
+            // A drag that loses its subject still has a step open, which has to be closed rather than leaked.
+            if (mHandle != Handle::None)
+            {
+                mContext.GetHistory().Close();
+            }
+
             mHandle = Handle::None;
             mSnapshots.Clear();
             return false;
@@ -147,6 +153,15 @@ namespace Tileon::Editor
                 mBearing   = ImVec2((Toolkit::Composer::GetMousePos().x - Anchor.x) / mReach, (Toolkit::Composer::GetMousePos().y - Anchor.y) / mReach);
 
                 CaptureSnapshots(Selection, Primary);
+
+                // The step stays open for the whole drag, so the entire move is taken back in one go.
+                Ref<History> History = mContext.GetHistory();
+                History.Open(mMode == Mode::Move ? "Move"_Text : (mMode == Mode::Rotate ? "Rotate"_Text : "Scale"_Text));
+
+                for (ConstRef<Snapshot> Snapshot : mSnapshots)
+                {
+                    History.CaptureEntity(Snapshot.Actor);
+                }
             }
             return Hovered != Handle::None;
         }
@@ -157,6 +172,7 @@ namespace Tileon::Editor
             {
                 Snapshot.Actor.Add<Tileon::Stale>();
             }
+            mContext.GetHistory().Close();
 
             mHandle = Handle::None;
             mSnapshots.Clear();

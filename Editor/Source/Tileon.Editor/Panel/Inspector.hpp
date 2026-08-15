@@ -51,11 +51,17 @@ namespace Tileon::Editor
         /// \param Actor    The entity being inspected.
         void DrawFooter(Scene::Entity Actor);
 
+        /// \brief Opens a step while a field is being edited, so the whole edit is taken back in one go.
+        ///
+        /// \param Actor The entity being inspected.
+        void TrackEdit(Scene::Entity Actor);
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         ComponentList mComponents;
+        Bool          mEditing;
     };
 }

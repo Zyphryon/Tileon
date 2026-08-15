@@ -25,7 +25,8 @@ namespace Tileon::Editor
         : Locator    { Host },
           mPresenter { Host, false },
           mProject   { Move(Project) },
-          mCatalog   { GetService<Scene::Service>() }
+          mCatalog   { GetService<Scene::Service>() },
+          mHistory   { * this }
     {
         mPresenter.Init(320, 200, Project.GetDensity());
         mPresenter.Load();

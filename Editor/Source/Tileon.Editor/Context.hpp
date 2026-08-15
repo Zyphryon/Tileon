@@ -14,6 +14,7 @@
 
 #include "Tileon.Session/Presenter.hpp"
 #include "Inspect/ComponentCatalog.hpp"
+#include "History.hpp"
 #include "Project.hpp"
 #include "Session.hpp"
 
@@ -136,6 +137,14 @@ namespace Tileon::Editor
             return mProject;
         }
 
+        /// \brief Gets a reference to the undo stack every edit is recorded into.
+        ///
+        /// \return A reference to the history associated with the context.
+        ZY_INLINE Ref<History> GetHistory()
+        {
+            return mHistory;
+        }
+
     private:
 
         /// \brief Restores the persisted editor session for the current project, including the camera position.
@@ -152,5 +161,6 @@ namespace Tileon::Editor
         Presenter        mPresenter;
         Project          mProject;
         ComponentCatalog mCatalog;
+        History          mHistory;
     };
 }

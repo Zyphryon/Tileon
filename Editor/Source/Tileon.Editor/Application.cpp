@@ -226,6 +226,25 @@ namespace Tileon::Editor
 
     void Application::DrawEditor(Real64 Delta)
     {
+        Ref<History> History = mContext->GetHistory();
+
+        // Retry whatever a restore had to leave waiting on a region that was still streaming in.
+        History.Tick();
+
+        // Undo reaches every panel, so it is answered here rather than inside the one that happens to hold focus.
+        if (!Toolkit::Composer::IsTextInputActive())
+        {
+            if (Toolkit::Composer::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z))
+            {
+                History.Undo();
+            }
+            else if (Toolkit::Composer::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Z)
+                  || Toolkit::Composer::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Y))
+            {
+                History.Redo();
+            }
+        }
+
         // Draw the main menu bar at the top.
         if (Toolkit::Composer::BeginMainMenuBar())
         {
@@ -242,6 +261,27 @@ namespace Tileon::Editor
                 if (Toolkit::Composer::MenuItem("Exit"))
                 {
                     Quit();
+                }
+
+                Toolkit::Composer::EndMenu();
+            }
+
+            // Draw the "Edit" menu.
+            if (Toolkit::Composer::BeginMenu("Edit"))
+            {
+                const String<64> Undo = History.CanUndo()
+                    ? String<64>::Print<"Undo {0}">(History.GetUndoLabel()) : String<64>("Undo");
+                const String<64> Redo = History.CanRedo()
+                    ? String<64>::Print<"Redo {0}">(History.GetRedoLabel()) : String<64>("Redo");
+
+                if (Toolkit::Composer::MenuItem(Undo, "Ctrl+Z", History.CanUndo()))
+                {
+                    History.Undo();
+                }
+
+                if (Toolkit::Composer::MenuItem(Redo, "Ctrl+Shift+Z", History.CanRedo()))
+                {
+                    History.Redo();
                 }
 
                 Toolkit::Composer::EndMenu();

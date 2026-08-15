@@ -152,6 +152,7 @@ namespace Tileon::Editor
         Real32           mTilt;
         Bool             mMarquee;
         Bool             mMarqueeMoved;
+        Bool             mStroke;
         ImVec2           mMarqueeScreen;
         SInt32           mPaintTileX;
         SInt32           mPaintTileY;

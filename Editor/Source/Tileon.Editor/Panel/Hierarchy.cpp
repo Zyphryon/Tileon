@@ -190,7 +190,7 @@ namespace Tileon::Editor
             }
         }
 
-        if (Toolkit::Composer::MenuItem(ICON_FA_LOCATION_CROSSHAIRS "  Go to", { }, Active))
+        if (Toolkit::Composer::MenuItem(ICON_FA_LOCATION_PIN "  Go to", { }, Active))
         {
             GetContext().GetDirector().SetPosition(Target);
         }

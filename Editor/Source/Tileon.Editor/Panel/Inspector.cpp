@@ -24,7 +24,8 @@ namespace Tileon::Editor
 
     Inspector::Inspector(Ref<Context> Context)
         : Panel       { Context, "Inspector", true },
-          mComponents { Context }
+          mComponents { Context },
+          mEditing    { false }
     {
     }
 
@@ -60,6 +61,8 @@ namespace Tileon::Editor
                 DrawEmptyPanel("No entity selected");
             }
             Toolkit::Composer::EndChild();
+
+            TrackEdit(Alive ? Actor : Scene::Entity());
 
             Toolkit::Composer::BeginChild("##footer", ImVec2(0, kFooterHeight));
 
@@ -139,6 +142,32 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    void Inspector::TrackEdit(Scene::Entity Actor)
+    {
+        const Bool Editing = Actor.IsValid()
+            && Toolkit::Composer::IsAnyItemActive()
+            && Toolkit::Composer::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+
+        if (Editing != mEditing)
+        {
+            Ref<History> History = GetContext().GetHistory();
+
+            if (Editing)
+            {
+                History.Open("Edit");
+                History.CaptureEntity(Actor);
+            }
+            else
+            {
+                History.Close();
+            }
+            mEditing = Editing;
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void Inspector::DrawFooter(Scene::Entity Actor)
     {
         if (Bool Awake = Actor.IsAwake(); Toolkit::Composer::Checkbox("Awake", Awake))
@@ -156,6 +185,12 @@ namespace Tileon::Editor
 
         if (Toolkit::Composer::Button(ICON_FA_TRASH "  Destroy") && Destroyable)
         {
+            Ref<History> History = GetContext().GetHistory();
+
+            History.Open("Destroy");
+            History.DiscardEntity(Actor);
+            History.Close();
+
             Actor.Add<Dispose>();
 
             GetContext().SetInteger("Selection.Entity", 0);

@@ -26,7 +26,8 @@ namespace Tileon::Editor
         : Panel    { Context, "Environment", true },
           mCatalog { Context.GetCatalog() },
           mBrowser { Context.GetContent() },
-          mAction  { Action::None }
+          mAction  { Action::None },
+          mEditing { false }
     {
     }
 
@@ -64,6 +65,8 @@ namespace Tileon::Editor
                 DrawEmptyPanel("The world holds no components");
             }
             Toolkit::Composer::EndChild();
+
+            TrackEdit();
 
             Toolkit::Composer::BeginChild("##footer", ImVec2(0, kFooterHeight));
             DrawCatalog();
@@ -197,6 +200,11 @@ namespace Tileon::Editor
         // A data-less tag has no storage to notify, so it can only ever be added or removed.
         const ConstPtr<ComponentType> Info = mSubject.TryGet<const ComponentType>();
 
+        Ref<History> History = GetContext().GetHistory();
+
+        History.Open(mAction == Action::Add ? "Add Component"_Text : "Remove Component"_Text);
+        History.CaptureSingleton(mSubject);
+
         switch (mAction)
         {
         case Action::None:
@@ -213,8 +221,45 @@ namespace Tileon::Editor
             mSubject.Remove(mSubject);
             break;
         }
+        History.Close();
 
         mAction  = Action::None;
         mSubject = Scene::Entity();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Environment::TrackEdit()
+    {
+        // A field is remembered the moment it is grabbed, which is before a drag has carried it anywhere.
+        const Bool Editing = Toolkit::Composer::IsAnyItemActive()
+                          && Toolkit::Composer::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+
+        if (Editing == mEditing)
+        {
+            return;
+        }
+        mEditing = Editing;
+
+        Ref<History> History = GetContext().GetHistory();
+
+        if (!Editing)
+        {
+            History.Close();
+            return;
+        }
+
+        // Which singleton owns the grabbed field is not knowable from here, so the whole panel is remembered;
+        // the ones the edit left alone are dropped when the step closes.
+        History.Open("Edit");
+
+        for (const Scene::Entity Component : mCatalog.GetComponents())
+        {
+            if (Component.Has(flecs::Singleton))
+            {
+                History.CaptureSingleton(Component);
+            }
+        }
     }
 }

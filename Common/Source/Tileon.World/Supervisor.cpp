@@ -47,13 +47,31 @@ namespace Tileon
 
     void Supervisor::Save()
     {
-        for (ConstRef<decltype(mRegistry)::Pair> Pair : mRegistry)
+        mRegistry.EraseIf([this](UInt32 Key, Ref<Unique<Slot>> Holder)
         {
-            if (const Scene::Entity Actor = Pair.Second->Actor; Actor.IsValid() && Actor.Has<Persist>())
+            const Scene::Entity Actor = Holder->Actor;
+
+            if (!Actor.IsValid())
+            {
+                return false;
+            }
+
+            if (Actor.Has<Persist>())
             {
                 SaveRegion(Actor);
+
+                // Now that it is on disk it is no longer the edit's only copy, so it may be let go again.
+                Actor.Remove<Persist>();
             }
-        }
+
+            if (mManifest.Contains(Key))
+            {
+                return false;
+            }
+
+            Evict(* Holder);
+            return true;
+        });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -75,6 +93,13 @@ namespace Tileon
         mRegistry.EraseIf([&](UInt32 Key, Ref<Unique<Slot>> Holder)
         {
             if (mManifest.Contains(Key))
+            {
+                return false;
+            }
+
+            // An edit lives nowhere but in memory until it is saved, so a region holding one stays resident.
+            // Writing it out here instead would put a change on disk that the user never asked to keep.
+            if (Holder->Actor.IsValid() && Holder->Actor.Has<Persist>())
             {
                 return false;
             }
@@ -393,14 +418,8 @@ namespace Tileon
     {
         if (const Scene::Entity Actor = Slot.Actor; Actor.IsValid())
         {
-            if (Actor.Has<Persist>())
-            {
-                SaveRegion(Actor);
-            }
+            DetachEntityOnCell(Actor);
 
-            {
-                DetachEntityOnCell(Actor);
-            }
             Actor.Destruct();
         }
     }

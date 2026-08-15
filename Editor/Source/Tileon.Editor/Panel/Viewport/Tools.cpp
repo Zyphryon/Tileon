@@ -30,6 +30,7 @@ namespace Tileon::Editor
           mAlignment        { Alignment::Lattice },
           mAligned          { false },
           mSelectionPrimary { 0 },
+          mRevision         { 0 },
           mClipboardCount   { 0 }
     {
     }
@@ -39,6 +40,15 @@ namespace Tileon::Editor
 
     void Tools::Tick()
     {
+        if (mOperations.IsEmpty())
+        {
+            return;
+        }
+
+        // A paint that had to wait for its region to stream in lands outside the stroke that asked for it.
+        Ref<History> History = mContext.GetHistory();
+        History.Open("Paint");
+
         mOperations.RemoveFastSomeIf([&](ConstRef<OpTile> Operation) -> Bool
         {
             if (Operation.Actor.IsValid())
@@ -55,6 +65,8 @@ namespace Tileon::Editor
             }
             return false;
         });
+
+        History.Close();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -62,13 +74,19 @@ namespace Tileon::Editor
 
     void Tools::Execute(Command Command, Placement Placement, UInt32 Object)
     {
+        Ref<History> History = mContext.GetHistory();
+
         switch (GetMode())
         {
         case Mode::Tile:
+            History.Open(Command == Command::Add ? "Paint"_Text : "Erase"_Text);
             ExecuteOnTiles(Command, Placement, Object);
+            History.Close();
             break;
         case Mode::Entity:
+            History.Open(Command == Command::Add ? "Place Entity"_Text : "Remove Entity"_Text);
             ExecuteOnEntities(Command, Placement, Object);
+            History.Close();
             break;
         }
     }
@@ -277,6 +295,8 @@ namespace Tileon::Editor
         // Mark the region as dirty so it gets saved and reloaded with the placed entity.
         Actor.Add<Persist>();
 
+        mContext.GetHistory().RecordEntity(Instance);
+
         // Select what was just placed so the inspector targets it; the brush stays armed for the next stamp.
         mContext.SetInteger("Selection.Entity", Instance.GetID());
 
@@ -296,6 +316,9 @@ namespace Tileon::Editor
         if (Scene::Entity Instance = PickEntity(Placement); Instance.IsValid())
         {
             Instance = Scene::Entity::ResolveRecursively(Instance, Scene::Hierarchy::Fixed);
+
+            mContext.GetHistory().DiscardEntity(Instance);
+
             Instance.Add<Dispose>();
 
             if (const Scene::Entity Actor = Instance.GetParent(); Actor.IsValid())
@@ -353,6 +376,26 @@ namespace Tileon::Editor
 
     void Tools::ReconcileSelection()
     {
+        // Restoring an entity rebuilds it under a fresh id, so the ids the selection holds have to follow it.
+        if (Ref<History> History = mContext.GetHistory(); History.GetRevision() != mRevision)
+        {
+            mRevision = History.GetRevision();
+
+            Bag<UInt64> Live;
+
+            for (const UInt64 ID : mSelection)
+            {
+                if (const UInt64 Remapped = History.Remap(ID))
+                {
+                    Live.Insert(Remapped);
+                }
+            }
+            mSelection        = Move(Live);
+            mSelectionPrimary = History.Remap(mSelectionPrimary);
+
+            mContext.SetInteger("Selection.Entity", static_cast<SInt64>(mSelectionPrimary));
+        }
+
         const UInt64 Current = static_cast<UInt64>(mContext.GetInteger("Selection.Entity", 0));
 
         if (Current != mSelectionPrimary)
@@ -514,7 +557,10 @@ namespace Tileon::Editor
 
     void Tools::DeleteSelection()
     {
-        Ref<Scene::Service> Scene = mContext.GetScene();
+        Ref<Scene::Service> Scene   = mContext.GetScene();
+        Ref<History>        History = mContext.GetHistory();
+
+        History.Open("Delete");
 
         for (const UInt64 ID : mSelection)
         {
@@ -530,8 +576,12 @@ namespace Tileon::Editor
             {
                 Region.Add<Persist>();
             }
+            History.DiscardEntity(Actor);
+
             Actor.Add<Dispose>();
         }
+        History.Close();
+
         ClearSelection();
     }
 
@@ -598,8 +648,13 @@ namespace Tileon::Editor
 
     void Tools::CutSelection()
     {
+        Ref<History> History = mContext.GetHistory();
+        History.Open("Cut");
+
         CopySelection();
         DeleteSelection();
+
+        History.Close();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -614,6 +669,9 @@ namespace Tileon::Editor
 
         Ref<Scene::Service> Scene      = mContext.GetScene();
         Ref<Supervisor>     Supervisor = mContext.GetSupervisor();
+        Ref<History>        History    = mContext.GetHistory();
+
+        History.Open("Paste");
 
         Reader Input(mClipboard.GetData(), mClipboard.GetSize());
         const UInt32 Count = Input.Read<UInt32>();
@@ -654,9 +712,13 @@ namespace Tileon::Editor
             Actor.Add<Persist>();
             Region.Add<Persist>();
 
+            History.RecordEntity(Actor);
+
             mSelection.Insert(Actor.GetID());
             Primary = Actor.GetID();
         }
+        History.Close();
+
         SetPrimary(Primary);
     }
 
@@ -716,6 +778,8 @@ namespace Tileon::Editor
             GlobalClipMinY - OriginY,
             GlobalClipMaxX - OriginX,
             GlobalClipMaxY - OriginY);
+
+        mContext.GetHistory().CaptureRegion(Operation.Actor);
 
         if (Operation.Command == Command::Add)
         {

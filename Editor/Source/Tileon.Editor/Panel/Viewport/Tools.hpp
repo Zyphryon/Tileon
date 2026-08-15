@@ -443,6 +443,7 @@ namespace Tileon::Editor
         Scene::Entity    mPreview;
         Bag<UInt64>      mSelection;
         UInt64           mSelectionPrimary;
+        UInt32           mRevision;
         Blob             mClipboard;
         UInt32           mClipboardCount;
     };
