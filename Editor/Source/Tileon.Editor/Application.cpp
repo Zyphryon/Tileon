@@ -34,80 +34,6 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    static void LoadConfig(Ref<Runtime::Startup> Config, ConstRef<Filesystem::Path> Path)
-    {
-        Blob File;
-
-        if (Filesystem::Read(Path, File) != Filesystem::Result::Success)
-        {
-            return;
-        }
-
-        if (JsonValue Document = JsonDocument::Parse(Text(File.GetData<Char>(), File.GetSize())); Document.IsObject())
-        {
-            const JsonObject Root(Document);
-
-            if (const JsonObject Section = Root.GetObject("Window"); Section.IsValid())
-            {
-                Config.SetWindowMonitor(Section.GetString("monitor", Config.GetWindowMonitor()));
-                Config.SetWindowWidth(Section.GetNumber<UInt32>("width", Config.GetWindowWidth()));
-                Config.SetWindowHeight(Section.GetNumber<UInt32>("height", Config.GetWindowHeight()));
-                Config.SetWindowFullscreen(Section.GetBool("fullscreen", Config.IsWindowFullscreen()));
-            }
-
-            if (const JsonObject Section = Root.GetObject("Graphic"); Section.IsValid())
-            {
-                Config.SetGraphicsTearless(Section.GetBool("tearless", Config.IsGraphicsTearless()));
-            }
-        }
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    static void SyncConfig(Ref<Runtime::Startup> Config, Ref<Engine::Subsystem::Host> Host)
-    {
-        ConstRetainer<Platform::Service> Platform = Host.GetService<Platform::Service>();
-
-        ConstRef<Platform::Window> Window = Platform->GetWindow();
-        Config.SetWindowWidth(Window.GetWidth());
-        Config.SetWindowHeight(Window.GetHeight());
-        Config.SetWindowFullscreen(Window.IsFullscreen());
-
-        if (const ConstPtr<Platform::Monitor> Monitor = Platform->GetDisplay().GetMonitor(Window.GetX(), Window.GetY()))
-        {
-            Config.SetWindowMonitor(Monitor->GetName());
-        }
-
-        ConstRetainer<Graphic::Service> Graphics = Host.GetService<Graphic::Service>();
-        Config.SetGraphicsTearless(Graphics->IsTearless());
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    static void SaveConfig(Ref<Runtime::Startup> Config, ConstRef<Filesystem::Path> Path)
-    {
-        JsonValue Document;
-        Document.SetObject();
-
-        JsonObject Root(Document);
-
-        JsonObject Window = Root.SetObject("Window");
-        Window.SetString("monitor", Config.GetWindowMonitor());
-        Window.SetNumber("width", Config.GetWindowWidth());
-        Window.SetNumber("height", Config.GetWindowHeight());
-        Window.SetBool("fullscreen", Config.IsWindowFullscreen());
-
-        JsonObject Graphic = Root.SetObject("Graphic");
-        Graphic.SetBool("tearless", Config.IsGraphicsTearless());
-
-        Filesystem::Write(Path, JsonDocument::Dump(Document));
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
     Application::Application()
         : mState { State::Idle }
     {
@@ -128,7 +54,18 @@ namespace Tileon::Editor
         // Load the persisted editor configuration before the engine spins up.
         const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor");
         Filesystem::Make(Path);
-        LoadConfig(Startup, Path + "/Config.json");
+
+        Blob File;
+
+        if (Filesystem::Read(Path + "/Config.json", File) != Filesystem::Result::Success)
+        {
+            return;
+        }
+
+        if (JsonValue Document = JsonDocument::Parse(Text(File.GetData<Char>(), File.GetSize())); Document.IsObject())
+        {
+            Startup.Load(JsonObject(Document));
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -148,8 +85,7 @@ namespace Tileon::Editor
         // Point ImGui at the layout beside the editor configuration.
         ImGui::GetIO().IniFilename = nullptr;
 
-        const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor") + "/Layout.ini";
-        ImGui::LoadIniSettingsFromDisk(Path.GetData());
+        ImGui::LoadIniSettingsFromDisk((Filesystem::GetDataFolder("Tileon", "Editor") + "/Layout.ini").GetData());
 
         return true;
     }
@@ -240,11 +176,15 @@ namespace Tileon::Editor
 
     void Application::OnTerminate()
     {
-        SyncConfig(mStartup, * this);
-        SaveConfig(mStartup, Filesystem::GetDataFolder("Tileon", "Editor") + "/Config.json");
+        const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor");
 
-        const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor") + "/Layout.ini";
-        ImGui::SaveIniSettingsToDisk(Path.GetData());
+        JsonValue Document;
+        Document.SetObject();
+
+        Save(JsonObject(Document));
+        Filesystem::Write(Path + "/Config.json", JsonDocument::Dump(Document));
+
+        ImGui::SaveIniSettingsToDisk((Path + "/Layout.ini").GetData());
 
         if (mContext)
         {
