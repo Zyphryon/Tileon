@@ -22,21 +22,20 @@
 
 namespace Tileon::Editor
 {
+    /// \brief Specifies the conventional names given to the textures a signature declares.
+    enum class TextureUsage : UInt8
+    {
+        Albedo,       ///< Base color map, sampled by every technique that puts art on the target.
+        Normal,       ///< Tangent-space normal map, which gives a flat surface the relief it lacks.
+    };
+
     /// \brief Gets the hash a technique's reflection stores for a texture name.
     ///
-    /// \param Slot The texture to resolve.
+    /// \param Usage The texture to resolve.
     /// \return The hash of the texture's name.
-    ZY_INLINE static constexpr UInt64 GetTextureID(Graphic::TextureSlot Slot)
+    ZY_INLINE static constexpr UInt64 GetTextureID(TextureUsage Usage)
     {
-        switch (Slot)
-        {
-        case Graphic::TextureSlot::Albedo:
-            return "Albedo"_Hash;
-        case Graphic::TextureSlot::Normal:
-            return "Normal"_Hash;
-        default:
-            return 0;
-        }
+        return Hash(Enum::GetName(Usage));
     }
 
     /// \brief Marks the region an entity was placed in as needing a save.

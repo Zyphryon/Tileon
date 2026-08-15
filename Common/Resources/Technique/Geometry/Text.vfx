@@ -38,9 +38,7 @@
         ]
     },
     "Program": {
-        "Defines": [
-            "GLYPH_SUBPIXEL=0.001953125"
-        ],
+        "Defines": ["GLYPH_SUBPIXEL=0.001953125"],
         "Shaders": {
             "HLSL": [
                 { "Path": "Text.hlsl", "Stage": "Vertex"   },

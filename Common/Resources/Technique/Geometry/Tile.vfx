@@ -58,6 +58,9 @@
         },
         {
             "Name": "Lit",
+            "Enable": {
+                "Texture": "Normal"
+            },
             "Program": {
                 "Defines": ["ENABLE_NORMAL_MAPPING"]
             }

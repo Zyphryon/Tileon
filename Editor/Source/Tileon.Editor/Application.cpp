@@ -125,12 +125,6 @@ namespace Tileon::Editor
         Startup.SetWindowBorderless(true);
 #endif
 
-#if   defined(ZY_PLATFORM_WINDOWS)
-        Startup.SetGraphicsDriver("D3D11");
-#elif defined(ZY_PLATFORM_WEB) || defined(ZY_PLATFORM_LINUX)
-        Startup.SetGraphicsDriver("GLES3");
-#endif
-
         // Load the persisted editor configuration before the engine spins up.
         const Filesystem::Path Path = Filesystem::GetDataFolder("Tileon", "Editor");
         Filesystem::Make(Path);

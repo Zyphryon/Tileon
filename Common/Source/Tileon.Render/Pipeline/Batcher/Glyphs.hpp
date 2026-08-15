@@ -75,7 +75,7 @@ namespace Tileon
         struct GlyphRun final
         {
             /// The transform the run is placed by, with the text's size folded into the basis.
-            Matrix4x3Packed    Transform;
+            Array<Real32, 12>  Transform;
 
             /// The effect every glyph of the run is drawn with.
             Render::FontEffect Effect;

@@ -24,8 +24,7 @@ namespace Tileon
     Sprites::Sprites(ConstRetainer<Graphic::Service> Service, Ref<Render::Collector> Collector)
         : mService   { Service },
           mCollector { Collector },
-          mPriority  { Render::Collector::Priority::Opaque },
-          mPipeline  { 0 }
+          mPriority  { Render::Collector::Priority::Opaque }
     {
     }
 
@@ -35,13 +34,7 @@ namespace Tileon
     void Sprites::SetTechnique(ConstRetainer<Graphic::Technique> Technique)
     {
         mTechnique = Technique;
-
-        // The queue and pipeline hold for the whole run, so they are resolved here instead of per sprite.
-        if (mTechnique)
-        {
-            mPriority = Render::Collector::GetPriority(* mTechnique);
-            mPipeline = mTechnique->GetHandle();
-        }
+        mPriority  = Render::Collector::GetPriority(* mTechnique);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -54,16 +47,16 @@ namespace Tileon
         ConstRef<Graphic::Technique> Technique = (* mTechnique);
 
         Ref<SpriteCommand> Command = mSprites.Append();
-        Command.Layout.Transform.SetData(Transform);
-        Command.Layout.Frame  = Appearance.GetSource();
-        Command.Layout.Size   = Size;
-        Command.Layout.Color  = Tint;
-        Command.Material      = AddressOf(* Appearance.GetMaterial());
-        Command.Technique     = AddressOf(Technique);
+        Command.Layout.Transform = Matrix4x3::Pack(Transform);
+        Command.Layout.Frame     = Appearance.GetSource();
+        Command.Layout.Size      = Size;
+        Command.Layout.Color     = Tint;
+        Command.Material         = AddressOf(* Appearance.GetMaterial());
+        Command.Technique        = AddressOf(Technique);
 
         const Real32                    Order = Transform.GetColumn(2).GetW();
         const Render::Collector::Object Object(Enum::Cast(Batch::Sprite), mSprites.GetSize() - 1);
-        mCollector.Push(Object, mPriority, Order, 0, mPipeline, Command.Material->GetHandle());
+        mCollector.Push(Object, mPriority, Order, 0, mTechnique->GetHandle(), Command.Material->GetHandle());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

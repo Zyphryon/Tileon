@@ -76,64 +76,42 @@ namespace Tileon
         // carries only the slot that finds them.
         const GlyphSlot RunData = Intern(Decoration.GetEffect(), Transform, Size);
 
-        const Real32 LineHeight = Font->GetLineHeight(1.0f) + Label.GetSpacing().GetY();
-
-        // Iterate through each character in the text content and generate draw commands for each glyph.
-        Real32 CurrentX = 0.0f;
-        Real32 CurrentY = 0.0f;
-        UInt32 Previous = 0;
-
         ConstRef<Graphic::Technique>      Technique = (* mTechnique);
         const Render::Collector::Priority Priority  = Render::Collector::GetPriority(Technique);
         const Graphic::Object             Pipeline  = Technique.GetHandle();
 
         const Real32 Order = Transform.GetColumn(2).GetW();
 
-        StrIterateUTF8(Label.GetContent(), [&](UInt32 Codepoint)
+        // The font lays the run out, so what is drawn sits exactly where the same walk measured it.
+        Font->Shape(Label.GetContent(), Label.GetSpacing(), [&](ConstRef<Render::Font::Placement> Placement)
         {
-            switch (Codepoint)
+            if (Placement.Local.GetWidth() <= 0 || Placement.Local.GetHeight() <= 0)
             {
-            case '\r':
-                CurrentX = 0.0f;
-                break;
-            case '\n':
-                CurrentY -= LineHeight;
-                break;
-            default:
-                const ConstPtr<Render::Font::Glyph> Glyph = Font->GetGlyph(Codepoint);
-
-                if (Glyph)
-                {
-                    if (Glyph->LocalBounds.GetWidth() > 0 && Glyph->LocalBounds.GetHeight() > 0)
-                    {
-                        const ConstPtr<Graphic::Material> Material = &* Font->GetMaterial(Glyph->Page);
-
-                        Ref<GlyphCommand> Command = mGlyphs.Append();
-                        Command.Generation       = RunData.Generation;
-                        Command.Material         = Material;
-                        Command.Technique        = AddressOf(Technique);
-                        Command.Layout.Effect    = CastBit<Real32>(static_cast<UInt32>(RunData.Slot));
-                        Command.Layout.Frame     = Array(
-                            EncodeUnitCoordinate(Glyph->AtlasBounds.GetMinimumX()),
-                            EncodeUnitCoordinate(Glyph->AtlasBounds.GetMinimumY()),
-                            EncodeUnitCoordinate(Glyph->AtlasBounds.GetMaximumX()),
-                            EncodeUnitCoordinate(Glyph->AtlasBounds.GetMaximumY()));
-                        Command.Layout.Offset    = Array(
-                            EncodeGlyphCoordinate<SInt16>(CurrentX + Glyph->LocalBounds.GetX()),
-                            EncodeGlyphCoordinate<SInt16>(CurrentY + Glyph->LocalBounds.GetY()));
-                        Command.Layout.Size      = Array(
-                            EncodeGlyphCoordinate<UInt16>(Glyph->LocalBounds.GetWidth()),
-                            EncodeGlyphCoordinate<UInt16>(Glyph->LocalBounds.GetHeight()));
-                        Command.Layout.Color     = Tint;
-
-                        const Render::Collector::Object Object(Enum::Cast(Batch::Glyph), mGlyphs.GetSize() - 1);
-                        mCollector.Push(Object, Priority, Order, RunData.Generation, Pipeline, Material->GetHandle());
-                    }
-                    CurrentX += Font->GetKerning(Previous, Codepoint) + Glyph->Advance + Label.GetSpacing().GetX();
-                }
-                break;
+                return;
             }
-            Previous = Codepoint;
+
+            const ConstPtr<Graphic::Material> Material = &* Font->GetMaterial(Placement.Page);
+
+            Ref<GlyphCommand> Command = mGlyphs.Append();
+            Command.Generation    = RunData.Generation;
+            Command.Material      = Material;
+            Command.Technique     = AddressOf(Technique);
+            Command.Layout.Effect = CastBit<Real32>(static_cast<UInt32>(RunData.Slot));
+            Command.Layout.Frame  = Array(
+                EncodeUnitCoordinate(Placement.Atlas.GetMinimumX()),
+                EncodeUnitCoordinate(Placement.Atlas.GetMinimumY()),
+                EncodeUnitCoordinate(Placement.Atlas.GetMaximumX()),
+                EncodeUnitCoordinate(Placement.Atlas.GetMaximumY()));
+            Command.Layout.Offset    = Array(
+                EncodeGlyphCoordinate<SInt16>(Placement.Local.GetX()),
+                EncodeGlyphCoordinate<SInt16>(Placement.Local.GetY()));
+            Command.Layout.Size      = Array(
+                EncodeGlyphCoordinate<UInt16>(Placement.Local.GetWidth()),
+                EncodeGlyphCoordinate<UInt16>(Placement.Local.GetHeight()));
+            Command.Layout.Color     = Tint;
+
+            const Render::Collector::Object Object(Enum::Cast(Batch::Glyph), mGlyphs.GetSize() - 1);
+            mCollector.Push(Object, Priority, Order, RunData.Generation, Pipeline, Material->GetHandle());
         });
     }
 
@@ -184,8 +162,8 @@ namespace Tileon
         };
 
         Ref<GlyphRun> Run = Palette.Runs.Append();
-        Run.Transform.SetData(Transform, Size);
-        Run.Effect = Effect;
+        Run.Transform = Matrix4x3::Pack(Matrix4x3::WithScale(Transform, Vector3(Size)));
+        Run.Effect    = Effect;
 
         return Result;
     }
@@ -198,7 +176,7 @@ namespace Tileon
         // Every draw call in this batch shares the same font material and run palette.
         ConstRef<GlyphCommand> First = mGlyphs[Commands.GetFront().Entry.Slot];
 
-        const Graphic::Stream                 Palette   = mPalettes[First.Generation].Stream;
+        const Graphic::Stream                 Palette = mPalettes[First.Generation].Stream;
         const Graphic::Transient<GlyphLayout> Instances
             = Gather<GlyphLayout, GlyphCommand>(* mService, mGlyphs, Commands);
 

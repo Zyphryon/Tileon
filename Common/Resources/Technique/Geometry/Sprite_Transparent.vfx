@@ -50,11 +50,11 @@
     "Features": [
         {
             "Name": "Lit",
-            "Enable": { "Texture": "Normal" },
+            "Enable": {
+                "Texture": "Normal"
+            },
             "Program": {
-                "Defines": [
-                    "ENABLE_NORMAL_MAPPING"
-                ]
+                "Defines": ["ENABLE_NORMAL_MAPPING"]
             }
         }
     ],

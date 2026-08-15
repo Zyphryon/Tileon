@@ -28,7 +28,7 @@ namespace Tileon
     {
     public:
 
-        /// \brief Names the art a motif is fired from, in the order the tile signature declares it.
+        /// \brief Names the art a motif is fired from, under the names the tile signature declares.
         enum class Source : UInt8
         {
             Albedo, ///< The base color the tile shows.
@@ -38,7 +38,7 @@ namespace Tileon
         /// \brief The maximum number of frames a motif's run can hold.
         static constexpr UInt kMaxFrames  = 11;
 
-        /// \brief TODO_DOC
+        /// \brief The number of textures a motif fires at once, one per \ref Source.
         static constexpr UInt kMaxSources = Enum::Count<Source>();
 
         /// \brief The run of frames a motif plays, one baked slice each and no data of its own.

@@ -91,7 +91,7 @@ namespace Tileon::Pipeline
 
             // Only the base layer is guaranteed to cover the ground whole, so only it can skip the alpha test.
             ConstRetainer<Graphic::Technique> Technique = mTechniques[Enum::Cast(Kind::Tile)];
-            const Graphic::Technique::Key     Masked    = Technique->Resolve("Masked");
+            const Graphic::Technique::Key     Masked    = Technique->ResolveByName("Masked");
 
             constexpr auto kLayers = Enum::GetValues<Tile::Layer>();
 

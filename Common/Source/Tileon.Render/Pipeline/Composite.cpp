@@ -37,8 +37,6 @@ namespace Tileon::Pipeline
     {
         ZY_PROFILE_SCOPE("Pipeline::Composite::Run");
 
-        Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
-
         // The scene authors its exposure alongside the rest of the environment, so the stage follows it.
         Real32 Exposure = 1.0f;
 
@@ -48,18 +46,15 @@ namespace Tileon::Pipeline
         }
 
         // The tone map's knee sits at a fixed place in the range, so exposure is what moves the scene into it.
-        Graphic::Transient<GpuCompositeLayout> Data = Graphics.AllocateInFlightUniforms<GpuCompositeLayout>(1);
-        Data[0].Exposure = Vector4(Exposure, 0.0f, 0.0f, 0.0f);
-        Encoder.SetPass(Data.GetStream());
+        Encoder.SetPass(GpuCompositeLayout {
+            .Exposure = Vector4(Exposure, 0.0f, 0.0f, 0.0f)
+        });
 
-        const Array                   Textures(mAlbedo->GetTexture(), mRadiance->GetTexture());
-        constexpr Graphic::Invocation Invocation = {
-            .Count     = 3,
-            .Base      = 0,
-            .Offset    = 0,
-            .Instances = 1
-        };
-        Encoder.Draw(* mTechniques[Enum::Cast(Kind::Composite)], Textures, Invocation);
+        // Each buffer binds under the name the signature declares it by, rather than by the order it is passed in.
+        Encoder.Begin(* mTechniques[Enum::Cast(Kind::Composite)])
+               .SetImage("Albedo"_Hash,   mAlbedo->GetTexture())
+               .SetImage("Radiance"_Hash, mRadiance->GetTexture())
+               .DrawFullscreen();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

@@ -84,10 +84,8 @@ namespace Tileon
         }
 
         // Build the frame-global uniform (the director's view-projection) the renderer binds for every stage.
-        Graphic::Transient<Matrix4x4> Global = GetService<Graphic::Service>().AllocateInFlightUniforms<Matrix4x4>(1);
-        Global[0] = Director.GetViewProjection();
-
-        mRenderer.Run(Global.GetStream());
+        ConstRef<Matrix4x4> Global = Director.GetViewProjection();
+        mRenderer.Run(GetService<Graphic::Service>().AllocateInFlightUniforms<Matrix4x4>(Global));
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

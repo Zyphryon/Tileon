@@ -199,7 +199,7 @@ namespace Tileon::Editor
 
                 if (Material && Material->HasCompleted())
                 {
-                    if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(Graphic::TextureSlot::Albedo)))
+                    if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(TextureUsage::Albedo)))
                     {
                         Thumbnail = Albedo->GetHandle();
                         Crop      = Visual->GetSource();

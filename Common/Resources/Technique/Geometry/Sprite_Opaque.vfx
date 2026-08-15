@@ -53,12 +53,11 @@
     "Features": [
         {
             "Name": "Lit",
-            "Enable": { "Texture": "Normal" },
+            "Enable": {
+                "Texture": "Normal"
+            },
             "Program": {
-                "Defines": [
-                    "ENABLE_NORMAL_MAPPING",
-                    "ENABLE_TRANSLUCENCY"
-                ]
+                "Defines": ["ENABLE_NORMAL_MAPPING", "ENABLE_TRANSLUCENCY"]
             }
         }
     ],

@@ -13,7 +13,6 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Zyphryon.Graphic/Service.hpp"
-#include "Zyphryon.Math/Matrix4x3.hpp"
 #include "Zyphryon.Render/Collector.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -27,46 +26,6 @@ namespace Tileon
     {
         Sprite,         ///< A sprite for drawing textured quads.
         Glyph,          ///< A text glyph for drawing characters from a font atlas.
-    };
-
-    /// \brief Defines a structure carrying a 4x3 transformation matrix in the layout the shaders consume.
-    struct Matrix4x3Packed final
-    {
-        /// \brief The X row of the basis.
-        Vector3 Basis0;
-
-        /// \brief The translation along X.
-        Real32  OffsetX;
-
-        /// \brief The Y row of the basis.
-        Vector3 Basis1;
-
-        /// \brief The translation along Y.
-        Real32  OffsetY;
-
-        /// \brief The Z row of the basis.
-        Vector3 Basis2;
-
-        /// \brief The translation along Z.
-        Real32  OffsetZ;
-
-        /// \brief Sets the values of the matrix from a 4x3 transformation matrix.
-        ///
-        /// \param Matrix The 4x3 transformation matrix to convert into the packed format.
-        /// \param Scale  The scale folded into the basis, leaving the translation where the transform put it.
-        ZY_INLINE void SetData(ConstRef<Matrix4x3> Matrix, Real32 Scale = 1.0f)
-        {
-            const Vector4 Column0 = Matrix.GetColumn(0);
-            const Vector4 Column1 = Matrix.GetColumn(1);
-            const Vector4 Column2 = Matrix.GetColumn(2);
-
-            Basis0  = Column0.GetXYZ() * Scale;
-            OffsetX = Column0.GetW();
-            Basis1  = Column1.GetXYZ() * Scale;
-            OffsetY = Column1.GetW();
-            Basis2  = Column2.GetXYZ() * Scale;
-            OffsetZ = Column2.GetW();
-        }
     };
 
     /// \brief Gathers the per-instance input of a batch's draw calls into a transient instance stream.

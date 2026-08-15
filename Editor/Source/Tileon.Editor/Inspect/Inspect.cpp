@@ -13,6 +13,7 @@
 #include "Inspect.hpp"
 #include "Tileon.Editor/Context.hpp"
 #include "Tileon.Editor/Toolkit/Theme.hpp"
+#include "Tileon.Editor/Utility.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -658,7 +659,7 @@ namespace Tileon::Editor
 
         if (Material && Material->HasCompleted())
         {
-            ConstRetainer<Graphic::Image> Albedo = Material->GetImage("Albedo"_Hash);
+            ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(TextureUsage::Albedo));
 
             if (Albedo && Albedo->GetWidth() > 0 && Albedo->GetHeight() > 0)
             {

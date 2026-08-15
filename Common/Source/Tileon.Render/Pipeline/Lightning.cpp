@@ -46,8 +46,6 @@ namespace Tileon::Pipeline
             mDirector->GetPosition().GetBaseX(),
             mDirector->GetPosition().GetBaseY()));
 
-        const Array Textures(mNormal->GetTexture(), mDepth->GetTexture());
-
         // Reset the light data for the current frame.
         mGlowlightData.Clear();
         mSpotlightData.Clear();
@@ -62,19 +60,16 @@ namespace Tileon::Pipeline
                 return Color(Value.GetRed() * Brightness, Value.GetGreen() * Brightness, Value.GetBlue() * Brightness, Alpha);
             };
 
-            Graphic::Transient<GpuSkylightLayout> Data =  Graphics.AllocateInFlightUniforms<GpuSkylightLayout>(1);
-            Data[0].SunColor    = Premultiply(Environment.GetSunTint(),    Environment.GetSunDirection().GetX());
-            Data[0].SkyColor    = Premultiply(Environment.GetSkyTint(),    Environment.GetSunDirection().GetY());
-            Data[0].GroundColor = Premultiply(Environment.GetGroundTint(), Environment.GetSunDirection().GetZ());
-            Encoder.SetPass(Data.GetStream());
+            Encoder.SetPass(GpuSkylightLayout {
+                .SunColor    = Premultiply(Environment.GetSunTint(),    Environment.GetSunDirection().GetX()),
+                .SkyColor    = Premultiply(Environment.GetSkyTint(),    Environment.GetSunDirection().GetY()),
+                .GroundColor = Premultiply(Environment.GetGroundTint(), Environment.GetSunDirection().GetZ())
+            });
 
-            constexpr Graphic::Invocation Invocation = {
-                .Count     = 3,
-                .Base      = 0,
-                .Offset    = 0,
-                .Instances = 1
-            };
-            Encoder.Draw(* mTechniques[Enum::Cast(Kind::Skylight)], Textures, Invocation);
+            // The ambient term reads the surface it lights, so the normals are all the skylight binds.
+            Encoder.Begin(* mTechniques[Enum::Cast(Kind::Skylight)])
+                   .SetImage("Normal"_Hash, mNormal->GetTexture())
+                   .DrawFullscreen();
         });
 
         // Accumulate the glowlights in the scene and render them in a single batch.
@@ -133,35 +128,27 @@ namespace Tileon::Pipeline
 
         if (!mGlowlightData.IsEmpty() || !mSpotlightData.IsEmpty())
         {
-            Graphic::Transient<GpuPassLayout> Data = Graphics.AllocateInFlightUniforms<GpuPassLayout>(1);
-            Data[0].Inverse = mDirector->GetViewProjectionInverse();
-
-            Encoder.SetPass(Data.GetStream());
+            Encoder.SetPass(GpuPassLayout { .Inverse = mDirector->GetViewProjectionInverse() });
         }
 
         // Render the accumulated glowlights in batches to minimize draw calls and state changes.
         if (const ConstSpan<GpuGlowlightLayout> Data = mGlowlightData; !Data.IsEmpty())
         {
-            Graphic::Transient<GpuGlowlightLayout> Instances
-                = Graphics.AllocateInFlightVertices<GpuGlowlightLayout>(Data.GetSize());
-            Instances.Copy(Data);
-
             const Graphic::Invocation Invocation = {
                 .Count     = 4,
                 .Base      = 0,
                 .Offset    = 0,
                 .Instances = static_cast<UInt32>(Data.GetSize())
             };
-            Encoder.Draw(* mTechniques[Enum::Cast(Kind::Glowlight)], Textures, Instances.GetStream(), Invocation);
+            Encoder.Begin(* mTechniques[Enum::Cast(Kind::Glowlight)])
+                   .SetImage("Normal"_Hash, mNormal->GetTexture())
+                   .SetImage("Depth"_Hash,  mDepth->GetTexture())
+                   .Draw(Graphics.AllocateInFlightVertices<GpuGlowlightLayout>(Data), Invocation);
         }
 
         // Render the accumulated spotlights in batches to minimize draw calls and state changes.
         if (const ConstSpan<GpuSpotlightLayout> Data = mSpotlightData; !Data.IsEmpty())
         {
-            Graphic::Transient<GpuSpotlightLayout> Instances
-                = Graphics.AllocateInFlightVertices<GpuSpotlightLayout>(Data.GetSize());
-            Instances.Copy(Data);
-
             // The cone is bounded by the rectangle its own sphere covers, so it emits a quad like the rest.
             const Graphic::Invocation Invocation = {
                 .Count     = 4,
@@ -169,7 +156,10 @@ namespace Tileon::Pipeline
                 .Offset    = 0,
                 .Instances = static_cast<UInt32>(Data.GetSize())
             };
-            Encoder.Draw(* mTechniques[Enum::Cast(Kind::Spotlight)], Textures, Instances.GetStream(), Invocation);
+            Encoder.Begin(* mTechniques[Enum::Cast(Kind::Spotlight)])
+                   .SetImage("Normal"_Hash, mNormal->GetTexture())
+                   .SetImage("Depth"_Hash,  mDepth->GetTexture())
+                   .Draw(Graphics.AllocateInFlightVertices<GpuSpotlightLayout>(Data), Invocation);
         }
     }
 

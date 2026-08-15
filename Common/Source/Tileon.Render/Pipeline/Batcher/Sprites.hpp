@@ -61,16 +61,16 @@ namespace Tileon
         struct SpriteLayout final
         {
             /// The transformation matrix to apply to the sprite for positioning, scaling, and rotation.
-            Matrix4x3Packed Transform;
+            Array<Real32, 12> Transform;
 
             /// The source rectangle within the sprite's texture, defining the portion of the texture to use.
-            Rect            Frame;
+            Rect              Frame;
 
             /// Additional data for the sprite, such as size stored as a 2D vector.
-            Vector2         Size;
+            Vector2           Size;
 
             /// Color tint to apply to the sprite, represented as an 8-bit integer color (RGBA).
-            IntColor8       Color;
+            IntColor8         Color;
         };
 
         /// \brief Defines a draw command for a sprite, containing its input data.
@@ -95,7 +95,6 @@ namespace Tileon
         Ref<Render::Collector>       mCollector;
         Retainer<Graphic::Technique> mTechnique;
         Render::Collector::Priority  mPriority;
-        Graphic::Object              mPipeline;
         Sequence<SpriteCommand>      mSprites;
     };
 }

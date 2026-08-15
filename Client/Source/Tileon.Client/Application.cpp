@@ -122,12 +122,6 @@ namespace Tileon::Client
         Startup.SetWindowBorderless(true);
 #endif
 
-#if   defined(ZY_PLATFORM_WINDOWS)
-        Startup.SetGraphicsDriver("D3D11");
-#elif defined(ZY_PLATFORM_WEB) || defined(ZY_PLATFORM_LINUX)
-        Startup.SetGraphicsDriver("GLES3");
-#endif
-
         ConstRef<Environment> Options = GetEnvironment();
         Startup.SetWindowWidth(Options.GetNumber<UInt32>("width", Startup.GetWindowWidth()));
         Startup.SetWindowHeight(Options.GetNumber<UInt32>("height", Startup.GetWindowHeight()));

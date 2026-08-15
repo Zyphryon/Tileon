@@ -106,8 +106,6 @@ namespace Tileon
 
     void Tiles::Flush(Ref<Render::Encoder> Encoder)
     {
-        const Graphic::Technique::Key Lit = mTechnique->Resolve("Lit");
-
         for (UInt32 Element = 0; Element < mCount; ++Element)
         {
             ConstRef<TileBatch> Batch = mBatches[Element];
@@ -117,18 +115,21 @@ namespace Tileon
                 continue;
             }
 
-            Graphic::Transient<TileLayout> Instances
-                = mService->AllocateInFlightVertices<TileLayout>(Batch.Layouts.GetSize());
-            Instances.Copy<TileLayout>(Batch.Layouts);
+            // Each source binds under the name it carries, and the lit variant follows from the normal map.
+            Render::Encoder::Binder Binder = Encoder.Begin(* mTechnique);
+
+            for (const Motif::Source Slot : Enum::GetValues<Motif::Source>())
+            {
+                Binder.SetImage(Hash(Enum::GetName(Slot)), Batch.Textures[Enum::Cast(Slot)]);
+            }
+
+            Binder.SetVariant(mVariant);
 
             const Graphic::Invocation Invocation {
                 .Count     = 4,
                 .Instances = static_cast<UInt32>(Batch.Layouts.GetSize())
             };
-
-            const Graphic::Technique::Key Variant
-                = mVariant | (Batch.Textures[Enum::Cast(Motif::Source::Normal)] ? Lit : 0);
-            Encoder.Draw(* mTechnique, Batch.Textures, Instances.GetStream(), Invocation, Variant);
+            Binder.Draw(mService->AllocateInFlightVertices<TileLayout>(Batch.Layouts), Invocation);
         }
     }
 }

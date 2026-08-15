@@ -46,20 +46,16 @@ namespace Tileon::Pipeline
     {
         ZY_PROFILE_SCOPE("Pipeline::Preview::Run");
 
-        Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
+        Encoder.SetPass(GpuPreviewLayout {
+            .Inverse = mDirector->GetViewProjectionInverse()
+        });
 
-        Graphic::Transient<GpuPreviewLayout> Data = Graphics.AllocateInFlightUniforms<GpuPreviewLayout>(1);
-        Data[0].Inverse = mDirector->GetViewProjectionInverse();
-        Encoder.SetPass(Data.GetStream());
-
-        const Array                   Textures(mSources[Enum::Cast(mSource)]->GetTexture());
-        constexpr Graphic::Invocation Invocation = {
-            .Count     = 3,
-            .Base      = 0,
-            .Offset    = 0,
-            .Instances = 1
-        };
-        Encoder.Draw(* mTechnique, Textures, Invocation, mTechnique->Resolve(Enum::GetName(mSource)));
+        // Color is what the technique reads by default, so only a buffer that has to be decoded names a variant.
+        const Bool Decoded = (mSource == Kind::Normal || mSource == Kind::Depth);
+        Encoder.Begin(* mTechnique)
+               .SetImage("Source"_Hash, mSources[Enum::Cast(mSource)]->GetTexture())
+               .SetVariant(Decoded ? mTechnique->ResolveByName(Enum::GetName(mSource)) : 0)
+               .DrawFullscreen();
 
         if (mSource == Kind::Albedo && HasProperty(Property::Grid))
         {
@@ -77,20 +73,11 @@ namespace Tileon::Pipeline
 
     void Preview::DrawGrid(Ref<Render::Encoder> Encoder)
     {
-        Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
-
-        Graphic::Transient<GpuGridLayout> Data = Graphics.AllocateInFlightUniforms<GpuGridLayout>(1);
-        Data[0].Camera    = mDirector->GetViewProjectionInverse();
-        Data[0].Dimension = Vector2(Region::kTilesPerX, Region::kTilesPerY);
-        Encoder.SetPass(Data.GetStream());
-
-        constexpr Graphic::Invocation Invocation = {
-            .Count     = 3,
-            .Base      = 0,
-            .Offset    = 0,
-            .Instances = 1
-        };
-        Encoder.Draw(* mOverlays[Enum::Cast(Overlay::Grid)], ConstSpan<Graphic::Object>(), Invocation);
+        Encoder.SetPass(GpuGridLayout {
+            .Camera    = mDirector->GetViewProjectionInverse(),
+            .Dimension = Vector2(Region::kTilesPerX, Region::kTilesPerY)
+        });
+        Encoder.Begin(* mOverlays[Enum::Cast(Overlay::Grid)]).DrawFullscreen();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -140,10 +127,6 @@ namespace Tileon::Pipeline
 
         if (const ConstSpan<GpuBoundaryLayout> Data = mBoundaries; !Data.IsEmpty())
         {
-            Graphic::Transient<GpuBoundaryLayout> Instances
-                = Graphics.AllocateInFlightVertices<GpuBoundaryLayout>(Data.GetSize());
-            Instances.Copy(Data);
-
             const Bool Flat = mDirector->GetProjection().IsAxisAligned();
 
             const Graphic::Invocation Invocation = {
@@ -153,7 +136,9 @@ namespace Tileon::Pipeline
                 .Instances = static_cast<UInt32>(Data.GetSize())
             };
             ConstRetainer<Graphic::Technique> Technique = mOverlays[Enum::Cast(Overlay::Boundary)];
-            Encoder.Draw(* Technique, { }, Instances.GetStream(), Invocation, Flat ? Technique->Resolve("Flat") : 0);
+            Encoder.Begin(* Technique)
+                   .SetVariant(Flat ? Technique->ResolveByName("Flat") : 0)
+                   .Draw(Graphics.AllocateInFlightVertices<GpuBoundaryLayout>(Data), Invocation);
         }
     }
 

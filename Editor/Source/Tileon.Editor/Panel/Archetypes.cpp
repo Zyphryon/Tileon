@@ -371,7 +371,7 @@ namespace Tileon::Editor
 
         if (Toolkit::Composer::BeginTabBar("##preview_tabs"))
         {
-            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(Graphic::TextureSlot::Albedo)))
+            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(TextureUsage::Albedo)))
             {
                 if (Toolkit::Composer::BeginTabItem("Preview"))
                 {
@@ -386,7 +386,7 @@ namespace Tileon::Editor
                 }
             }
 
-            for (const Graphic::TextureSlot Semantic : Enum::GetValues<Graphic::TextureSlot>())
+            for (const TextureUsage Semantic : Enum::GetValues<TextureUsage>())
             {
                 if (ConstRetainer<Graphic::Image> Texture = Material->GetImage(GetTextureID(Semantic)))
                 {
