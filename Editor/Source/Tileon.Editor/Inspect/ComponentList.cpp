@@ -47,7 +47,7 @@ namespace Tileon::Editor
         // Draw the components the entity owns.
         Actor.Each([&](Scene::Entity Component)
         {
-            if (!ecs_id_is_pair(Component.GetID()) && IsAuthorable(Actor, Component))
+            if (!Component.IsPair() && IsAuthorable(Actor, Component))
             {
                 DrawComponent(Actor, Component, false);
             }
@@ -58,7 +58,7 @@ namespace Tileon::Editor
         {
             Archetype.Each([&](Scene::Entity Component)
             {
-                if (!ecs_id_is_pair(Component.GetID()) && IsAuthorable(Actor, Component) && !Actor.Owns(Component.GetID()))
+                if (!Component.IsPair() && IsAuthorable(Actor, Component) && !Actor.Owns(Component.GetID()))
                 {
                     DrawComponent(Actor, Component, true);
                 }
@@ -172,7 +172,7 @@ namespace Tileon::Editor
             {
                 // A singleton's data lives on the component entity itself, so attaching it to an actor would be
                 // meaningless. It still carries a descriptor, so a world-level panel can draw it.
-                if (!IsAuthorable(Actor, Component) || Component.Has(flecs::Singleton))
+                if (!IsAuthorable(Actor, Component) || Component.Has(EcsSingleton))
                 {
                     continue;
                 }

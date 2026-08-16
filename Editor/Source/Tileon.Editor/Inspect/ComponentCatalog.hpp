@@ -44,18 +44,18 @@ namespace Tileon::Editor
         /// \brief Publishes a component, making it inspectable and available in the catalog.
         ///
         /// \tparam Type  The component type to publish.
-        /// \param  Name  The name the component was registered with. Must match the runtime's registration.
+        /// \param  Name  The label the catalog lists the component under.
         /// \param  Icon  The glyph displayed alongside the label.
         /// \param  Group The category the component is filed under in the catalog.
         /// \param  Scope The kind of entity the component may be authored on.
         template<typename Type>
         void Add(Text Name, Text Icon, Text Group, ComponentType::Scope Scope = ComponentType::Scope::Any)
         {
-            const Scene::Entity Component = mScene.GetComponent<Type>(Name);
+            const Scene::Entity Component = mScene.GetComponent<Type>();
 
             Component.Set(ComponentType::Create<Type>(Name, Icon, Group, Scope));
 
-            mComponents.Append(mScene.GetComponent<Type>(Name));
+            mComponents.Append(Component);
         }
 
         /// \brief Publishes every component the editor can author.

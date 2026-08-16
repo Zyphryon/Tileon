@@ -488,7 +488,7 @@ namespace Tileon::Editor
             // A singleton that was never declared serializable writes no payload, so only its presence comes back.
             if (Input.GetAvailable() > 0)
             {
-                Scene::Codec::ReadComponent<Scene::Entity>(Component.GetHandle().world(), Input, Component);
+                Scene::Codec::ReadComponent<Scene::Entity>(Component.GetWorld(), Input, Component);
             }
             else
             {

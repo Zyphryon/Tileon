@@ -52,7 +52,7 @@ namespace Tileon::Editor
 
             for (const Scene::Entity Component : mCatalog.GetComponents())
             {
-                if (Component.Has(flecs::Singleton))
+                if (Component.Has(EcsSingleton))
                 {
                     DrawComponent(Component);
 
@@ -149,7 +149,7 @@ namespace Tileon::Editor
 
             for (const Scene::Entity Component : mCatalog.GetComponents())
             {
-                if (!Component.Has(flecs::Singleton))
+                if (!Component.Has(EcsSingleton))
                 {
                     continue;
                 }
@@ -256,7 +256,7 @@ namespace Tileon::Editor
 
         for (const Scene::Entity Component : mCatalog.GetComponents())
         {
-            if (Component.Has(flecs::Singleton))
+            if (Component.Has(EcsSingleton))
             {
                 History.CaptureSingleton(Component);
             }
