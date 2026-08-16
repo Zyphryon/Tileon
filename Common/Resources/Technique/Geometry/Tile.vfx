@@ -36,7 +36,10 @@
     },
     "Program": {
         "Defines": [
-            "TILE_LAYER_BIAS=0.00001"
+            "TILE_LAYER_BIAS=0.00001",
+            "TILE_MIRROR_X=1u",
+            "TILE_MIRROR_Y=2u",
+            "TILE_TRANSPOSE=4u"
         ],
         "Shaders": {
             "GLSL": [

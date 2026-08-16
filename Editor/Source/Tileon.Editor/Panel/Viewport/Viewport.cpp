@@ -504,6 +504,28 @@ namespace Tileon::Editor
         }
 
         Toolkit::Composer::SameLine();
+
+        const Bool Turned = (mTools.GetOrientation() != Tile::Orientation::None);
+
+        if (Turned)
+        {
+            Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        }
+
+        if (Toolkit::Composer::Button(ICON_FA_ROTATE_RIGHT "##Orientation", 32.0f))
+        {
+            mTools.Reorient(Tile::Orientation::Opposite);
+        }
+
+        Toolkit::Composer::Tooltip("Turn the art a quarter (W), or mirror it across x (Q) or y (E)");
+
+        if (Turned)
+        {
+            Toolkit::Composer::PopStyleColor(2);
+        }
+
+        Toolkit::Composer::SameLine();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -1075,10 +1097,36 @@ namespace Tileon::Editor
                 const UInt32    Selection = GetContext().GetInteger("Selection.Tile", 0);
                 const Placement Cursor    = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
 
+                if (!Toolkit::Composer::IsKeyDown(ImGuiMod_Ctrl) && !Toolkit::Composer::IsTextInputActive())
+                {
+                    if (Toolkit::Composer::IsKeyPressed(ImGuiKey_W))
+                    {
+                        mTools.Reorient(Tile::Orientation::Opposite);
+                    }
+                    else if (Toolkit::Composer::IsKeyPressed(ImGuiKey_Q))
+                    {
+                        mTools.Reorient(Tile::Orientation::MirrorX);
+                    }
+                    else if (Toolkit::Composer::IsKeyPressed(ImGuiKey_E))
+                    {
+                        mTools.Reorient(Tile::Orientation::MirrorY);
+                    }
+                }
+
                 // Footprint preview: show exactly which cells the stamp covers before it is committed.
                 {
-                    const Bool       IsBucket = (mTools.GetBrush() == Tools::Brush::Bucket);
-                    const IntVector2 Span     = Selection ? mContext.GetTileset().GetMotif(Selection).GetPeriod() : IntVector2::One();
+                    const Bool              IsBucket = (mTools.GetBrush() == Tools::Brush::Bucket);
+                    const Tile::Orientation Facing   = mTools.GetOrientation();
+
+                    const IntVector2 Authored = Selection
+                        ? mContext.GetTileset().GetMotif(Selection).GetPeriod()
+                        : IntVector2::One();
+                    const IntVector2 Period(Max(Authored.GetX(), 1), Max(Authored.GetY(), 1));
+
+                    // A transposed motif lays its axes the other way round, so it covers the ground that way too.
+                    const IntVector2 Span = Tile::Has(Facing, Tile::Orientation::Transpose)
+                        ? IntVector2(Period.GetY(), Period.GetX())
+                        : Period;
 
                     IntRect Footprint;
 
@@ -1124,34 +1172,43 @@ namespace Tileon::Editor
                         const UInt32 Alpha   = static_cast<UInt32>(((Base >> 24) & 0xFF) * 0.7f) << 24;
                         const UInt32 Preview = (Base & 0x00FFFFFF) | Alpha;
 
-                        const IntVector2 Period(Max(Span.GetX(), 1), Max(Span.GetY(), 1));
-                        const SInt32     SpanX = Period.GetX();
-                        const SInt32     SpanY = Period.GetY();
-
-                        // Atlas region of one sub-tile within the motif, which owns its slice whole.
-                        const Real32 CellU = 1.0f / SpanX;
-                        const Real32 CellV = 1.0f / SpanY;
-
                         const IntVector2 Origin(Footprint.GetMinimumX(), Footprint.GetMinimumY());
-                        const IntVector2 Anchor = IntVector2(mTools.Resolve(Origin, Period));
+                        const IntVector2 Anchor = IntVector2(mTools.Resolve(Origin, Span));
+
+                        const auto Locate = [&](SInt32 LatticeX, SInt32 LatticeY)
+                        {
+                            Real32 X = static_cast<Real32>(LatticeX);
+                            Real32 Y = static_cast<Real32>(LatticeY);
+
+                            if (Tile::Has(Facing, Tile::Orientation::Transpose))
+                            {
+                                Swap(X, Y);
+                            }
+                            if (Tile::Has(Facing, Tile::Orientation::MirrorX))
+                            {
+                                X = Period.GetX() - X;
+                            }
+                            if (Tile::Has(Facing, Tile::Orientation::MirrorY))
+                            {
+                                Y = Period.GetY() - Y;
+                            }
+                            return Sample(X / Period.GetX(), (Period.GetY() - Y) / Period.GetY());
+                        };
 
                         // Draw the motif cell-by-cell so each cell shows the exact sub-tile the paint will store.
                         for (SInt32 CellY = Footprint.GetMinimumY(); CellY < Footprint.GetMaximumY(); ++CellY)
                         {
                             for (SInt32 CellX = Footprint.GetMinimumX(); CellX < Footprint.GetMaximumX(); ++CellX)
                             {
-                                const IntVector2 Phase  = Tile::Align(IntVector2(CellX, CellY) - Anchor, Period);
+                                const IntVector2 Phase  = Tile::Align(IntVector2(CellX, CellY) - Anchor, Span);
                                 const SInt32     Column = Phase.GetX();
                                 const SInt32     Row    = Phase.GetY();
-
-                                const Real32 U0 = Column            * CellU;
-                                const Real32 V0 = (SpanY - 1 - Row) * CellV;
 
                                 List->AddImageQuad(Slice,
                                     Project(CellX,     CellY),     Project(CellX + 1, CellY),
                                     Project(CellX + 1, CellY + 1), Project(CellX,     CellY + 1),
-                                    Sample(U0, V0 + CellV), Sample(U0 + CellU, V0 + CellV),
-                                    Sample(U0 + CellU, V0), Sample(U0, V0),
+                                    Locate(Column,     Row),       Locate(Column + 1, Row),
+                                    Locate(Column + 1, Row + 1),   Locate(Column,     Row + 1),
                                     Preview);
                             }
                         }

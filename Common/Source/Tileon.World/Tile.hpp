@@ -32,6 +32,17 @@ namespace Tileon
             Detail,     ///< The detail layer of the tile, representing additional terrain features or variations.
         };
 
+        /// \brief Enumerates the eight ways the art of a layer can be laid onto the ground.
+        enum class Orientation : UInt8
+        {
+            None      = 0,                   ///< The art as it was authored.
+            MirrorX   = 1 << 0,              ///< The art mirrored across the x-axis.
+            MirrorY   = 1 << 1,              ///< The art mirrored across the y-axis.
+            Transpose = 1 << 2,              ///< The art's two axes exchanged.
+            Quarter   = MirrorY | Transpose, ///< The art turned a quarter.
+            Opposite  = MirrorX | Transpose, ///< The art turned a quarter the other way.
+        };
+
         /// \brief Define where the art of a layer is anchored, in whole tiles along each axis.
         using Offset = AnyVector2<UInt8>;
 
@@ -39,7 +50,10 @@ namespace Tileon
         struct Unit final
         {
             /// The unique identifier for the terrain type of the layer.
-            UInt16 Handle;
+            UInt16 Handle      : 12;
+
+            /// How the terrain's art is laid down.
+            UInt16 Orientation : 4;
 
             /// Where the terrain's art is anchored.
             Offset Offset;
@@ -49,12 +63,13 @@ namespace Tileon
 
         /// \brief Sets the terrain a specific layer of the tile shows.
         ///
-        /// \param Type   The type of layer to set.
-        /// \param Handle The unique identifier for the terrain type of the layer.
-        /// \param Offset The alignment offset, zero to follow the lattice the world defines.
-        ZY_INLINE void SetLayer(Layer Type, UInt16 Handle, Offset Offset)
+        /// \param Type        The type of layer to set.
+        /// \param Handle      The unique identifier for the terrain type of the layer.
+        /// \param Offset      The alignment offset, zero to follow the lattice the world defines.
+        /// \param Orientation The orientation of the layer.
+        ZY_INLINE void SetLayer(Layer Type, UInt16 Handle, Offset Offset, Orientation Orientation)
         {
-            mLayers[Enum::Cast(Type)] = Unit(Handle, Offset);
+            mLayers[Enum::Cast(Type)] = Unit(Handle, Enum::Cast(Orientation), Offset);
         }
 
         /// \brief Gets the unique identifier for the terrain type of a specific layer in the tile.
@@ -64,6 +79,15 @@ namespace Tileon
         ZY_INLINE UInt16 GetHandle(Layer Type) const
         {
             return mLayers[Enum::Cast(Type)].Handle;
+        }
+
+        /// \brief Gets how the art of a specific layer of the tile is laid down.
+        ///
+        /// \param Type The type of layer to retrieve the orientation of.
+        /// \return The orientation the layer's art is laid down with.
+        ZY_INLINE Orientation GetOrientation(Layer Type) const
+        {
+            return static_cast<Orientation>(mLayers[Enum::Cast(Type)].Orientation);
         }
 
         /// \brief Gets where the art of a specific layer of the tile is anchored.
@@ -76,6 +100,33 @@ namespace Tileon
         }
 
     public:
+
+        /// \brief Checks whether an orientation applies an operation.
+        ///
+        /// \param Value The orientation to inspect.
+        /// \param Flag  The operation to look for.
+        /// \return `true` if the orientation applies the operation, `false` otherwise.
+        ZY_INLINE static constexpr Bool Has(Orientation Value, Orientation Flag)
+        {
+            return HasBit(Enum::Cast(Value), Enum::Cast(Flag));
+        }
+
+        /// \brief Applies one orientation on top of another.
+        ///
+        /// \param Base  The orientation applied first.
+        /// \param Delta The orientation applied on top of it.
+        /// \return The single orientation equivalent to applying both.
+        ZY_INLINE static constexpr Orientation Compose(Orientation Base, Orientation Delta)
+        {
+            const Bool Swapped = Has(Delta, Orientation::Transpose);
+            const Bool MirrorX = Has(Base, Swapped ? Orientation::MirrorY : Orientation::MirrorX);
+            const Bool MirrorY = Has(Base, Swapped ? Orientation::MirrorX : Orientation::MirrorY);
+
+            return static_cast<Orientation>(
+                  (MirrorX != Has(Delta, Orientation::MirrorX)  ? Enum::Cast(Orientation::MirrorX)   : 0)
+                | (MirrorY != Has(Delta, Orientation::MirrorY)  ? Enum::Cast(Orientation::MirrorY)   : 0)
+                | (Has(Base, Orientation::Transpose) != Swapped ? Enum::Cast(Orientation::Transpose) : 0));
+        }
 
         /// \brief Reduces an anchor into the period of a motif.
         ///

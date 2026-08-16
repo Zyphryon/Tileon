@@ -45,7 +45,9 @@ namespace Tileon
         /// \param Position The position of the tile's origin, in whole tiles relative to the camera.
         /// \param Size     The span the tile covers on the ground, in whole tiles.
         /// \param Layer    The layer the tile stacks on, where higher layers are drawn in front.
-        void Draw(ConstRef<Tileset::Glyph> Glyph, IntVector2 Phase, IntVector2 Position, IntVector2 Size, UInt8 Layer);
+        /// \param Facing   How the art is laid down, as the bits of a \ref Tile::Orientation.
+        void Draw(ConstRef<Tileset::Glyph> Glyph,
+            IntVector2 Phase, IntVector2 Position, IntVector2 Size, UInt8 Layer, UInt8 Facing);
 
         /// \brief Retires the batches recorded so far, keeping their storage for the next pass to draw into.
         void Reset();
@@ -63,7 +65,7 @@ namespace Tileon
             /// The position of the tile's origin, in whole tiles relative to the camera.
             Array<SInt16, 2> Position;
 
-            /// The tile's span in whole tiles, the layer it stacks on, and one byte to spare.
+            /// The tile's span in whole tiles, the layer it stacks on, and how its art is laid down.
             Array<UInt8, 4>  Metrics;
 
             /// The glyph's period in whole tiles, then where the tile's origin falls within it.

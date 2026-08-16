@@ -143,6 +143,22 @@ namespace Tileon::Editor
             return mAlignment;
         }
 
+        /// \brief Lays the art of a painted terrain down with an operation applied on top of its current one.
+        ///
+        /// \param Delta The operation to apply.
+        ZY_INLINE void Reorient(Tile::Orientation Delta)
+        {
+            mOrientation = Tile::Compose(mOrientation, Delta);
+        }
+
+        /// \brief Gets how the art of a painted terrain is laid down.
+        ///
+        /// \return The current orientation.
+        ZY_INLINE Tile::Orientation GetOrientation() const
+        {
+            return mOrientation;
+        }
+
         /// \brief Sets whether placed entities snap to the centre of the tile under the cursor.
         ///
         /// \param Aligned `true` to place entities at tile centres, `false` to place at the exact cursor.
@@ -282,25 +298,28 @@ namespace Tileon::Editor
         struct OpTile
         {
             /// The region's actor to apply the operation.
-            Scene::Entity Actor;
+            Scene::Entity     Actor;
 
             /// The command to apply (e.g., add or remove).
-            Command       Command;
+            Command           Command;
 
             /// The layer of the tiles to apply the command to (e.g., base or detail).
-            Tile::Layer   Layer;
+            Tile::Layer       Layer;
 
             /// The unique identifier for the terrain type to apply when adding tiles.
-            UInt16        Terrain;
+            UInt16            Terrain;
 
             /// The alignment offset to apply when adding tiles.
-            Tile::Offset  Offset;
+            Tile::Offset      Offset;
+
+            /// How the art is laid down when adding tiles.
+            Tile::Orientation Orientation;
 
             /// The dimensions of the tile being applied.
-            IntVector2    Span;
+            IntVector2        Span;
 
             /// The rectangular area of tiles to apply the command to, specified in tile coordinates.
-            IntRect       Area;
+            IntRect           Area;
         };
 
         /// \brief Executes a tile editing command at the specified placement in the world.
@@ -420,8 +439,10 @@ namespace Tileon::Editor
         /// \param Layer   The layer of the tiles to apply the command to (e.g., base or detail).
         /// \param Handle  The unique identifier for the terrain type to apply when adding tiles.
         /// \param Offset  The alignment offset to apply when adding tiles.
+        /// \param Facing  How the art is laid down when adding tiles.
         /// \param Span    The dimensions of the tile being applied.
-        void ApplyTiles(Command Command, IntRect Area, Tile::Layer Layer, UInt16 Handle, Tile::Offset Offset, IntVector2 Span);
+        void ApplyTiles(Command Command, IntRect Area,
+            Tile::Layer Layer, UInt16 Handle, Tile::Offset Offset, Tile::Orientation Facing, IntVector2 Span);
 
         /// \brief Applies the specified operation to an area of tiles.
         ///
@@ -434,17 +455,18 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Ref<Context>     mContext;
-        Level            mLevel;
-        Brush            mBrush;
-        Alignment        mAlignment;
-        Bool             mAligned;
-        Sequence<OpTile> mOperations;
-        Scene::Entity    mPreview;
-        Bag<UInt64>      mSelection;
-        UInt64           mSelectionPrimary;
-        UInt32           mRevision;
-        Blob             mClipboard;
-        UInt32           mClipboardCount;
+        Ref<Context>      mContext;
+        Level             mLevel;
+        Brush             mBrush;
+        Alignment         mAlignment;
+        Tile::Orientation mOrientation;
+        Bool              mAligned;
+        Sequence<OpTile>  mOperations;
+        Scene::Entity     mPreview;
+        Bag<UInt64>       mSelection;
+        UInt64            mSelectionPrimary;
+        UInt32            mRevision;
+        Blob              mClipboard;
+        UInt32            mClipboardCount;
     };
 }

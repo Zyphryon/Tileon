@@ -154,7 +154,7 @@ namespace Tileon::Pipeline
 
         mQrDrawLightBoundaries = Scene.CreateQuery<
             Scene::DSL::In<const Enclosure>,
-            Scene::DSL::Not<Sprite, Text>
+            Scene::DSL::Not<Sprite, Lettering>
         >("Render::Preview::DrawLightBoundaries", Scene::Cache::Auto);
     }
 

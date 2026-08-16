@@ -29,22 +29,25 @@ namespace Tileon
         struct Block final
         {
             /// The region-local x-coordinate of the block's origin.
-            UInt8        X;
+            UInt8             X;
 
             /// The region-local y-coordinate of the block's origin.
-            UInt8        Y;
+            UInt8             Y;
 
             /// The width of the block, in tiles.
-            UInt8        Width;
+            UInt8             Width;
 
             /// The height of the block, in tiles.
-            UInt8        Height;
+            UInt8             Height;
 
             /// The terrain handle shared by every tile of the block.
-            UInt16       Handle;
+            UInt16            Handle;
 
             /// The alignment offset shared by every tile of the block.
-            Tile::Offset Offset;
+            Tile::Offset      Offset;
+
+            /// How the art is laid down, shared by every tile of the block.
+            Tile::Orientation Orientation;
         };
 
     public:
@@ -87,13 +90,19 @@ namespace Tileon
 
         /// \brief Gets where a block's origin falls within the period of the motif it draws.
         ///
-        /// \param Origin The block's origin, in absolute world tiles.
-        /// \param Period The motif's period, in whole tiles.
-        /// \param Offset The block's alignment offset, zero to follow the lattice the world defines.
+        /// \param Origin      The block's origin, in absolute world tiles.
+        /// \param Period      The motif's period, in whole tiles.
+        /// \param Offset      The block's alignment offset, zero to follow the lattice the world defines.
+        /// \param Orientation How the block's art is laid down.
         /// \return The phase along each axis, always inside the period so it survives being sent as a byte.
-        ZY_INLINE static IntVector2 GetPhase(IntVector2 Origin, IntVector2 Period, Tile::Offset Offset)
+        ZY_INLINE static IntVector2 GetPhase(
+            IntVector2 Origin, IntVector2 Period, Tile::Offset Offset, Tile::Orientation Orientation)
         {
-            return Tile::Align(Origin - IntVector2(Offset), Period);
+            const IntVector2 Ground = Tile::Has(Orientation, Tile::Orientation::Transpose)
+                ? IntVector2(Period.GetY(), Period.GetX())
+                : Period;
+
+            return Tile::Align(Origin - IntVector2(Offset), Ground);
         }
 
     private:

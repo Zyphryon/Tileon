@@ -209,7 +209,6 @@ namespace Tileon::Pipeline
 
     void Geometry::OnRegister(Ref<Scene::Service> Scene)
     {
-
         Scene.Register(
             Scene::DSL::Declare<Animator, Appearance, Mosaic>(),
             Scene::DSL::Declare<IntColor8>("Tint", Scene::DSL::Authored),
@@ -431,8 +430,8 @@ namespace Tileon::Pipeline
                     Region.GetX() * Region::kTilesPerX + Block.X,
                     Region.GetY() * Region::kTilesPerY + Block.Y);
 
-                const IntVector2 Phase = Mosaic::GetPhase(Absolute, Glyph.Period, Block.Offset);
-                mTiles.Draw(Glyph, Phase, Position, Span, Enum::Cast(Layer));
+                const IntVector2 Phase = Mosaic::GetPhase(Absolute, Glyph.Period, Block.Offset, Block.Orientation);
+                mTiles.Draw(Glyph, Phase, Position, Span, Enum::Cast(Layer), Enum::Cast(Block.Orientation));
             }
         }
     }

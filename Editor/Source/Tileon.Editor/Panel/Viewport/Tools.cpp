@@ -28,6 +28,7 @@ namespace Tileon::Editor
           mLevel            { Level::Base },
           mBrush            { Brush::Pencil },
           mAlignment        { Alignment::Lattice },
+          mOrientation      { Tile::Orientation::None },
           mAligned          { false },
           mSelectionPrimary { 0 },
           mRevision         { 0 },
@@ -189,8 +190,13 @@ namespace Tileon::Editor
 
     void Tools::ExecuteOnTiles(Command Command, Placement Placement, UInt32 Object)
     {
-        // Gets the tileset entry for the specified object ID and retrieves its column and row span.
-        const IntVector2 Span  = Object ? mContext.GetTileset().GetMotif(Object).GetPeriod() : IntVector2::One();
+        // Gets the tileset entry for the specified object ID and retrieves the period its art repeats on.
+        const IntVector2 Period = Object ? mContext.GetTileset().GetMotif(Object).GetPeriod() : IntVector2::One();
+
+        // A transposed motif lays its axes the other way round, so it covers the ground the other way round too.
+        const IntVector2 Span = Tile::Has(GetOrientation(), Tile::Orientation::Transpose)
+            ? IntVector2(Period.GetY(), Period.GetX())
+            : Period;
 
         // Apply the command based on the current brush type and the placement of the cursor in the world.
         switch (mBrush)
@@ -210,6 +216,7 @@ namespace Tileon::Editor
                 static_cast<Tile::Layer>(Enum::Cast(mLevel)),
                 Object,
                 Resolve(IntVector2(TileX, TileY), Span),
+                GetOrientation(),
                 Span);
             break;
         }
@@ -225,6 +232,7 @@ namespace Tileon::Editor
                 static_cast<Tile::Layer>(Enum::Cast(mLevel)),
                 Object,
                 Resolve(IntVector2(TileX, TileY), Span),
+                GetOrientation(),
                 Span);
         }
         }
@@ -725,7 +733,8 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Tools::ApplyTiles(Command Command, IntRect Area, Tile::Layer Layer, UInt16 Handle, Tile::Offset Offset, IntVector2 Span)
+    void Tools::ApplyTiles(Command Command, IntRect Area,
+        Tile::Layer Layer, UInt16 Handle, Tile::Offset Offset, Tile::Orientation Facing, IntVector2 Span)
     {
         Ref<Supervisor> Supervisor = mContext.GetSupervisor();
 
@@ -743,7 +752,7 @@ namespace Tileon::Editor
 
                 if (Actor.IsValid())
                 {
-                    const OpTile Operation(Actor, Command, Layer, Handle, Offset, Span, Area);
+                    const OpTile Operation(Actor, Command, Layer, Handle, Offset, Facing, Span, Area);
 
                     if (const Ptr<Region> Component = Actor.TryGet<Region>())
                     {
@@ -783,7 +792,7 @@ namespace Tileon::Editor
 
         if (Operation.Command == Command::Add)
         {
-            Region->Fill(LocalArea, Operation.Layer, Operation.Terrain, Operation.Offset);
+            Region->Fill(LocalArea, Operation.Layer, Operation.Terrain, Operation.Offset, Operation.Orientation);
         }
         else
         {

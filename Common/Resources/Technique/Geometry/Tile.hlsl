@@ -16,7 +16,7 @@ struct vs_Input
     uint   VertexID : SV_VertexID;
 
     int2   Position : SLOT0;  // ground origin, in whole tiles relative to the camera
-    uint4  Metrics  : SLOT1;  // size.xy in whole tiles, layer, reserved
+    uint4  Metrics  : SLOT1;  // size.xy in whole tiles, layer, orientation
     uint4  Lattice  : SLOT2;  // motif period.xy in whole tiles, phase.xy of the run within it
     uint   Atlas    : SLOT3;  // slice of the array texture
     float4 Color    : SLOT4;
@@ -24,10 +24,14 @@ struct vs_Input
 
 struct fs_Input
 {
-    float4               Position : SV_POSITION;
-    float2               Texture  : TEXCOORD0;
-    float4               Color    : COLOR0;
-    nointerpolation uint Slice    : TEXCOORD1;
+    float4                 Position : SV_POSITION;
+    float2                 Texture  : TEXCOORD0;
+    float4                 Color    : COLOR0;
+    nointerpolation uint   Slice    : TEXCOORD1;
+
+#ifdef ENABLE_NORMAL_MAPPING
+    nointerpolation float4 Basis    : TEXCOORD2;
+#endif
 };
 
 struct fs_Output
@@ -70,14 +74,37 @@ fs_Input main(vs_Input Input)
     Result.Position.z -= float(Input.Metrics.z) * TILE_LAYER_BIAS;
 
     // The art lands on a lattice the ground defines, so the run carries only its phase within the period.
-    // V runs against world Y, which keeps the art upright while the ground climbs the screen.
     const float2 Period = float2(Input.Lattice.xy);
     const float2 Phase  = float2(Input.Lattice.zw);
     const float2 Size   = float2(Input.Metrics.xy);
+    const uint   Facing = Input.Metrics.w;
 
-    Result.Texture = float2((Phase.x + Corner.x * Size.x) / Period.x, (Period.y - Phase.y - Corner.y * Size.y) / Period.y);
+    float2 Lattice = Phase + Corner * Size;
+
+    if ((Facing & TILE_TRANSPOSE) != 0u)
+    {
+        Lattice = Lattice.yx;
+    }
+    if ((Facing & TILE_MIRROR_X) != 0u)
+    {
+        Lattice.x = Period.x - Lattice.x;
+    }
+    if ((Facing & TILE_MIRROR_Y) != 0u)
+    {
+        Lattice.y = Period.y - Lattice.y;
+    }
+
+    Result.Texture = float2(Lattice.x / Period.x, (Period.y - Lattice.y) / Period.y);
     Result.Color   = Input.Color;
     Result.Slice   = Input.Atlas & 0xFFFFu;
+
+#ifdef ENABLE_NORMAL_MAPPING
+
+    const float2 Sign = float2((Facing & TILE_MIRROR_X) != 0u ? -1.0 : 1.0, (Facing & TILE_MIRROR_Y) != 0u ? -1.0 : 1.0);
+
+    Result.Basis = (Facing & TILE_TRANSPOSE) != 0u ? float4(0.0, Sign.y, Sign.x, 0.0) : float4(Sign.x, 0.0, 0.0, Sign.y);
+
+#endif
 
     return Result;
 }
@@ -115,7 +142,9 @@ fs_Output main(fs_Input Input)
     // A tile never tilts, so tangent space maps onto the ground with a fixed swizzle: the map's own
     // up axis becomes the world's, and a flat map lands back on the constant an unlit tile writes.
     const float3 Tangent = t_Normal.Sample(s_Normal, float3(Input.Texture, Input.Slice)).xyz * 2.0 - 1.0;
-    const float3 Normal  = normalize(float3(Tangent.x, Tangent.z, Tangent.y));
+
+    const float2 Plane  = float2(dot(Input.Basis.xy, Tangent.xy), dot(Input.Basis.zw, Tangent.xy));
+    const float3 Normal = normalize(float3(Plane.x, Tangent.z, Plane.y));
 
     Result.Normal = float4(Normal * 0.5 + 0.5, 1.0);
 

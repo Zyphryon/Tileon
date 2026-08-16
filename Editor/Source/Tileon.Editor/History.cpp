@@ -522,6 +522,7 @@ namespace Tileon::Editor
                     Output.Write<UInt16>(Tile.GetHandle(Layer));
                     Output.Write<UInt8>(Offset.GetX());
                     Output.Write<UInt8>(Offset.GetY());
+                    Output.Write<Tile::Orientation>(Tile.GetOrientation(Layer));
                 }
             }
         }
@@ -590,8 +591,9 @@ namespace Tileon::Editor
                     const UInt16              Handle = Input.Read<UInt16>();
                     const UInt8               X0     = Input.Read<UInt8>();
                     const UInt8               Y0     = Input.Read<UInt8>();
+                    const Tile::Orientation   Facing = Input.Read<Tileon::Tile::Orientation>();
 
-                    Tile.SetLayer(Layer, Handle, Tileon::Tile::Offset(X0, Y0));
+                    Tile.SetLayer(Layer, Handle, Tileon::Tile::Offset(X0, Y0), Facing);
                 }
                 Component.SetTile(X, Y, Move(Tile));
             }

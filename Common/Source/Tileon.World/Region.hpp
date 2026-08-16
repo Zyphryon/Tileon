@@ -92,17 +92,18 @@ namespace Tileon
 
         /// \brief Stamps a terrain onto a rectangular area of tiles on the specified layer.
         ///
-        /// \param Area   The rectangular area within the region to fill (region-local coordinates).
-        /// \param Layer  The tile layer to fill the terrain on.
-        /// \param Handle The unique identifier for the terrain type to stamp onto the tiles.
-        /// \param Offset The alignment offset, zero to follow the lattice the world defines.
-        ZY_INLINE void Fill(IntRect Area, Tile::Layer Layer, UInt16 Handle, Tile::Offset Offset)
+        /// \param Area        The rectangular area within the region to fill (region-local coordinates).
+        /// \param Layer       The tile layer to fill the terrain on.
+        /// \param Handle      The unique identifier for the terrain type to stamp onto the tiles.
+        /// \param Offset      The alignment offset, zero to follow the lattice the world defines.
+        /// \param Orientation The orientation of the layer.
+        ZY_INLINE void Fill(IntRect Area, Tile::Layer Layer, UInt16 Handle, Tile::Offset Offset, Tile::Orientation Orientation)
         {
             for (UInt8 Y = Area.GetMinimumY(); Y < Area.GetMaximumY(); ++Y)
             {
                 for (UInt8 X = Area.GetMinimumX(); X < Area.GetMaximumX(); ++X)
                 {
-                    mTiles[ConvertTo1D(X, Y, kTilesPerX)].SetLayer(Layer, Handle, Offset);
+                    mTiles[ConvertTo1D(X, Y, kTilesPerX)].SetLayer(Layer, Handle, Offset, Orientation);
                 }
             }
         }
@@ -117,7 +118,7 @@ namespace Tileon
             {
                 for (UInt8 X = Area.GetMinimumX(); X < Area.GetMaximumX(); ++X)
                 {
-                    mTiles[ConvertTo1D(X, Y, kTilesPerX)].SetLayer(Layer, 0, Tile::Offset());
+                    mTiles[ConvertTo1D(X, Y, kTilesPerX)].SetLayer(Layer, 0, Tile::Offset(), Tile::Orientation::None);
                 }
             }
         }

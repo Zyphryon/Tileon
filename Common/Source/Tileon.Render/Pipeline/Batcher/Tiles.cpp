@@ -40,7 +40,8 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Tiles::Draw(ConstRef<Tileset::Glyph> Glyph, IntVector2 Phase, IntVector2 Position, IntVector2 Size, UInt8 Layer)
+    void Tiles::Draw(ConstRef<Tileset::Glyph> Glyph,
+        IntVector2 Phase, IntVector2 Position, IntVector2 Size, UInt8 Layer, UInt8 Facing)
     {
         ZY_ASSERT(mTechnique, "A technique must be set before recording a tile");
 
@@ -77,7 +78,7 @@ namespace Tileon
             static_cast<UInt8>(Size.GetX()),
             static_cast<UInt8>(Size.GetY()),
             Layer,
-            static_cast<UInt8>(0));
+            Facing);
         Layout.Lattice  = Array(
             static_cast<UInt8>(Max<SInt32>(Glyph.Period.GetX(), 1)),
             static_cast<UInt8>(Max<SInt32>(Glyph.Period.GetY(), 1)),

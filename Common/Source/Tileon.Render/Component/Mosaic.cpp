@@ -42,8 +42,9 @@ namespace Tileon
 
                     Tile Anchor = Region.GetTile(TileX, TileY);
 
-                    const UInt16       Handle = Anchor.GetHandle(Layer);
-                    const Tile::Offset Offset = Anchor.GetOffset(Layer);
+                    const UInt16            Handle = Anchor.GetHandle(Layer);
+                    const Tile::Offset      Offset = Anchor.GetOffset(Layer);
+                    const Tile::Orientation Facing = Anchor.GetOrientation(Layer);
 
                     if (Handle == 0)
                     {
@@ -58,7 +59,8 @@ namespace Tileon
 
                         if (HasBit(Resolution[TileY], 1u << InnerX)
                             || Tile.GetHandle(Layer) != Handle
-                            || Tile.GetOffset(Layer) != Offset)
+                            || Tile.GetOffset(Layer) != Offset
+                            || Tile.GetOrientation(Layer) != Facing)
                         {
                             break;
                         }
@@ -81,7 +83,8 @@ namespace Tileon
 
                             Merge = !HasBit(Resolution[InnerY], 1u << InnerX)
                                 && Tile.GetHandle(Layer) == Handle
-                                && Tile.GetOffset(Layer) == Offset;
+                                && Tile.GetOffset(Layer) == Offset
+                                && Tile.GetOrientation(Layer) == Facing;
                         }
 
                         if (!Merge)
@@ -91,7 +94,9 @@ namespace Tileon
                         Resolution[InnerY] |= Mask;
                     }
 
-                    Blocks.Append(static_cast<UInt8>(TileX), static_cast<UInt8>(TileY), CountX, CountY, Handle, Offset);
+                    Blocks.Append(
+                        static_cast<UInt8>(TileX),
+                        static_cast<UInt8>(TileY), CountX, CountY, Handle, Offset, Facing);
 
                     TileX += CountX - 1;
                 }
