@@ -31,7 +31,7 @@ namespace Tileon
         static constexpr Text   kManifestUri    = "Resources://Data/World.bin";
 
         /// \brief Maximum number of terrains that can be stored in the repository.
-        static constexpr UInt32 kTerrainLimit   = 1'024;
+        static constexpr UInt32 kTerrainLimit   = 2'048;
 
         /// \brief Default filename for storing terrains.
         static constexpr Text   kTerrainUri     = "Resources://Data/Terrains.bin";

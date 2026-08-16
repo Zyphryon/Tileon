@@ -12,7 +12,6 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Render/Component/Skylight.hpp"
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Engine/Locator.hpp>
 #include <Zyphryon.Graphic/Technique.hpp>

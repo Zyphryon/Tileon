@@ -28,7 +28,7 @@ namespace Tileon
     public:
 
         /// \brief The maximum number of motif a tileset can hold (must match the limit in repository).
-        static constexpr UInt32 kLimit    = 1'024;
+        static constexpr UInt32 kLimit    = 2'048;
 
         /// \brief The filename of the tileset data file.
         static constexpr Symbol kFilename = "Resources://Data/Tileset.bin";
