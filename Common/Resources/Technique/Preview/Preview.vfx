@@ -20,7 +20,7 @@
       { "Name": "Source", "Frequency": "Pass" }
     ],
     "Samplers": [
-      { "Name": "Source", "Frequency": "Pass", "Filter": "NearestMipNearest" }
+      { "Name": "Source", "Frequency": "Pass", "Filter": "Point" }
     ]
   },
   "Program": {

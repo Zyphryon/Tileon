@@ -32,8 +32,8 @@ struct fs_Input
 #ifdef ENABLE_NORMAL_MAPPING
     float3 AxisX      : TEXCOORD1;
     float3 AxisY      : TEXCOORD2;
-    float3 AxisZ      : TEXCOORD3;
 #endif
+    float3 AxisZ      : TEXCOORD3;
 };
 
 struct fs_Output
@@ -82,8 +82,9 @@ fs_Input main(vs_Input Input)
 #ifdef ENABLE_NORMAL_MAPPING
     Result.AxisX = normalize(float3(Input.Transform0.x, Input.Transform1.x, Input.Transform2.x));
     Result.AxisY = normalize(float3(Input.Transform0.y, Input.Transform1.y, Input.Transform2.y));
-    Result.AxisZ = normalize(float3(Input.Transform0.z, Input.Transform1.z, Input.Transform2.z));
 #endif
+
+    Result.AxisZ = normalize(float3(Input.Transform0.z, Input.Transform1.z, Input.Transform2.z));
 
     return Result;
 }
@@ -120,8 +121,6 @@ fs_Output main(fs_Input Input)
     float4 Sampled = t_Normal.Sample(s_Normal, Input.Texture);
     float3 Tangent = normalize(Sampled.rgb * 2.0 - 1.0);
     float3 Normal  = normalize(Tangent.x * Input.AxisX + Tangent.y * Input.AxisY - Tangent.z * Input.AxisZ);
-
-    // The sprite plane faces +Z, so the tangent-space Z carries over to world space unchanged.
 #if   defined(ENABLE_TRANSLUCENCY)
     const float Opacity = Sampled.a;
 #elif defined(ENABLE_ALPHA_TEST)
@@ -138,8 +137,7 @@ fs_Output main(fs_Input Input)
 #else
     const float Opacity = Result.Albedo.a;
 #endif
-
-    Result.Normal = float4(0.5, 0.5, 0.0, Opacity);
+    Result.Normal = float4(-Input.AxisZ * 0.5 + 0.5, Opacity);
 #endif
 
     return Result;

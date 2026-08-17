@@ -74,14 +74,31 @@ fs_Input main(vs_Input Input)
     const float3 Center = Input.Params0.xyz;
     const float  Extent = Input.Params0.w;
 
-    // The projection is affine, so the sphere's screen half-extent is what each world axis contributes to the
-    // screen at that radius. Summing them bounds the sphere by the box around it, conservative by the corners.
-    const float4 Middle = mul(u_Camera, float4(Center, 1.0));
-    const float2 Radius = abs(mul(u_Camera, float4(Extent, 0.0, 0.0, 0.0)).xy)
-                        + abs(mul(u_Camera, float4(0.0, Extent, 0.0, 0.0)).xy)
-                        + abs(mul(u_Camera, float4(0.0, 0.0, Extent, 0.0)).xy);
+    // The projection is affine, so each screen axis is a fixed combination of the three world axes. The
+    // furthest a unit sphere reaches along one is the length of that combination, not the sum of its parts:
+    // summing bounds the box the sphere sits in, which is wider by half again on an isometric camera.
+    const float2 Ex = mul(u_Camera, float4(1.0, 0.0, 0.0, 0.0)).xy;
+    const float2 Ey = mul(u_Camera, float4(0.0, 1.0, 0.0, 0.0)).xy;
+    const float2 Ez = mul(u_Camera, float4(0.0, 0.0, 1.0, 0.0)).xy;
 
-    const float2 Clip = Middle.xy + (Corner * 2.0 - 1.0) * Radius;
+    const float2 Spread = float2(length(float3(Ex.x, Ey.x, Ez.x)),
+                                 length(float3(Ex.y, Ey.y, Ez.y)));
+
+#if defined(LIGHT_SPOT)
+    // A cone fits inside its range's sphere but barely fills it. Its hull is the apex together with the disc
+    // it opens onto, so bounding those two and boxing the pair is far tighter wherever the beam is narrow.
+    const float  Widest = Extent * sqrt(saturate(1.0 - Input.Outer * Input.Outer));
+    const float2 Apex   = mul(u_Camera, float4(Center, 1.0)).xy;
+    const float2 Mouth  = mul(u_Camera, float4(Center + Input.Params1.xyz * Extent, 1.0)).xy;
+
+    const float2 Lower = min(Apex, Mouth - Widest * Spread);
+    const float2 Upper = max(Apex, Mouth + Widest * Spread);
+
+    const float2 Clip = lerp(Lower, Upper, Corner);
+#else
+    const float4 Middle = mul(u_Camera, float4(Center, 1.0));
+    const float2 Clip   = Middle.xy + (Corner * 2.0 - 1.0) * (Extent * Spread);
+#endif
 
     Result.Position = float4(Clip, 0.0, 1.0);
     Result.Probe    = float4(Clip, Clip * float2(0.5, -0.5) + 0.5);
@@ -109,11 +126,12 @@ SamplerState s_Normal : register(s0);
 Texture2D    t_Depth  : register(t1);
 SamplerState s_Depth  : register(s1);
 
-float4 main(fs_Input Input) : SV_Target0
+float3 main(fs_Input Input) : SV_Target0
 {
     // Depth is position compressed to one channel: the pixel's clip coordinates plus its depth are three
     // knowns, and the inverse of the camera turns them back into the one world point that produced them.
-    const float  Depth = t_Depth.Sample(s_Depth, Input.Probe.zw).r;
+    const int3   Texel = int3(Input.Position.xy, 0);
+    const float  Depth = t_Depth.Load(Texel).r;
     const float4 Probe = mul(u_Inverse, float4(Input.Probe.xy, Depth, 1.0));
     const float3 World = Probe.xyz / Probe.w;
 
@@ -131,17 +149,27 @@ float4 main(fs_Input Input) : SV_Target0
     clip(Attenuation - 0.001);
 
 #if defined(ENABLE_NORMAL_MAPPING)
-    const float4 Surface    = t_Normal.Sample(s_Normal, Input.Probe.zw);
+    // Filtering a normal across an edge blends two unrelated surfaces, so it is read by texel as well.
+    const float4 Surface    = t_Normal.Load(Texel);
     const float3 Normal     = normalize(Surface.rgb * 2.0 - 1.0);
-    const float  Lambert    = saturate(dot(Normal, Incident) / 1.0);
 
+    // The alpha of the normal buffer is opacity, which doubles as thickness: the more of it a surface
+    // lets through, the more a light behind it shows. That is what gives foliage its backlight, and it
+    // is why nothing else may claim that channel.
+    const float  Lambert    = saturate(dot(Normal, Incident));
     const float  Through    = saturate(dot(-Normal, Incident)) * (1.0 - Surface.a);
-    const float  NormalDotL = max(Lambert, Through);
+
+    // The two dots are exact negatives, so at most one of them survives saturation and the sum is the
+    // one that did. Written as a sum rather than a maximum because it stays correct if either ever
+    // gains a wrap term and stops being mutually exclusive.
+    const float  NormalDotL = Lambert + Through;
 #else
     const float  NormalDotL = 1.0;
 #endif
 
-    return float4(Input.Color.rgb * (Attenuation * NormalDotL), Attenuation);
+    // Three channels, because that is what the radiance target has. The accumulation blend is a plain
+    // additive on colour alone, so the contribution is the whole of what this pass has to say.
+    return Input.Color.rgb * (Attenuation * NormalDotL);
 }
 
 #endif // FRAGMENT_SHADER

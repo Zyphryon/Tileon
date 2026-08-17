@@ -60,9 +60,6 @@ void main()
 
     float Elevation = clamp(World.y / ELEVATION_SCALE, 0.0, 1.0);
 
-    // The camera reserves a band either side of the world, so where a pixel lands says whether it is drawn
-    // where it belongs. The world's own band ramps grey by elevation, the floor sitting at the dark end and
-    // whatever stands on it climbing towards white.
     vec3 Color = mix(vec3(0.12), vec3(1.0), Elevation);
 
     Color = mix(Color, vec3(0.15, 0.45, 1.00), step(Depth, PREVIEW_MIDGROUND));

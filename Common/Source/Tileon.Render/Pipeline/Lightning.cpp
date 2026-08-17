@@ -54,10 +54,10 @@ namespace Tileon::Pipeline
         mQrDrawSkylight.Run([&](ConstRef<Skylight> Environment)
         {
             // Premultiplies a tint by the brightness, leaving the alpha channel free to carry custom data.
-            const auto Premultiply = [Brightness = Environment.GetBrightness()](IntColor8 Tint, Real32 Alpha)
+            const auto Premultiply = [Scale = Environment.GetBrightness()](IntColor8 Tint, Real32 Alpha)
             {
                 const Color Value = Math::Color::FromColor8(Tint);
-                return Color(Value.GetRed() * Brightness, Value.GetGreen() * Brightness, Value.GetBlue() * Brightness, Alpha);
+                return Color(Value.GetRed() * Scale, Value.GetGreen() * Scale, Value.GetBlue() * Scale, Alpha);
             };
 
             Encoder.SetPass(GpuSkylightLayout {

@@ -19,11 +19,11 @@ struct PackedFontParameters
     vec4  u_Transform2;
 
     uint  u_OutsetTint;
-    float u_OutsetOffset;
-    float u_OutsetWidth;
-    float u_OutsetBias;
-    float u_OutsetBlur;
-    float u_InsetRoundness;
+    float u_OutsetOffset;      // screen coverage, pixel absolute
+    float u_OutsetWidth;       // atlas distance, zoom relative
+    float u_OutsetBias;        // screen coverage, pixel absolute
+    float u_OutsetBlur;        // atlas distance, zoom relative
+    float u_InsetRoundness;    // 0 keeps the corner-true field, 1 the smooth one
     float u_InsetThreshold;
 };
 
@@ -41,7 +41,7 @@ layout(std140, binding = 3) uniform cb_Instance
 in vec4  a_Frame;   // normalized atlas edges: minimum.xy, maximum.xy
 in ivec2 a_Offset;  // corner within the text layout, in subpixel steps
 in uvec2 a_Size;    // extent, in subpixel steps
-in float a_Effect;  // the interned effect slot, reinterpreted as a float
+in uint a_Effect;   // the interned effect slot
 in vec4  a_Color;
 
 out vec4 v_Color;
@@ -64,7 +64,7 @@ void main()
 {
     vec2 Corner = TessellateRect(gl_VertexID);
 
-    PackedFontParameters Run = u_Parameters[floatBitsToUint(a_Effect)];
+    PackedFontParameters Run = u_Parameters[a_Effect];
 
     vec2 Plane    = (vec2(a_Offset) + Corner * vec2(a_Size)) * GLYPH_SUBPIXEL;
     vec3 Local    = vec3(Plane, 0.0);
@@ -78,7 +78,7 @@ void main()
 
     v_Texture = mix(a_Frame.xy, a_Frame.zw, Corner);
     v_Color   = a_Color;
-    v_Effect  = floatBitsToUint(a_Effect);
+    v_Effect  = a_Effect;
 }
 
 #endif // VERTEX_SHADER
@@ -139,7 +139,7 @@ void main()
     float BlurDist   = Font.u_InsetThreshold - DistanceSDF - Font.u_OutsetOffset / Scale;
     float BlurFactor = mix(1.0, 1.0 - smoothstep(BlurEnd, BlurStart, BlurDist), step(0.0001, Font.u_OutsetBlur));
 
-    out_Color = InnerColor * InnerOpacity + (OuterColor * BlurFactpr) * (OuterOpacity - InnerOpacity);
+    out_Color = InnerColor * InnerOpacity + (OuterColor * BlurFactor) * max(OuterOpacity - InnerOpacity, 0.0);
 }
 
 #endif // FRAGMENT_SHADER

@@ -4,9 +4,9 @@
 
 layout(std140, binding = 1) uniform cb_Pass
 {
-    vec4 u_SunColor;      // RGB = Color * Intensity, A = Sun Direction X
-    vec4 u_SkyColor;      // RGB = Color * Intensity, A = Sun Direction Y
-    vec4 u_GroundColor;   // RGB = Color * Intensity, A = Sun Direction Z
+    vec4 u_SunColor;      // RGB = Color * Intensity * Headroom, A = Sun Direction X
+    vec4 u_SkyColor;      // RGB = Color * Intensity * Headroom, A = Sun Direction Y
+    vec4 u_GroundColor;   // RGB = Color * Intensity * Headroom, A = Sun Direction Z
 };
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -35,25 +35,28 @@ uniform sampler2D t_Normal;
 
 in vec2 v_Texture;
 
-layout(location = 0) out vec4 out_Color;
+layout(location = 0) out vec3 out_Color;
 
 void main()
 {
-    vec4 Surface = texture(t_Normal, v_Texture);
+    vec4 Surface = texelFetch(t_Normal, ivec2(gl_FragCoord.xy), 0);
     vec3 Normal  = normalize(Surface.rgb * 2.0 - 1.0);
 
-    // Hemisphere ambient
+    // Hemisphere ambient. The weight is world Y, so this reads as "facing the sky" only because the normal
+    // buffer stores world-space normals with Y up.
     float Weight = Normal.y * 0.5 + 0.5;
     vec3 Ambient = mix(u_GroundColor.rgb, u_SkyColor.rgb, Weight);
+    vec3 Toward  = vec3(u_SunColor.w, u_SkyColor.w, u_GroundColor.w);
 
-    // Directional
-    vec3 SunDir = vec3(u_SunColor.w, u_SkyColor.w, u_GroundColor.w);
-    vec3 Toward = normalize(SunDir);
-
-    float Facing = max(max(dot(Normal, Toward), 0.0), max(dot(-Normal, Toward), 0.0) * (1.0 - Surface.a));
+    // The alpha of the normal buffer is opacity, which doubles as thickness: the more of it a surface lets
+    // through, the more the sun behind it shows.
+    float Facing = max(dot(Normal, Toward), 0.0) + max(dot(-Normal, Toward), 0.0) * (1.0 - Surface.a);
     vec3  Sun    = u_SunColor.rgb * Facing;
 
-    out_Color = vec4((Ambient + Sun) * 0.5, 1.0);
+    // Two independent contributions, so they sum, at whatever intensity they were authored with. Three
+    // channels, because that is what the radiance target has, and it is a float format with no ceiling to
+    // protect: the composite's tone curve is what brings the range back down.
+    out_Color = Ambient + Sun;
 }
 
 #endif // FRAGMENT_SHADER

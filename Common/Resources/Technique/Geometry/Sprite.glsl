@@ -27,8 +27,8 @@ out vec4 v_Color;
 #ifdef ENABLE_NORMAL_MAPPING
 out vec3 v_AxisX;
 out vec3 v_AxisY;
-out vec3 v_AxisZ;
 #endif
+out vec3 v_AxisZ;
 
 vec2 TessellateRect(int VertexID)
 {
@@ -63,8 +63,9 @@ void main()
 #ifdef ENABLE_NORMAL_MAPPING
     v_AxisX = normalize(vec3(a_Transform0.x, a_Transform1.x, a_Transform2.x));
     v_AxisY = normalize(vec3(a_Transform0.y, a_Transform1.y, a_Transform2.y));
-    v_AxisZ = normalize(vec3(a_Transform0.z, a_Transform1.z, a_Transform2.z));
 #endif
+
+    v_AxisZ = normalize(vec3(a_Transform0.z, a_Transform1.z, a_Transform2.z));
 }
 
 #endif // VERTEX_SHADER
@@ -87,8 +88,8 @@ in vec4 v_Color;
 #ifdef ENABLE_NORMAL_MAPPING
 in vec3 v_AxisX;
 in vec3 v_AxisY;
-in vec3 v_AxisZ;
 #endif
+in vec3 v_AxisZ;
 
 layout(location = 0) out vec4 out_Albedo;
 layout(location = 1) out vec4 out_Normal;
@@ -110,8 +111,6 @@ void main()
     vec4 Sampled = texture(t_Normal, v_Texture);
     vec3 Tangent = normalize(Sampled.rgb * 2.0 - 1.0);
     vec3 Normal  = normalize(Tangent.x * v_AxisX + Tangent.y * v_AxisY - Tangent.z * v_AxisZ);
-
-    // The sprite plane faces +Z, so the tangent-space Z carries over to world space unchanged.
 #if defined(ENABLE_TRANSLUCENCY)
     float Opacity = Sampled.a;
 #elif defined(ENABLE_ALPHA_TEST)
@@ -127,8 +126,7 @@ void main()
 #else
     float Opacity = out_Albedo.a;
 #endif
-
-    out_Normal = vec4(0.5, 0.5, 0.0, Opacity);
+    out_Normal = vec4(-v_AxisZ * 0.5 + 0.5, Opacity);
 #endif
 }
 

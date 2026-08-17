@@ -94,7 +94,7 @@ namespace Tileon
             Array<UInt16, 2> Size;
 
             /// The slot of the run the glyph belongs to, reinterpreted as a float for the vertex stream.
-            Real32           Effect;
+            UInt32           Effect;
 
             /// Color tint to apply to the text, represented as an 8-bit integer color (RGBA).
             IntColor8        Color;

@@ -59,12 +59,31 @@ void main()
 
     // The projection is affine, so the sphere's screen half-extent is what each world axis contributes to the
     // screen at that radius. Summing them bounds the sphere by the box around it, conservative by the corners.
-    vec4 Middle = u_Camera * vec4(Center, 1.0);
-    vec2 Radius = abs((u_Camera * vec4(Extent, 0.0, 0.0, 0.0)).xy)
-                + abs((u_Camera * vec4(0.0, Extent, 0.0, 0.0)).xy)
-                + abs((u_Camera * vec4(0.0, 0.0, Extent, 0.0)).xy);
+    // The projection is affine, so each screen axis is a fixed combination of the three world axes. The
+    // furthest a unit sphere reaches along one is the length of that combination, not the sum of its parts:
+    // summing bounds the box the sphere sits in, which is wider by half again on an isometric camera.
+    vec2 Ex = (u_Camera * vec4(1.0, 0.0, 0.0, 0.0)).xy;
+    vec2 Ey = (u_Camera * vec4(0.0, 1.0, 0.0, 0.0)).xy;
+    vec2 Ez = (u_Camera * vec4(0.0, 0.0, 1.0, 0.0)).xy;
 
-    vec2 Clip = Middle.xy + (Corner * 2.0 - 1.0) * Radius;
+    vec2 Spread = vec2(length(vec3(Ex.x, Ey.x, Ez.x)),
+                       length(vec3(Ex.y, Ey.y, Ez.y)));
+
+#if defined(LIGHT_SPOT)
+    // A cone fits inside its range's sphere but barely fills it. Its hull is the apex together with the disc
+    // it opens onto, so bounding those two and boxing the pair is far tighter wherever the beam is narrow.
+    float Widest = Extent * sqrt(clamp(1.0 - a_Outer * a_Outer, 0.0, 1.0));
+    vec2  Apex   = (u_Camera * vec4(Center, 1.0)).xy;
+    vec2  Mouth  = (u_Camera * vec4(Center + a_Params1.xyz * Extent, 1.0)).xy;
+
+    vec2 Lower = min(Apex, Mouth - Widest * Spread);
+    vec2 Upper = max(Apex, Mouth + Widest * Spread);
+
+    vec2 Clip = mix(Lower, Upper, Corner);
+#else
+    vec4 Middle = u_Camera * vec4(Center, 1.0);
+    vec2 Clip   = Middle.xy + (Corner * 2.0 - 1.0) * (Extent * Spread);
+#endif
 
     gl_Position = vec4(Clip, 0.0, 1.0);
 
@@ -98,13 +117,17 @@ in vec4  v_Spot;
 in float v_Outer;
 #endif
 
-layout(location = 0) out vec4 out_Color;
+layout(location = 0) out vec3 out_Color;
 
 void main()
 {
     // Depth is position compressed to one channel: the pixel's clip coordinates plus its depth are three
     // knowns, and the inverse of the camera turns them back into the one world point that produced them.
-    float Depth = texture(t_Depth, v_Probe.zw).r;
+    // Read by texel, never by sampler: filtering across a silhouette averages the foreground's depth with
+    // the background's and unprojects to a point hanging in the gap between them, which rims every sprite
+    // with a lit or unlit halo. The fragment's own coordinate is already the texel.
+    ivec2 Texel = ivec2(gl_FragCoord.xy);
+    float Depth = texelFetch(t_Depth, Texel, 0).r;
     vec4  Probe = u_Inverse * vec4(v_Probe.xy, Depth, 1.0);
     vec3  World = Probe.xyz / Probe.w;
 
@@ -125,17 +148,27 @@ void main()
     }
 
 #ifdef ENABLE_NORMAL_MAPPING
-    vec4  Surface    = texture(t_Normal, v_Probe.zw);
-    vec3  Normal     = normalize(Surface.rgb * 2.0 - 1.0);
-    float Lambert    = clamp(dot(Normal, Incident) / 1.0, 0.0, 1.0);
+    // Filtering a normal across an edge blends two unrelated surfaces, so it is read by texel as well.
+    vec4 Surface = texelFetch(t_Normal, Texel, 0);
+    vec3 Normal  = normalize(Surface.rgb * 2.0 - 1.0);
 
-    float Through    = max(dot(-Normal, Incident), 0.0) * (1.0 - Surface.a);
-    float NormalDotL = max(Lambert, Through);
+    // The alpha of the normal buffer is opacity, which doubles as thickness: the more of it a surface
+    // lets through, the more a light behind it shows. That is what gives foliage its backlight, and it
+    // is why nothing else may claim that channel.
+    float Lambert = clamp(dot(Normal, Incident), 0.0, 1.0);
+    float Through = max(dot(-Normal, Incident), 0.0) * (1.0 - Surface.a);
+
+    // The two dots are exact negatives, so at most one of them survives the clamp and the sum is the one
+    // that did. Written as a sum rather than a maximum because it stays correct if either ever gains a
+    // wrap term and stops being mutually exclusive.
+    float NormalDotL = Lambert + Through;
 #else
     float NormalDotL = 1.0;
 #endif
 
-    out_Color = vec4(v_Color.rgb * (Attenuation * NormalDotL), Attenuation);
+    // Three channels, because that is what the radiance target has. The accumulation blend is a plain
+    // additive on colour alone, so the contribution is the whole of what this pass has to say.
+    out_Color = v_Color.rgb * (Attenuation * NormalDotL);
 }
 
 #endif // FRAGMENT_SHADER

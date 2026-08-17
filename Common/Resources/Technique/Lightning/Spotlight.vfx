@@ -25,7 +25,7 @@
   },
   "Signature": {
     "Uniforms": [
-      { "Frequency": "Frame",    "Name": "Camera", "Type": "Float4", "Count": 4 },
+      { "Frequency": "Frame",    "Name": "Camera",  "Type": "Float4", "Count": 4 },
       { "Frequency": "Instance", "Name": "Light",   "Type": "Float4", "Count": 4 },
       { "Frequency": "Pass",     "Name": "Inverse", "Type": "Float4", "Count": 4 }
     ],
@@ -34,8 +34,8 @@
       { "Name": "Depth",  "Frequency": "Pass" }
     ],
     "Samplers": [
-      { "Name": "Normal", "Frequency": "Pass", "Filter": "NearestMipNearest" },
-      { "Name": "Depth",  "Frequency": "Pass", "Filter": "NearestMipNearest" }
+      { "Name": "Normal", "Frequency": "Pass", "Filter": "Point" },
+      { "Name": "Depth",  "Frequency": "Pass", "Filter": "Point" }
     ]
   },
   "Program": {

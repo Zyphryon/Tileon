@@ -27,7 +27,7 @@
       { "Name": "Normal", "Frequency": "Pass" }
     ],
     "Samplers": [
-      { "Name": "Normal", "Frequency": "Pass", "Filter": "NearestMipNearest" }
+      { "Name": "Normal", "Frequency": "Pass", "Filter": "Point" }
     ]
   },
   "Program": {

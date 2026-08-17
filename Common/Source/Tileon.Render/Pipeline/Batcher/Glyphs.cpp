@@ -96,7 +96,7 @@ namespace Tileon
             Command.Generation    = RunData.Generation;
             Command.Material      = Material;
             Command.Technique     = AddressOf(Technique);
-            Command.Layout.Effect = CastBit<Real32>(static_cast<UInt32>(RunData.Slot));
+            Command.Layout.Effect = static_cast<UInt32>(RunData.Slot);
             Command.Layout.Frame  = Array(
                 EncodeUnitCoordinate(Placement.Atlas.GetMinimumX()),
                 EncodeUnitCoordinate(Placement.Atlas.GetMinimumY()),

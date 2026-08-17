@@ -21,11 +21,11 @@ cbuffer cb_Instance : register(b3)
         float4 u_Transform2;
 
         uint   u_OutsetTint;
-        float  u_OutsetOffset;
-        float  u_OutsetWidth;
-        float  u_OutsetBias;
-        float  u_OutsetBlur;
-        float  u_InsetRoundness;
+        float  u_OutsetOffset;      // screen coverage, pixel absolute
+        float  u_OutsetWidth;       // atlas distance, zoom relative
+        float  u_OutsetBias;        // screen coverage, pixel absolute
+        float  u_OutsetBlur;        // atlas distance, zoom relative
+        float  u_InsetRoundness;    // 0 keeps the corner-true field, 1 the smooth one
         float  u_InsetThreshold;
     };
     PackedFontParameters u_Parameters[128];
@@ -42,7 +42,7 @@ struct vs_Input
     float4   Frame      : SLOT0;  // normalized atlas edges: minimum.xy, maximum.xy
     int2     Offset     : SLOT1;  // corner within the text layout, in subpixel steps
     uint2    Size       : SLOT2;  // extent, in subpixel steps
-    float    Effect     : SLOT3;  // the interned run slot, reinterpreted as a float
+    uint     Effect     : SLOT3;  // the interned run slot
     float4   Color      : SLOT4;
 };
 
@@ -77,7 +77,7 @@ fs_Input main(vs_Input Input)
 {
     const float2 Corner = TessellateRect(Input.VertexID);
 
-    const PackedFontParameters Run = u_Parameters[asuint(Input.Effect)];
+    const PackedFontParameters Run = u_Parameters[Input.Effect];
 
     const float2 Plane    = (float2(Input.Offset) + Corner * float2(Input.Size)) * GLYPH_SUBPIXEL;
     const float3 Local    = float3(Plane, 0.0);
@@ -92,7 +92,7 @@ fs_Input main(vs_Input Input)
     Result.Position = mul(u_Camera, float4(Position, 1.0));
     Result.Texture  = lerp(Input.Frame.xy, Input.Frame.zw, Corner);
     Result.Color    = Input.Color;
-    Result.Effect   = asuint(Input.Effect);
+    Result.Effect   = Input.Effect;
 
     return Result;
 }
@@ -155,8 +155,7 @@ float4 main(fs_Input Input) : SV_Target
     const float BlurDist   = Font.u_InsetThreshold - DistanceSDF - Font.u_OutsetOffset / Scale;
     const float BlurFactor = lerp(1.0, 1.0 - smoothstep(BlurEnd, BlurStart, BlurDist), step(0.0001, Font.u_OutsetBlur));
 
-    float4 Result = (InnerColor * InnerOpacity) + ((OuterColor * BlurFactor) * (OuterOpacity - InnerOpacity));
-    return Result;
+    return (InnerColor * InnerOpacity) + ((OuterColor * BlurFactor) * max(OuterOpacity - InnerOpacity, 0.0));
 }
 
 #endif // FRAGMENT_SHADER

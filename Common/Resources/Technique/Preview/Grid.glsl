@@ -4,7 +4,7 @@
 
 layout(std140, binding = 1) uniform cb_Pass
 {
-    mat4 u_Camera;      // Inverse view-projection.
+    mat4 u_Inverse;
     vec2 u_Dimension;
 };
 
@@ -28,8 +28,8 @@ void main()
     vec2 Corner = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
     gl_Position = vec4(Corner * 2.0 - 1.0, 0.0, 1.0);
 
-    vec4 Head = u_Camera * vec4(gl_Position.xy, 0.0, 1.0);
-    vec4 Tail = u_Camera * vec4(gl_Position.xy, 1.0, 1.0);
+    vec4 Head = u_Inverse * vec4(gl_Position.xy, 0.0, 1.0);
+    vec4 Tail = u_Inverse * vec4(gl_Position.xy, 1.0, 1.0);
 
     vec3 Origin    = Head.xyz / Head.w;
     vec3 Direction = Tail.xyz / Tail.w - Origin;

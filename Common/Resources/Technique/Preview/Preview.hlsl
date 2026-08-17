@@ -1,3 +1,7 @@
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// Uniforms
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
 #if defined(PREVIEW_DEPTH)
 cbuffer cb_Pass : register(b1)
 {
@@ -30,8 +34,6 @@ fs_Input main(uint VertexID : SV_VertexID)
 
     Result.Position  = float4(Result.Texture * 2.0 - 1.0, 0.0, 1.0);
     Result.Probe     = Result.Position.xy;
-
-    // D3D samples from the top-left, so the row the clip position lands on is the mirror of the texture's.
     Result.Texture.y = 1.0 - Result.Texture.y;
 
     return Result;
@@ -68,9 +70,6 @@ float4 main(fs_Input Input) : SV_Target0
 
     const float Elevation = saturate(World.y / ELEVATION_SCALE);
 
-    // The camera reserves a band either side of the world, so where a pixel lands says whether it is drawn
-    // where it belongs. The world's own band ramps grey by elevation, the floor sitting at the dark end and
-    // whatever stands on it climbing towards white.
     float3 Color = lerp(float3(0.12, 0.12, 0.12), float3(1.0, 1.0, 1.0), Elevation);
 
     Color = lerp(Color, float3(0.15, 0.45, 1.00), step(Depth, PREVIEW_MIDGROUND));
