@@ -34,10 +34,10 @@ namespace Tileon
         /// \brief Default filename format for storing region data.
         static constexpr Symbol kRegionFilename       = "Resources://World/{0}_{1}.region";
 
-        /// \brief Extent of the cell hierarchy for loose spatial partitioning (in tiles).
+        /// \brief Extent of the cell hierarchy for loose spatial partitioning (in world units).
         static constexpr UInt32 kHierarchyLooseExtent = 8;
 
-        /// \brief Bit shift value for converting world tile coordinates to loose cell coordinates.
+        /// \brief Bit shift value for converting world unit coordinates to loose cell coordinates.
         static constexpr UInt32 kHierarchyLooseLog    = Base::Log(kHierarchyLooseExtent);
 
     public:
@@ -279,7 +279,6 @@ namespace Tileon
                 }
                 return false;
             }
-
         };
 
         /// \brief Holds a resident region together with the slice of the spatial hierarchy that covers it.
@@ -402,7 +401,7 @@ namespace Tileon
 
         /// \brief Visits every resident slot whose boundaries meet the given volume.
         ///
-        /// \param Volume    The volume to walk, in absolute world tiles.
+        /// \param Volume    The volume to walk, in absolute world units.
         /// \param Predicate Invoked per slot that survives the rejection; returning `true` stops the walk.
         /// \return `true` if the predicate stopped the walk, `false` if it ran to completion.
         template<typename Function>

@@ -17,7 +17,7 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Pipeline
+namespace Tileon::Stage
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -36,7 +36,7 @@ namespace Tileon::Pipeline
 
     void Composite::Run(Ref<Render::Encoder> Encoder)
     {
-        ZY_PROFILE_SCOPE("Pipeline::Composite::Run");
+        ZY_PROFILE_SCOPE("Stage::Composite::Run");
 
         // The scene authors its exposure and its curve alongside the rest of the environment.
         Real32            Exposure = 1.0f;
@@ -55,7 +55,7 @@ namespace Tileon::Pipeline
 
         ConstRetainer<Graphic::Technique> Technique = mTechniques[Enum::Cast(Kind::Composite)];
 
-        // The base variant carries the Gran Turismo curve, so only another operator names a feature to compile in.
+        // The base variant carries the Polyphon curve, so only another operator names a feature to compile in.
         const Graphic::Technique::Key Variant = Tonemap == Skylight::Tonemap::GT7
             ? 0
             : Technique->ResolveByName(Enum::GetName(Tonemap));

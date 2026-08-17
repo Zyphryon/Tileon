@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Common.hpp"
+#include "Batch.hpp"
 #include "Tileon.Render/Component/Appearance.hpp"
 #include "Zyphryon.Render/Encoder.hpp"
 
@@ -20,10 +20,10 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon
+namespace Tileon::Batcher
 {
     /// \brief Records the sprites of a pass and writes back the batches the collector hands it.
-    class Sprites final
+    class Sprite final
     {
     public:
 
@@ -31,12 +31,15 @@ namespace Tileon
         ///
         /// \param Service   The service the transient instance streams are allocated from.
         /// \param Collector The collector the sprites are ordered and batched by.
-        Sprites(ConstRetainer<Graphic::Service> Service, Ref<Render::Collector> Collector);
+        Sprite(ConstRetainer<Graphic::Service> Service, Ref<Render::Collector> Collector);
 
         /// \brief Sets the technique subsequent sprites are recorded under.
         ///
         /// \param Technique The technique to set for subsequent sprites.
-        void SetTechnique(ConstRetainer<Graphic::Technique> Technique);
+        /// \param Variant  The features the caller turns on itself, beyond the ones a material implies.
+        /// \param Priority The queue the draws are collected into, which the open pass decides.
+        void SetTechnique(ConstRetainer<Graphic::Technique> Technique,
+            Graphic::Technique::Key Variant, Render::Collector::Priority Priority);
 
         /// \brief Records a sprite with the specified parameters.
         ///
@@ -58,7 +61,7 @@ namespace Tileon
     private:
 
         /// \brief Defines a structure representing the input data for drawing a sprite in the GPU.
-        struct SpriteLayout final
+        struct Layout final
         {
             /// The transformation matrix to apply to the sprite for positioning, scaling, and rotation.
             Array<Real32, 12> Transform;
@@ -71,19 +74,25 @@ namespace Tileon
 
             /// Color tint to apply to the sprite, represented as an 8-bit integer color (RGBA).
             IntColor8         Color;
+
+            /// How the art is laid down, as the bits the technique tests for mirroring and transposing.
+            UInt32            Facing;
         };
 
         /// \brief Defines a draw command for a sprite, containing its input data.
-        struct SpriteCommand final
+        struct Command final
         {
             /// The graphics technique to use for rendering the sprite.
             ConstPtr<Graphic::Technique> Technique;
+
+            /// The features the technique is drawn with, which keeps one variant's draws out of another's batch.
+            Graphic::Technique::Key      Variant;
 
             /// The material to use for rendering the sprite, containing shader parameters and resources.
             ConstPtr<Graphic::Material>  Material;
 
             /// The input data for the sprite.
-            SpriteLayout                 Layout;
+            Batcher::Sprite::Layout      Layout;
         };
 
     private:
@@ -94,7 +103,8 @@ namespace Tileon
         Retainer<Graphic::Service>   mService;
         Ref<Render::Collector>       mCollector;
         Retainer<Graphic::Technique> mTechnique;
+        Graphic::Technique::Key      mVariant;
         Render::Collector::Priority  mPriority;
-        Sequence<SpriteCommand>      mSprites;
+        Sequence<Command>            mCommands;
     };
 }

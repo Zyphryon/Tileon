@@ -19,7 +19,6 @@
 #include "Component/Glowlight.hpp"
 #include "Component/Label.hpp"
 #include "Component/Lettering.hpp"
-#include "Component/Mosaic.hpp"
 #include "Component/Shading.hpp"
 #include "Component/Skylight.hpp"
 #include "Component/Spotlight.hpp"

@@ -37,20 +37,11 @@ namespace Tileon::Editor
 
     private:
 
-        /// \brief Draws the tab listing the terrains available in the repository.
-        void DrawTerrainTab();
-
         /// \brief Draws the tab listing the archetypes available in the repository.
         void DrawEntityTab();
 
-        /// \brief Draws the gallery of terrains available in the repository.
-        void DrawTerrainGallery();
-
         /// \brief Draws the gallery of archetypes available in the repository.
         void DrawEntityGallery();
-
-        /// \brief Draws the status bar contents describing the selected terrain.
-        void DrawTerrainStatus();
 
         /// \brief Draws the status bar contents describing the selected archetype.
         void DrawEntityStatus();
@@ -65,14 +56,11 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Ref<Repository>  mRepository;
-        Ref<Tileset>     mTileset;
+        Ref<Repository> mRepository;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Gallery          mTerrains;
-        Gallery          mEntities;
-        SInt32           mMode;
+        Gallery         mEntities;
     };
 }

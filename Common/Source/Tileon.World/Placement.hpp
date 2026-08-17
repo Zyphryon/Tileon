@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Region.hpp"
+#include "Component/Region.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -31,17 +31,17 @@ namespace Tileon
         /// \brief The maximum region coordinate in the world.
         static constexpr SInt16 kMaxRegion = kMaximum<SInt16>;
 
-        /// \brief The minimum tile coordinate in the world per x-axis.
-        static constexpr SInt32 kMinTileX  = static_cast<SInt32>(kMinRegion) * Region::kTilesPerX;
+        /// \brief The minimum unit coordinate in the world per x-axis.
+        static constexpr SInt32 kMinUnitX  = static_cast<SInt32>(kMinRegion) * Region::kUnitsPerX;
 
-        /// \brief The maximum tile coordinate in the world per x-axis.
-        static constexpr SInt32 kMaxTileX  = (static_cast<SInt32>(kMaxRegion) + 1) * Region::kTilesPerX - 1;
+        /// \brief The maximum unit coordinate in the world per x-axis.
+        static constexpr SInt32 kMaxUnitX  = (static_cast<SInt32>(kMaxRegion) + 1) * Region::kUnitsPerX - 1;
 
-        /// \brief The minimum tile coordinate in the world per y-axis.
-        static constexpr SInt32 kMinTileY  = static_cast<SInt32>(kMinRegion) * Region::kTilesPerY;
+        /// \brief The minimum unit coordinate in the world per y-axis.
+        static constexpr SInt32 kMinUnitY  = static_cast<SInt32>(kMinRegion) * Region::kUnitsPerY;
 
-        /// \brief The maximum tile coordinate in the world per y-axis.
-        static constexpr SInt32 kMaxTileY  = (static_cast<SInt32>(kMaxRegion) + 1) * Region::kTilesPerY - 1;
+        /// \brief The maximum unit coordinate in the world per y-axis.
+        static constexpr SInt32 kMaxUnitY  = (static_cast<SInt32>(kMaxRegion) + 1) * Region::kUnitsPerY - 1;
 
     public:
 
@@ -105,7 +105,7 @@ namespace Tileon
         /// \return The shifted x-coordinate of the region.
         ZY_INLINE constexpr SInt32 GetBaseX() const
         {
-            return mRegionX * Region::kTilesPerX;
+            return mRegionX * Region::kUnitsPerX;
         }
 
         /// \brief Gets the shifted y-coordinate of the region.
@@ -113,7 +113,7 @@ namespace Tileon
         /// \return The shifted y-coordinate of the region.
         ZY_INLINE constexpr SInt32 GetBaseY() const
         {
-            return mRegionY * Region::kTilesPerY;
+            return mRegionY * Region::kUnitsPerY;
         }
 
         /// \brief Gets the absolute x-coordinate in the world by combining the region's x-coordinate and the offset.
@@ -121,7 +121,7 @@ namespace Tileon
         /// \return The absolute x-coordinate in the world.
         ZY_INLINE constexpr Real64 GetAbsoluteX() const
         {
-            return (mRegionX * Region::kTilesPerX) + mOffsetX;
+            return (mRegionX * Region::kUnitsPerX) + mOffsetX;
         }
 
         /// \brief Gets the absolute y-coordinate in the world by combining the region's y-coordinate and the offset.
@@ -129,7 +129,7 @@ namespace Tileon
         /// \return The absolute y-coordinate in the world.
         ZY_INLINE constexpr Real64 GetAbsoluteY() const
         {
-            return (mRegionY * Region::kTilesPerY) + mOffsetY;
+            return (mRegionY * Region::kUnitsPerY) + mOffsetY;
         }
 
         /// \brief Adds two placements together.
@@ -210,10 +210,10 @@ namespace Tileon
         /// \param AbsoluteY The absolute y-coordinate in the world, which will be used to determine the region and offset.
         ZY_INLINE static Placement FromAbsolute(Real64 AbsoluteX, Real64 AbsoluteY)
         {
-            const SInt16 RegionX = static_cast<SInt16>(Floor(AbsoluteX / (Region::kTilesPerX)));
-            const SInt16 RegionY = static_cast<SInt16>(Floor(AbsoluteY / (Region::kTilesPerY)));
-            const Real32 OffsetX = static_cast<Real32>(AbsoluteX - (RegionX * Region::kTilesPerX));
-            const Real32 OffsetY = static_cast<Real32>(AbsoluteY - (RegionY * Region::kTilesPerY));
+            const SInt16 RegionX = static_cast<SInt16>(Floor(AbsoluteX / (Region::kUnitsPerX)));
+            const SInt16 RegionY = static_cast<SInt16>(Floor(AbsoluteY / (Region::kUnitsPerY)));
+            const Real32 OffsetX = static_cast<Real32>(AbsoluteX - (RegionX * Region::kUnitsPerX));
+            const Real32 OffsetY = static_cast<Real32>(AbsoluteY - (RegionY * Region::kUnitsPerY));
             return Placement(RegionX, RegionY, OffsetX, OffsetY);
         }
 
@@ -223,14 +223,14 @@ namespace Tileon
         /// \return A new placement with normalized region coordinates and offset.
         ZY_INLINE static Placement Normalize(Placement Input)
         {
-            const SInt32 DeltaX = static_cast<SInt32>(Floor(Input.GetOffsetX() / Region::kTilesPerX));
-            const SInt32 DeltaY = static_cast<SInt32>(Floor(Input.GetOffsetY() / Region::kTilesPerY));
+            const SInt32 DeltaX = static_cast<SInt32>(Floor(Input.GetOffsetX() / Region::kUnitsPerX));
+            const SInt32 DeltaY = static_cast<SInt32>(Floor(Input.GetOffsetY() / Region::kUnitsPerY));
 
             return Placement(
                 Input.GetRegionX() + DeltaX,
                 Input.GetRegionY() + DeltaY,
-                Input.GetOffsetX() - DeltaX * Region::kTilesPerX,
-                Input.GetOffsetY() - DeltaY * Region::kTilesPerY);
+                Input.GetOffsetX() - DeltaX * Region::kUnitsPerX,
+                Input.GetOffsetY() - DeltaY * Region::kUnitsPerY);
         }
 
         /// \brief Clamps a placement to the valid world boundaries defined by the region limits.
@@ -240,8 +240,8 @@ namespace Tileon
         ZY_INLINE static Placement Clamp(Placement Input)
         {
             return FromAbsolute(
-                Base::Clamp(Input.GetAbsoluteX(), static_cast<Real64>(kMinTileX), static_cast<Real64>(kMaxTileX)),
-                Base::Clamp(Input.GetAbsoluteY(), static_cast<Real64>(kMinTileY), static_cast<Real64>(kMaxTileY)));
+                Base::Clamp(Input.GetAbsoluteX(), static_cast<Real64>(kMinUnitX), static_cast<Real64>(kMaxUnitX)),
+                Base::Clamp(Input.GetAbsoluteY(), static_cast<Real64>(kMinUnitY), static_cast<Real64>(kMaxUnitY)));
         }
 
         /// \brief Linearly interpolates between two placements.

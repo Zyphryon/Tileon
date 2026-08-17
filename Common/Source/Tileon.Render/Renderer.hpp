@@ -13,12 +13,10 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Director.hpp"
-#include "Pipeline/Preview.hpp"
-#include "Tileset.hpp"
+#include "Stage/Preview.hpp"
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Engine/Locator.hpp>
 #include <Zyphryon.Render/Graph.hpp>
-#include <Zyphryon.Scene/Service.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -51,7 +49,7 @@ namespace Tileon
         };
 
         /// \brief Represents the diagnostic overlays the pipeline can draw over the composed scene.
-        using Debug = Pipeline::Preview::Property;
+        using Debug = Stage::Preview::Property;
 
     public:
 
@@ -59,15 +57,8 @@ namespace Tileon
         ///
         /// \param Host      The service host to associate with the renderer.
         /// \param Immediate `true` composes into the display otherwise composes into \ref Target::Final.
-        Renderer(Ref<Engine::Subsystem::Host> Host, Bool Immediate);
-
-        /// \brief Gets the tileset associated with the renderer.
-        ///
-        /// \return The tileset associated with the renderer.
-        ZY_INLINE Ref<Tileset> GetTileset()
-        {
-            return mTileset;
-        }
+        /// \param Density   The pixel density the stages measure and project against.
+        Renderer(Ref<Engine::Subsystem::Host> Host, Bool Immediate, Real32 Density);
 
         /// \brief Loads necessary resources and initializes the renderer.
         void Load();
@@ -80,11 +71,6 @@ namespace Tileon
         /// \param Width  The new width of the viewport in pixels.
         /// \param Height The new height of the viewport in pixels.
         void Resize(UInt16 Width, UInt16 Height);
-
-        /// \brief Sets how many pixels of art the project maps onto one world unit.
-        ///
-        /// \param Density The pixel density sprites are measured against.
-        void SetDensity(UInt16 Density);
 
         /// \brief Executes the rendering pipeline to compose the scene.
         ///
@@ -136,26 +122,31 @@ namespace Tileon
 
     private:
 
+        /// \brief The view matrices every stage is handed, bound at scope zero for the whole frame.
+        struct GpuFrameLayout final
+        {
+            /// Turns world space into clip space.
+            Matrix4x4 Camera;
+
+            /// Turns clip space back into world space, which is what a screen-space probe reads through.
+            Matrix4x4 CameraInverse;
+        };
+
         /// \brief Declares the pipeline's managed targets and its stages, in execution order.
         ///
         /// \param Host      The service host to associate with each stage.
         /// \param Immediate If `true`, the composite stage targets the display instead of \ref Target::Final.
-        void OnCreate(Ref<Engine::Subsystem::Host> Host, Bool Immediate);
-
-        /// \brief Registers the renderer with the specified scene service.
-        ///
-        /// \param Scene The scene service to register with.
-        void OnRegister(Ref<Scene::Service> Scene);
+        /// \param Density   The pixel density handed to every stage that measures against it.
+        void OnCreate(Ref<Engine::Subsystem::Host> Host, Bool Immediate, Real32 Density);
 
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Render::Graph          mRenderer;
-        Tileset                mTileset;
-        Ptr<Pipeline::Preview> mPreview;
-        Target                 mOutput;
-        Bool                   mImmediate;
+        Render::Graph       mRenderer;
+        Ptr<Stage::Preview> mPreview;
+        Target              mOutput;
+        Bool                mImmediate;
     };
 }

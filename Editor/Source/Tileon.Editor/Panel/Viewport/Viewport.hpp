@@ -84,9 +84,6 @@ namespace Tileon::Editor
         /// \param Actor The entity a click would take, if any.
         void DrawSelectionHint(ConstRef<Camera> Camera, Scene::Entity Actor);
 
-        /// \brief Draws the tile editing toolbar for the scene activity.
-        void DrawTileToolbar();
-
         /// \brief Draws the entity editing toolbar for the scene activity.
         void DrawEntityToolbar();
 
@@ -154,7 +151,5 @@ namespace Tileon::Editor
         Bool             mMarqueeMoved;
         Bool             mStroke;
         ImVec2           mMarqueeScreen;
-        SInt32           mPaintTileX;
-        SInt32           mPaintTileY;
     };
 }

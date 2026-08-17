@@ -25,9 +25,7 @@ namespace Tileon::Editor
 
     Palette::Palette(Ref<Context> Context)
         : Panel       { Context, "Palette", true },
-          mRepository { Context.GetRepository() },
-          mTileset    { Context.GetTileset() },
-          mMode       { -1 }
+          mRepository { Context.GetRepository() }
     {
     }
 
@@ -41,71 +39,11 @@ namespace Tileon::Editor
 
         if (Toolkit::Composer::Begin(GetTitle(), mVisible))
         {
-            const Tools::Mode Mode     = GetContext().GetEnum("Tools.Mode", Tools::Mode::Tile);
-            const Bool           External = (static_cast<SInt32>(Mode) != mMode);
-
-            if (Toolkit::Composer::BeginTabBar("##palette_tabs"))
-            {
-                const ImGuiTabItemFlags TerrainFlags =
-                    (External && Mode == Tools::Mode::Tile)
-                        ? ImGuiTabItemFlags_SetSelected
-                        : ImGuiTabItemFlags_None;
-
-                if (Toolkit::Composer::BeginTabItem("Terrain", TerrainFlags))
-                {
-                    if (Mode != Tools::Mode::Tile)
-                    {
-                        GetContext().SetEnum("Tools.Mode", Tools::Mode::Tile);
-                    }
-
-                    DrawTerrainTab();
-                    Toolkit::Composer::EndTabItem();
-                }
-
-                const ImGuiTabItemFlags EntityFlags =
-                    (External && Mode == Tools::Mode::Entity)
-                        ? ImGuiTabItemFlags_SetSelected
-                        : ImGuiTabItemFlags_None;
-
-                if (Toolkit::Composer::BeginTabItem("Entity", EntityFlags))
-                {
-                    if (Mode != Tools::Mode::Entity)
-                    {
-                        GetContext().SetEnum("Tools.Mode", Tools::Mode::Entity);
-                    }
-
-                    DrawEntityTab();
-                    Toolkit::Composer::EndTabItem();
-                }
-
-                Toolkit::Composer::EndTabBar();
-            }
-
-            mMode = static_cast<SInt32>(GetContext().GetEnum("Tools.Mode", Tools::Mode::Tile));
+            DrawEntityTab();
         }
         Toolkit::Composer::End();
     }
 
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Palette::DrawTerrainTab()
-    {
-        mTerrains.DrawToolbar();
-        Toolkit::Composer::Separator();
-
-        const Real32 BodyHeight = -(Toolkit::Composer::GetFrameHeightWithSpacing() + 8.0f);
-        Toolkit::Composer::BeginChild("##terrain_body", ImVec2(0.0f, BodyHeight), ImGuiChildFlags_None);
-        DrawTerrainGallery();
-        Toolkit::Composer::EndChild();
-
-        DrawBottomBar("##terrain_status", [&](Real32)
-        {
-            DrawTerrainStatus();
-        });
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     void Palette::DrawEntityTab()
@@ -122,53 +60,6 @@ namespace Tileon::Editor
         {
             DrawEntityStatus();
         });
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Palette::DrawTerrainGallery()
-    {
-        mTerrains.SetSelection(GetContext().GetInteger("Selection.Tile", 0));
-
-        mTerrains.Begin();
-        mRepository.ForEachTerrain([&](ConstRef<Terrain> Terrain)
-        {
-            ConstRef<Tileset::Glyph> Glyph = mTileset.GetGlyph(Terrain.GetID());
-
-            Bool WasSelected;
-
-            // Draw the terrain item in the gallery, showing the array slice its motif was promoted into.
-            if (Glyph.GetTexture(Motif::Source::Albedo))
-            {
-                // Every slice shares one identifier, so which of them is drawn rides in the coordinates.
-                const ImTextureID Thumbnail = Plugin::ImGuiRenderer::GetLayeredTextureID(Glyph.GetTexture(Motif::Source::Albedo));
-                const Real32      Offset    = Glyph.Slice * Plugin::ImGuiRenderer::kSliceStride;
-
-                WasSelected = mTerrains.DrawItem(
-                    Terrain.GetID(),
-                    Terrain.GetName(), Thumbnail, Rect(Offset, 0.0f, Offset + 1.0f, 1.0f), Glyph.Tint);
-            }
-            else
-            {
-                WasSelected = mTerrains.DrawItem(Terrain.GetID(), Terrain.GetName());
-            }
-
-            // Set the selected tile in the context when the item is clicked.
-            if (WasSelected)
-            {
-                GetContext().SetInteger("Selection.Tile", Terrain.GetID());
-            }
-        });
-        mTerrains.End();
-
-        // Right-clicking a terrain jumps to the Terrains with it selected, keeping the palette and editor in sync.
-        if (const SInt64 Target = mTerrains.GetActivated(); Target >= 0)
-        {
-            GetContext().SetString("Navigate.Panel", "Terrains");
-            GetContext().SetInteger("Selection.Tile", Target);
-            GetContext().SetInteger("Selection.Tile.Target", Target);
-        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -232,28 +123,6 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Palette::DrawTerrainStatus()
-    {
-        const UInt16 Selection = GetContext().GetInteger("Selection.Tile", 0);
-
-        if (mRepository.HasTerrain(Selection))
-        {
-            ConstRef<Terrain> Terrain = mRepository.GetTerrain(Selection);
-
-            Toolkit::Composer::SetCursorPosX(Toolkit::Composer::GetStyle().ItemSpacing.x);
-            Toolkit::Composer::Label("{0:04}  {1}", Selection, Terrain.GetName().IsEmpty()
-                ? "(Unnamed)"
-                : Terrain.GetName());
-        }
-        else
-        {
-            DrawHint("No terrain selected");
-        }
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
     void Palette::DrawEntityStatus()
     {
         const UInt32        Selection = GetContext().GetInteger("Selection.Archetype", 0);
@@ -273,6 +142,8 @@ namespace Tileon::Editor
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     void Palette::DrawHint(Text Hint)

@@ -31,14 +31,8 @@ namespace Tileon
         ///
         /// \param Host      The service host to associate with the presenter.
         /// \param Immediate `true`, renders directly to the display, otherwise renders to an off-screen texture.
-        explicit Presenter(Ref<Engine::Subsystem::Host> Host, Bool Immediate);
-
-        /// \brief Initializes the world and related systems with the specified parameters.
-        ///
-        /// \param Width   The display width (in pixels) for rendering the world.
-        /// \param Height  The display height (in pixels) for rendering the world.
-        /// \param Density The pixel density that defines how many pixels one logical world unit occupies on screen.
-        void Init(UInt16 Width, UInt16 Height, UInt16 Density);
+        /// \param Density   The pixel density one world unit occupies, fixed for the session's lifetime.
+        Presenter(Ref<Engine::Subsystem::Host> Host, Bool Immediate, Real32 Density);
 
         /// \brief Loads the world and the tileset the pipeline draws it with.
         void Load();

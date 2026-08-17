@@ -18,7 +18,7 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Pipeline
+namespace Tileon::Stage
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -44,11 +44,7 @@ namespace Tileon::Pipeline
 
     void Preview::Run(Ref<Render::Encoder> Encoder)
     {
-        ZY_PROFILE_SCOPE("Pipeline::Preview::Run");
-
-        Encoder.SetPass(GpuPreviewLayout {
-            .Inverse = mDirector->GetViewProjectionInverse()
-        });
+        ZY_PROFILE_SCOPE("Stage::Preview::Run");
 
         // Color is what the technique reads by default, so only a buffer that has to be decoded names a variant.
         const Bool Decoded = (mSource == Kind::Normal || mSource == Kind::Depth);
@@ -74,8 +70,7 @@ namespace Tileon::Pipeline
     void Preview::DrawGrid(Ref<Render::Encoder> Encoder)
     {
         Encoder.SetPass(GpuGridLayout {
-            .Camera    = mDirector->GetViewProjectionInverse(),
-            .Dimension = Vector2(Region::kTilesPerX, Region::kTilesPerY)
+            .Dimension = Vector2(Region::kUnitsPerX, Region::kUnitsPerY)
         });
         Encoder.Begin(* mOverlays[Enum::Cast(Overlay::Grid)]).DrawFullscreen();
     }
@@ -112,7 +107,7 @@ namespace Tileon::Pipeline
         }
         else
         {
-            mQrDrawLightBoundaries.Run([&](Scene::Entity Actor, ConstRef<Enclosure> Enclosure)
+            mQrDrawLightingBoundaries.Run([&](Scene::Entity Actor, ConstRef<Enclosure> Enclosure)
             {
                 if (const IntBox Volume = Enclosure.GetVolume(); mDirector->IsVisible(Volume))
                 {
@@ -149,13 +144,13 @@ namespace Tileon::Pipeline
     {
         mQrDrawGeometryBoundaries = Scene.CreateQuery<
             Scene::DSL::In<const Enclosure>,
-            Scene::DSL::Not<Glowlight, Spotlight>
+            Scene::DSL::With<Sprite, Lettering>
         >("Render::Preview::DrawGeometryBoundaries", Scene::Cache::Auto);
 
-        mQrDrawLightBoundaries = Scene.CreateQuery<
+        mQrDrawLightingBoundaries = Scene.CreateQuery<
             Scene::DSL::In<const Enclosure>,
-            Scene::DSL::Not<Sprite, Lettering>
-        >("Render::Preview::DrawLightBoundaries", Scene::Cache::Auto);
+            Scene::DSL::With<Glowlight, Spotlight>
+        >("Render::Preview::DrawLightingBoundaries", Scene::Cache::Auto);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

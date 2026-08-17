@@ -17,5 +17,6 @@
 #include "Component/Extent.hpp"
 #include "Component/Lifecycle.hpp"
 #include "Component/Pose.hpp"
+#include "Component/Region.hpp"
 #include "Component/Transform.hpp"
 #include "Component/Velocity.hpp"

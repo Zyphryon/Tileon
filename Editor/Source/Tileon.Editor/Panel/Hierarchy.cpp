@@ -172,8 +172,8 @@ namespace Tileon::Editor
         if (const ConstPtr<Region> Placed = Actor.TryGet<const Region>())
         {
             Target = Placement::FromAbsolute(
-                Placed->GetX() * Region::kTilesPerX + Region::kTilesPerX * 0.5,
-                Placed->GetY() * Region::kTilesPerY + Region::kTilesPerY * 0.5);
+                Placed->GetX() * Region::kUnitsPerX + Region::kUnitsPerX * 0.5,
+                Placed->GetY() * Region::kUnitsPerY + Region::kUnitsPerY * 0.5);
             Active = true;
         }
         else

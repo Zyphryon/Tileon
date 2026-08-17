@@ -12,7 +12,6 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Terrain.hpp"
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Scene/Service.hpp>
 
@@ -29,12 +28,6 @@ namespace Tileon
 
         /// \brief Default filename for storing the world state.
         static constexpr Text   kManifestUri    = "Resources://Data/World.bin";
-
-        /// \brief Maximum number of terrains that can be stored in the repository.
-        static constexpr UInt32 kTerrainLimit   = 2'048;
-
-        /// \brief Default filename for storing terrains.
-        static constexpr Text   kTerrainUri     = "Resources://Data/Terrains.bin";
 
         /// \brief Maximum number of entity archetypes that can be stored in the repository.
         static constexpr UInt32 kArchetypeLimit = Scene::kMaxCountArchetypes;
@@ -94,49 +87,6 @@ namespace Tileon
             return GetService<Scene::Service>().GetEntity(Name);
         }
 
-        /// \brief Creates a new terrain in the repository.
-        ///
-        /// \return A reference to the terrain that was created.
-        Ref<Terrain> CreateTerrain();
-
-        /// \brief Creates a new terrain by copying an existing one.
-        ///
-        /// \param ID The unique identifier of the terrain to copy.
-        /// \return A reference to the terrain that was created.
-        Ref<Terrain> CloneTerrain(UInt16 ID);
-
-        /// \brief Deletes a terrain from the repository.
-        ///
-        /// \param ID The unique identifier of the terrain to delete from the repository.
-        void DeleteTerrain(UInt16 ID);
-
-        /// \brief Checks if a terrain with the given unique identifier exists in the repository.
-        ///
-        /// \param ID The unique identifier of the terrain to check for existence.
-        /// \return `true` if a terrain with the given ID exists, `false` otherwise.
-        ZY_INLINE Bool HasTerrain(UInt16 ID) const
-        {
-            return mTerrains.IsAllocated(ID);
-        }
-
-        /// \brief Gets a terrain by its unique identifier.
-        ///
-        /// \param ID The unique identifier of the terrain.
-        /// \return A reference to the terrain corresponding to the given ID.
-        ZY_INLINE Ref<Terrain> GetTerrain(UInt16 ID)
-        {
-            return mTerrains[ID];
-        }
-
-        /// \brief Gets a terrain by its unique identifier.
-        ///
-        /// \param ID The unique identifier of the terrain.
-        /// \return A read-only reference to the terrain corresponding to the given ID.
-        ZY_INLINE ConstRef<Terrain> GetTerrain(UInt16 ID) const
-        {
-            return mTerrains[ID];
-        }
-
         /// \brief Iterates over all entity archetypes.
         ///
         /// \param Callback The callback function to apply to each archetype entity.
@@ -144,15 +94,6 @@ namespace Tileon
         ZY_INLINE void ForEachArchetype(AnyRef<Function> Callback) const
         {
             GetService<Scene::Service>().QueryArchetypes(Callback);
-        }
-
-        /// \brief Iterates over all terrains.
-        ///
-        /// \param Callback The callback function to apply to each terrain.
-        template<typename Function>
-        ZY_INLINE void ForEachTerrain(AnyRef<Function> Callback) const
-        {
-            mTerrains.ForEach(Callback);
         }
 
     private:
@@ -168,18 +109,5 @@ namespace Tileon
 
         /// \brief Saves the entity archetype database to file.
         void SaveArchetypeDatabase();
-
-        /// \brief Loads the terrain database from file.
-        void LoadTerrainDatabase(Filesystem::Result Result, AnyRef<Blob> Data);
-
-        /// \brief Saves the terrain database to file.
-        void SaveTerrainDatabase();
-
-    private:
-
-        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-        // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-        Pool<Terrain, kTerrainLimit, 0> mTerrains;
     };
 }

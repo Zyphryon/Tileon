@@ -14,7 +14,8 @@
   },
   "Signature": {
     "Uniforms": [
-      { "Frequency": "Pass", "Name": "Inverse", "Type": "Float4", "Count": 4 }
+      { "Frequency": "Frame", "Name": "Camera",        "Type": "Float4", "Count": 4 },
+      { "Frequency": "Frame", "Name": "CameraInverse", "Type": "Float4", "Count": 4 }
     ],
     "Textures": [
       { "Name": "Source", "Frequency": "Pass" }

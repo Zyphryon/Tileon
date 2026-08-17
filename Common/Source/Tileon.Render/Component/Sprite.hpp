@@ -26,16 +26,34 @@ namespace Tileon
     {
     public:
 
-        /// \brief Default constructor.
-        ZY_INLINE Sprite() = default;
+        /// \brief Enumerates the orientations the art can be laid down with.
+        enum class Facing : UInt8
+        {
+            None    = 0,                 ///< The art as it was authored.
+            MirrorX = 1 << 0,            ///< The art mirrored across the x-axis.
+            MirrorY = 1 << 1,            ///< The art mirrored across the y-axis.
+            Both    = MirrorX | MirrorY, ///< The art mirrored across both axes.
+        };
+        ZY_DEFINE_BITWISE_FRIEND_ENUM(Facing)
+
+    public:
+
+        /// \brief Constructs a sprite with no art, laid down the way it was authored.
+        ZY_INLINE Sprite()
+            : mSource { Rect::One() },
+              mFacing { Facing::None }
+        {
+        }
 
         /// \brief Constructs a sprite with the specified path and source rectangle.
         ///
         /// \param Path   The path to the sprite's texture resource.
         /// \param Source The source rectangle for the sprite.
-        ZY_INLINE Sprite(AnyRef<Content::Uri> Path, Rect Source = Rect::One())
+        /// \param Facing The orientation of the sprite.
+        ZY_INLINE Sprite(AnyRef<Content::Uri> Path, Rect Source = Rect::One(), Facing Facing = Facing::None)
             : mPath   { Move(Path) },
-              mSource { Source }
+              mSource { Source },
+              mFacing { Facing }
         {
         }
 
@@ -71,6 +89,22 @@ namespace Tileon
             return mSource;
         }
 
+        /// \brief Sets the orientation of the sprite.
+        ///
+        /// \param Facing The orientation to lay the sprite down with.
+        ZY_INLINE void SetFacing(Facing Facing)
+        {
+            mFacing = Facing;
+        }
+
+        /// \brief Gets the orientation of the sprite.
+        ///
+        /// \return The orientation the sprite is laid down with.
+        ZY_INLINE Facing GetFacing() const
+        {
+            return mFacing;
+        }
+
         /// \brief Serializes the state of the object to or from the specified archive.
         ///
         /// \param Archive The archive to serialize the object with.
@@ -79,6 +113,7 @@ namespace Tileon
         {
             Archive.Serialize(mPath);
             Archive.Serialize(mSource);
+            Archive.Serialize(mFacing);
         }
 
     private:
@@ -88,5 +123,6 @@ namespace Tileon
 
         Content::Uri mPath;
         Rect         mSource;
+        Facing       mFacing;
     };
 }

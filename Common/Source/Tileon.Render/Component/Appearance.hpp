@@ -12,6 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+#include "Sprite.hpp"
 #include <Zyphryon.Graphic/Material.hpp>
 #include <Zyphryon.Math/Geometry/Rect.hpp>
 
@@ -34,10 +35,12 @@ namespace Tileon
         /// \param Material   The material to use for rendering the sprite.
         /// \param Source     The source rectangle for the sprite.
         /// \param Resolution The pixel dimensions of the material's albedo, which the source rect is a fraction of.
-        ZY_INLINE Appearance(ConstRetainer<Graphic::Material> Material, Rect Source, Vector2 Resolution)
+        /// \param Facing     The orientation of the sprite.
+        ZY_INLINE Appearance(ConstRetainer<Graphic::Material> Material, Rect Source, Vector2 Resolution, Sprite::Facing Facing)
             : mMaterial   { Material },
               mSource     { Source },
-              mResolution { Resolution }
+              mResolution { Resolution },
+              mFacing     { Facing }
         {
         }
 
@@ -89,6 +92,22 @@ namespace Tileon
             return mResolution;
         }
 
+        /// \brief Sets the orientation of the sprite.
+        ///
+        /// \param Facing The orientation to lay the sprite down with.
+        ZY_INLINE void SetFacing(Sprite::Facing Facing)
+        {
+            mFacing = Facing;
+        }
+
+        /// \brief Gets the orientation of the sprite.
+        ///
+        /// \return The orientation the sprite is laid down with.
+        ZY_INLINE Sprite::Facing GetFacing() const
+        {
+            return mFacing;
+        }
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -97,5 +116,6 @@ namespace Tileon
         Retainer<Graphic::Material> mMaterial;
         Rect                        mSource;
         Vector2                     mResolution;
+        Sprite::Facing              mFacing;
     };
 }

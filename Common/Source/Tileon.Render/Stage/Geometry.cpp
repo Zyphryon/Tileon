@@ -18,28 +18,32 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Pipeline
+namespace Tileon::Stage
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    static Vector3 Measure(Ref<Appearance> Appearance, UInt16 Density)
+    static Vector3 Measure(Ref<Appearance> Appearance, Real32 Density, Bool Grounded)
     {
         const Rect    Source     = Appearance.GetSource();
         const Vector2 Resolution = Appearance.GetResolution();
 
-        return Vector3(Source.GetWidth() * Resolution.GetX() / Density, Source.GetHeight() * Resolution.GetY() / Density, 0.0f);
+        const Real32  Width      = Source.GetWidth()  * Resolution.GetX() / Density;
+        const Real32  Height     = Source.GetHeight() * Resolution.GetY() / Density;
+
+        // A decal's quad spans the local x and z axes, so its box has to lie the same way or the enclosure
+        // it drives would stand upright and pick nothing that the eye sees.
+        return Grounded ? Vector3(Width, 0.0f, Height) : Vector3(Width, Height, 0.0f);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Geometry::Geometry(Ref<Engine::Subsystem::Host> Host, ConstRef<Tileset> Tileset)
+    Geometry::Geometry(Ref<Engine::Subsystem::Host> Host, Real32 Density)
         : Locator   { Host },
-          mTileset  { Tileset },
           mDirector { nullptr },
-          mDensity  { 0 },
-          mTiles    { Host.GetService<Graphic::Service>() },
+          mDensity  { Density },
+          mCutout   { 0 },
           mSprites  { Host.GetService<Graphic::Service>(), mCollector },
           mGlyphs   { Host.GetService<Graphic::Service>(), mCollector }
     {
@@ -52,22 +56,22 @@ namespace Tileon::Pipeline
 
     void Geometry::Run(Ref<Render::Encoder> Encoder)
     {
-        ZY_PROFILE_SCOPE("Pipeline::Geometry::Run");
+        ZY_PROFILE_SCOPE("Stage::Geometry::Run");
 
         const IntVector3 Origin  = IntVector3::FromXZ(
             IntVector2(mDirector->GetPosition().GetBaseX(),
                        mDirector->GetPosition().GetBaseY()));
 
-        // Opaque entities go down first, so the ground behind them is rejected by depth rather than shaded twice.
+        // Opaque entities go down next, so the ground behind them is rejected by depth rather than shaded twice.
         mCollector.Begin(Render::Collector::Priority::Opaque);
 
         {
-            ZY_PROFILE_SCOPE("Pipeline::Geometry::Opaque");
+            ZY_PROFILE_SCOPE("Stage::Geometry::Opaque");
 
             mSprites.Reset();
 
             // Draw opaque sprite entities.
-            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Opaque)]);
+            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite)], mCutout, Render::Collector::Priority::Opaque);
             mQrDrawOpaqueSprites.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
@@ -82,60 +86,54 @@ namespace Tileon::Pipeline
                     mSprites.Draw(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
                 }
             });
+
+            // Decals ride the same batch as sprites and differ only in technique, which lays their quad against
+            // the ground and biases its depth so it wins over the terrain it is painted on. Both variants stay
+            // in the g-buffer so the lighting that follows reaches them; only the blend differs.
+            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Decal)], mCutout, Render::Collector::Priority::Opaque);
+            mQrDrawOpaqueDecals.Run<>([&](
+                ConstRef<Transform>  Transform,
+                ConstRef<Extent>     Extent,
+                ConstRef<Enclosure>  Enclosure,
+                ConstRef<Appearance> Appearance,
+                ConstPtr<IntColor8>  Tint)
+            {
+                if (mDirector->IsVisible(Enclosure.GetVolume()))
+                {
+                    const Matrix4x3 Matrix = Transform.Rebase(Origin);
+
+                    mSprites.Draw(Appearance, Extent.GetSize().GetXZ(), Matrix, Tint ? (* Tint) : IntColor8::White());
+                }
+            });
+
+            // A decal marked Transparent feathers into what it is painted on instead of cutting out.
+            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Decal)], 0, Render::Collector::Priority::Opaque);
+            mQrDrawTransparentDecals.Run<>([&](
+                ConstRef<Transform>  Transform,
+                ConstRef<Extent>     Extent,
+                ConstRef<Enclosure>  Enclosure,
+                ConstRef<Appearance> Appearance,
+                ConstPtr<IntColor8>  Tint)
+            {
+                if (mDirector->IsVisible(Enclosure.GetVolume()))
+                {
+                    const Matrix4x3 Matrix = Transform.Rebase(Origin);
+
+                    mSprites.Draw(Appearance, Extent.GetSize().GetXZ(), Matrix, Tint ? (* Tint) : IntColor8::White());
+                }
+            });
         }
         Drain(Encoder);
-
-        // The ground follows, drawn front to back so the layers above reject the base layer they cover.
-        {
-            ZY_PROFILE_SCOPE("Pipeline::Geometry::Tiles");
-
-            // Only the base layer is guaranteed to cover the ground whole, so only it can skip the alpha test.
-            ConstRetainer<Graphic::Technique> Technique = mTechniques[Enum::Cast(Kind::Tile)];
-            const Graphic::Technique::Key     Masked    = Technique->ResolveByName("Masked");
-
-            constexpr auto kLayers = Enum::GetValues<Tile::Layer>();
-
-            for (UInt32 Index = kLayers.GetSize(); Index > 0; --Index)
-            {
-                const Tile::Layer Layer = kLayers[Index - 1];
-
-                // Each layer drains on its own, so its own variant is the one every batch of it is drawn with.
-                mTiles.Reset();
-                mTiles.SetTechnique(Technique, Layer == Tile::Layer::Base ? 0 : Masked);
-
-                // Draw region entities.
-                mQrDrawRegions.Run<>([&](ConstRef<Region> Region, Ref<Mosaic> Mosaic)
-                {
-                    const SInt32 WorldRegionX = Region.GetX() * Region::kTilesPerX;
-                    const SInt32 WorldRegionY = Region.GetY() * Region::kTilesPerY;
-
-                    const IntRect Frustum = mDirector->GetFrustum();
-                    const IntRect Boundaries(
-                        WorldRegionX,
-                        WorldRegionY,
-                        WorldRegionX + Region::kTilesPerX,
-                        WorldRegionY + Region::kTilesPerY);
-
-                    if (const IntRect Overlap = IntRect::Intersection(Boundaries, Frustum); !Overlap.IsAlmostZero())
-                    {
-                        const IntRect Tiles = Overlap - IntRect(WorldRegionX, WorldRegionY, WorldRegionX, WorldRegionY);
-                        DrawRegion(Region, Mosaic, Origin, Tiles, Layer);
-                    }
-                });
-
-                mTiles.Flush(Encoder);
-            }
-        }
 
         // Everything that blends comes last, drained back to front by the collector.
         mCollector.Begin(Render::Collector::Priority::Transparent);
         {
-            ZY_PROFILE_SCOPE("Pipeline::Geometry::Transparent");
+            ZY_PROFILE_SCOPE("Stage::Geometry::Transparent");
 
             mSprites.Reset();
 
             // Draw transparent sprite entities, each lit by the normal map its own material carries.
-            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite_Transparent)]);
+            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite)], 0, Render::Collector::Priority::Transparent);
             mQrDrawTransparentSprites.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
@@ -182,9 +180,13 @@ namespace Tileon::Pipeline
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void Geometry::Drain(Ref<Render::Encoder> Encoder)
     {
-        ZY_PROFILE_SCOPE("Pipeline::Geometry::Drain");
+        ZY_PROFILE_SCOPE("Stage::Geometry::Drain");
 
         // The runs the glyph batches index into are uploaded here, so a drain can never read a stale palette.
         mGlyphs.Prepare();
@@ -192,12 +194,12 @@ namespace Tileon::Pipeline
         // Sprites and text share the queue, so one sorted drain hands each batch back to whichever recorded it.
         mCollector.Poll([&](UInt32 Kind, ConstSpan<Render::Collector::Command> Commands)
         {
-            switch (static_cast<Batch>(Kind))
+            switch (static_cast<Batcher::Batch>(Kind))
             {
-            case Batch::Sprite:
+            case Batcher::Batch::Sprite:
                 mSprites.Write(Encoder, Commands);
                 break;
-            case Batch::Glyph:
+            case Batcher::Batch::Glyph:
                 mGlyphs.Write(Encoder, Commands);
                 break;
             }
@@ -210,32 +212,11 @@ namespace Tileon::Pipeline
     void Geometry::OnRegister(Ref<Scene::Service> Scene)
     {
         Scene.Register(
-            Scene::DSL::Declare<Animator, Appearance, Mosaic>(),
+            Scene::DSL::Declare<Animator, Appearance>(),
             Scene::DSL::Declare<IntColor8>("Tint", Scene::DSL::Authored),
             Scene::DSL::Declare<Transparent>(Scene::DSL::Authored),
+            Scene::DSL::Declare<Decal>(Scene::DSL::Authored),
             Scene::DSL::Declare<Animation, Decoration, Label, Lettering, Sprite>(Scene::DSL::Authored));
-
-        // Observe when a region is attached, and automatically give it the mosaic its tiles are drawn from.
-        Scene.CreateObserver<Scene::DSL::With<Region>>(
-            "Render::Geometry::ObsAttachMosaic",
-            EcsOnAdd,
-            [](Scene::Entity Actor)
-            {
-                Actor.Emplace<Mosaic>();
-            });
-
-        // Observe changes to the region component to invalidate its mosaic, so the merged runs of tiles the
-        // stage draws are rebuilt from the tiles the region now holds.
-        Scene.CreateObserver<Scene::DSL::With<Region>>(
-            "Render::Geometry::ObsInvalidateMosaicOnRegionUpdate",
-            EcsOnSet,
-            [](Scene::Entity Actor)
-            {
-                if (const Ptr<Mosaic> Cache = Actor.TryGet<Mosaic>())
-                {
-                    Cache->Invalidate();
-                }
-            });
 
         // Observe when a lettering component is attached, and automatically provide the label it sets the text of.
         Scene.CreateObserver<Scene::DSL::With<Lettering>>(
@@ -244,6 +225,32 @@ namespace Tileon::Pipeline
             [](Scene::Entity Actor)
             {
                 Actor.Emplace<Label>();
+            });
+
+        // A decal's quad spans a different pair of axes than a sprite's, so the box has to be measured again
+        // when the tag arrives on art that was already resolved. Without this the box keeps the axes it was
+        // measured on and the draw reads a zero along one of them, which is a quad with no area.
+        Scene.CreateObserver<Scene::DSL::With<Decal>>(
+            "Render::Geometry::ObsRemeasureOnDecalAttach",
+            EcsOnAdd,
+            [this](Scene::Entity Actor)
+            {
+                if (Ptr<Appearance> Visual = Actor.TryGet<Appearance>())
+                {
+                    Actor.Set(Extent(Vector3::Zero(), Measure(* Visual, mDensity, true)));
+                }
+            });
+
+        // The same holds in reverse, so art that stops being a decal stands its box back up.
+        Scene.CreateObserver<Scene::DSL::With<Decal>>(
+            "Render::Geometry::ObsRemeasureOnDecalDetach",
+            EcsOnRemove,
+            [this](Scene::Entity Actor)
+            {
+                if (Ptr<Appearance> Visual = Actor.TryGet<Appearance>())
+                {
+                    Actor.Set(Extent(Vector3::Zero(), Measure(* Visual, mDensity, false)));
+                }
             });
 
         // Observe changes to the sprite component to resolve material resources and trigger updates when necessary.
@@ -281,9 +288,9 @@ namespace Tileon::Pipeline
                             }
                         }
 
-                        Appearance Appearance(Material, Component.GetSource(), Resolution);
+                        Appearance Appearance(Material, Component.GetSource(), Resolution, Component.GetFacing());
 
-                        Actor.Set(Extent(Vector3::Zero(), Measure(Appearance, mDensity)));
+                        Actor.Set(Extent(Vector3::Zero(), Measure(Appearance, mDensity, Actor.Has<Decal>())));
                         Actor.Set(Move(Appearance));
                     }
                 }
@@ -341,7 +348,8 @@ namespace Tileon::Pipeline
             "Render::Geometry::ComputeAnimation",
             EcsOnUpdate,
             Scene::Execution::Default,
-            [this](ConstRef<Scene::Clock> Clock,
+            [this](Scene::Entity           Actor,
+                   ConstRef<Scene::Clock> Clock,
                    ConstRef<Animation>    Animation,
                    Ref<Animator>          Animator,
                    Ref<Appearance>        Appearance,
@@ -358,27 +366,33 @@ namespace Tileon::Pipeline
                 {
                     Appearance.SetSource(Source);
 
-                    Extent.SetSize(Measure(Appearance, mDensity));
+                    Extent.SetSize(Measure(Appearance, mDensity, Actor.Has<Decal>()));
                 }
             });
 
         mQrDrawOpaqueSprites = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
-            Scene::DSL::Not<Transparent>
+            Scene::DSL::Not<Transparent>, Scene::DSL::Not<Decal>
         >("Render::Geometry::DrawOpaqueSprites", Scene::Cache::Auto);
 
         mQrDrawTransparentSprites = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
-            Scene::DSL::With<Transparent>
+            Scene::DSL::With<Transparent>, Scene::DSL::Not<Decal>
         >("Render::Geometry::DrawTransparentSprites", Scene::Cache::Auto);
+
+        mQrDrawOpaqueDecals = Scene.CreateQuery<
+            Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
+            Scene::DSL::With<Decal>, Scene::DSL::Not<Transparent>
+        >("Render::Geometry::DrawOpaqueDecals", Scene::Cache::Auto);
+
+        mQrDrawTransparentDecals = Scene.CreateQuery<
+            Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
+            Scene::DSL::With<Decal>, Scene::DSL::With<Transparent>
+        >("Render::Geometry::DrawTransparentDecals", Scene::Cache::Auto);
 
         mQrDrawTexts = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Enclosure, const Lettering, const Label, ConstPtr<IntColor8>, ConstPtr<Decoration>>
         >("Render::Geometry::DrawTexts", Scene::Cache::Auto);
-
-        mQrDrawRegions = Scene.CreateQuery<
-            Scene::DSL::In<Region>, Scene::DSL::InOut<Mosaic>
-        >("Render::Geometry::DrawRegions", Scene::Cache::Auto);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -392,47 +406,8 @@ namespace Tileon::Pipeline
 
             mTechniques[Enum::Cast(Type)] = Content.Load<Graphic::Technique>(Move(Path));
         }
-    }
 
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Geometry::DrawRegion(ConstRef<Region> Region, Ref<Mosaic> Mosaic, IntVector3 Origin, IntRect Boundaries, Tile::Layer Layer)
-    {
-        const IntVector2 Ground  = Origin.GetXZ();
-        const SInt32     RegionX = (Region.GetX() * Region::kTilesPerX) - Ground.GetX();
-        const SInt32     RegionY = (Region.GetY() * Region::kTilesPerY) - Ground.GetY();
-
-        if (Mosaic.IsInvalidated())
-        {
-            Mosaic.Rebuild(Region);
-        }
-
-        // Draw the visible blocks of the layer within the specified boundaries.
-        for (ConstRef<Mosaic::Block> Block : Mosaic.GetBlocks(Layer))
-        {
-            const IntRect Area(Block.X, Block.Y, Block.X + Block.Width, Block.Y + Block.Height);
-
-            // Skip blocks that lie entirely outside the visible slice of the region.
-            if (!Area.Test(Boundaries))
-            {
-                continue;
-            }
-
-            // Draw all merged tiles as a single tile instance, once its image has reached the atlas.
-            ConstRef<Tileset::Glyph> Glyph = mTileset.GetGlyph(Block.Handle);
-
-            if (Glyph.GetTexture(Motif::Source::Albedo))
-            {
-                const IntVector2 Position(RegionX + Block.X, RegionY + Block.Y);
-                const IntVector2 Span(Block.Width, Block.Height);
-                const IntVector2 Absolute(
-                    Region.GetX() * Region::kTilesPerX + Block.X,
-                    Region.GetY() * Region::kTilesPerY + Block.Y);
-
-                const IntVector2 Phase = Mosaic::GetPhase(Absolute, Glyph.Period, Block.Offset, Block.Orientation);
-                mTiles.Draw(Glyph, Phase, Position, Span, Enum::Cast(Layer), Enum::Cast(Block.Orientation));
-            }
-        }
+        // Both sprite and decal declare the same feature, so one key selects the cutout variant of either.
+        mCutout = mTechniques[Enum::Cast(Kind::Sprite)]->ResolveByName("Cutout");
     }
 }

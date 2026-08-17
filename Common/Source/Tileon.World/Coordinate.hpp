@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Region.hpp"
+#include "Component/Region.hpp"
 #include <Zyphryon.Math/Geometry/Rect.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -26,54 +26,54 @@ namespace Tileon
     {
     public:
 
-        /// \brief Bit shift value for converting world tile x-coordinates to region x-coordinates.
-        static constexpr SInt32 kBitShiftLocalX = Base::Log(Region::kTilesPerX);
+        /// \brief Bit shift value for converting world unit x-coordinates to region x-coordinates.
+        static constexpr SInt32 kBitShiftLocalX = Base::Log(Region::kUnitsPerX);
 
         /// \brief Bit mask for extracting the local x-coordinate within a region.
         static constexpr SInt32 kBitMaskLocalX  = (1u << kBitShiftLocalX) - 1u;
 
-        /// \brief Bit shift value for converting world tile y-coordinates to region y-coordinates.
-        static constexpr SInt32 kBitShiftLocalY = Base::Log(Region::kTilesPerY);
+        /// \brief Bit shift value for converting world unit y-coordinates to region y-coordinates.
+        static constexpr SInt32 kBitShiftLocalY = Base::Log(Region::kUnitsPerY);
 
         /// \brief Bit mask for extracting the local y-coordinate within a region.
         static constexpr SInt32 kBitMaskLocalY  = (1u << kBitShiftLocalY) - 1u;
 
     public:
 
-        /// \brief Converts world tile x-coordinates to region x-coordinates.
+        /// \brief Converts world unit x-coordinates to region x-coordinates.
         ///
-        /// \param WorldTileX The x-coordinate in world tile space.
+        /// \param WorldUnitX The x-coordinate in world unit space.
         /// \return The corresponding x-coordinate in region space.
-        ZY_INLINE static constexpr SInt16 GetRegionX(SInt32 WorldTileX)
+        ZY_INLINE static constexpr SInt16 GetRegionX(SInt32 WorldUnitX)
         {
-            return WorldTileX >> kBitShiftLocalX;
+            return WorldUnitX >> kBitShiftLocalX;
         }
 
-        /// \brief Extracts the local x-coordinate within a region from a world tile x-coordinate.
+        /// \brief Extracts the local x-coordinate within a region from a world unit x-coordinate.
         ///
-        /// \param WorldTileX The x-coordinate in world tile space.
+        /// \param WorldUnitX The x-coordinate in world unit space.
         /// \return The local x-coordinate within the region.
-        ZY_INLINE static constexpr UInt8 GetLocalTileX(SInt32 WorldTileX)
+        ZY_INLINE static constexpr UInt8 GetLocalUnitX(SInt32 WorldUnitX)
         {
-            return WorldTileX & kBitMaskLocalX;
+            return WorldUnitX & kBitMaskLocalX;
         }
 
-        /// \brief Converts world tile y-coordinates to region y-coordinates.
+        /// \brief Converts world unit y-coordinates to region y-coordinates.
         ///
-        /// \param WorldTileY The y-coordinate in world tile space.
+        /// \param WorldUnitY The y-coordinate in world unit space.
         /// \return The corresponding y-coordinate in region space.
-        ZY_INLINE static constexpr SInt16 GetRegionY(SInt32 WorldTileY)
+        ZY_INLINE static constexpr SInt16 GetRegionY(SInt32 WorldUnitY)
         {
-            return WorldTileY >> kBitShiftLocalY;
+            return WorldUnitY >> kBitShiftLocalY;
         }
 
-        /// \brief Extracts the local y-coordinate within a region from a world tile y-coordinate.
+        /// \brief Extracts the local y-coordinate within a region from a world unit y-coordinate.
         ///
-        /// \param WorldTileY The y-coordinate in world tile space.
+        /// \param WorldUnitY The y-coordinate in world unit space.
         /// \return The local y-coordinate within the region.
-        ZY_INLINE static constexpr UInt8 GetLocalTileY(SInt32 WorldTileY)
+        ZY_INLINE static constexpr UInt8 GetLocalUnitY(SInt32 WorldUnitY)
         {
-            return WorldTileY & kBitMaskLocalY;
+            return WorldUnitY & kBitMaskLocalY;
         }
 
         /// \brief Converts world coordinates to cell coordinates based on the specified bit shifts for x and y axes.

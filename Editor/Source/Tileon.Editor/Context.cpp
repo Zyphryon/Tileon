@@ -23,12 +23,12 @@ namespace Tileon::Editor
 
     Context::Context(Ref<Engine::Subsystem::Host> Host, AnyRef<Project> Project)
         : Locator    { Host },
-          mPresenter { Host, false },
+          mPresenter { Host, false, static_cast<Real32>(Project.GetDensity()) },
           mProject   { Move(Project) },
           mCatalog   { GetService<Scene::Service>() },
           mHistory   { * this }
     {
-        mPresenter.Init(320, 200, Project.GetDensity());
+        mPresenter.Resize(320, 200);
         mPresenter.Load();
         Load();
     }

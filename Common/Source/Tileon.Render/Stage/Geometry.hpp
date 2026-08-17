@@ -12,12 +12,9 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Render/Pipeline/Batcher/Glyphs.hpp"
-#include "Tileon.Render/Pipeline/Batcher/Sprites.hpp"
-#include "Tileon.Render/Pipeline/Batcher/Tiles.hpp"
-#include "Tileon.Render/Component/Mosaic.hpp"
+#include "Tileon.Render/Batcher/Glyph.hpp"
+#include "Tileon.Render/Batcher/Sprite.hpp"
 #include "Tileon.Render/Director.hpp"
-#include "Tileon.Render/Tileset.hpp"
 #include <Zyphryon.Render/Pass.hpp>
 #include <Zyphryon.Scene/Service.hpp>
 
@@ -25,7 +22,7 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Pipeline
+namespace Tileon::Stage
 {
     /// \brief Represents the geometry stage of the rendering pipeline, responsible for rendering objects.
     class Geometry final : public Render::Pass, public Engine::Locator<Content::Service>
@@ -35,8 +32,8 @@ namespace Tileon::Pipeline
         /// \brief Constructs the stage instance with the specified service host.
         ///
         /// \param Host    The service host to associate with the stage.
-        /// \param Tileset The tileset containing the tile data to be used for rendering the stage.
-        Geometry(Ref<Engine::Subsystem::Host> Host, ConstRef<Tileset> Tileset);
+        /// \param Density The pixel density sprites are measured against.
+        Geometry(Ref<Engine::Subsystem::Host> Host, Real32 Density);
 
         /// \brief Sets the director the stage resolves its draws against for the current frame.
         ///
@@ -48,12 +45,6 @@ namespace Tileon::Pipeline
 
         /// \brief Sets how many pixels of art the project maps onto one world unit.
         ///
-        /// \param Density The pixel density sprites are measured against.
-        ZY_INLINE void SetDensity(UInt16 Density)
-        {
-            mDensity = Density;
-        }
-
         /// \brief Executes the stage's main logic.
         ///
         /// \param Encoder The render encoder used to submit draw calls for this stage.
@@ -66,9 +57,8 @@ namespace Tileon::Pipeline
         /// \remark Each value names the technique file the stage loads it from.
         enum class Kind : UInt8
         {
-            Sprite_Opaque,      ///< Technique for opaque sprites, lit when their material carries a normal map.
-            Sprite_Transparent, ///< Technique for transparent sprites, lit when their material carries a normal map.
-            Tile,               ///< Technique for the ground, masked on every layer above the base.
+            Sprite,             ///< Technique for art stood upright, cut out or blended by its Cutout variant.
+            Decal,              ///< Technique for art laid against the ground, cut out or blended the same way.
             Text,               ///< Technique for rendering text glyphs from a font atlas.
         };
 
@@ -85,15 +75,6 @@ namespace Tileon::Pipeline
         /// \param Content The content service used to load resources for the stage.
         void OnLoad(Ref<Content::Service> Content);
 
-        /// \brief Draws one layer of a region within the specified boundaries.
-        ///
-        /// \param Region     The region to draw.
-        /// \param Mosaic     The region's block cache, rebuilt in place when it has gone stale.
-        /// \param Origin     The origin point in world coordinates where the region should be drawn.
-        /// \param Boundaries The boundaries within which to draw the region.
-        /// \param Layer      The layer of the region to draw.
-        void DrawRegion(ConstRef<Region> Region, Ref<Mosaic> Mosaic, IntVector3 Origin, IntRect Boundaries, Tile::Layer Layer);
-
         /// \brief Drains everything the collector holds, encoding it as batched draw commands.
         ///
         /// \param Encoder The encoder that builds and binds the resulting draw commands.
@@ -105,24 +86,26 @@ namespace Tileon::Pipeline
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         Techniques         mTechniques;
-        ConstRef<Tileset>  mTileset;
         ConstPtr<Director> mDirector;
-        UInt16             mDensity;
+        Real32             mDensity;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         Render::Collector  mCollector;
-        Tiles              mTiles;
-        Sprites            mSprites;
-        Glyphs             mGlyphs;
+        Batcher::Sprite    mSprites;
+        Batcher::Glyph     mGlyphs;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        /// The key that turns a technique's cutout variant on, resolved once the techniques have loaded.
+        Graphic::Technique::Key mCutout;
 
         Scene::Query       mQrDrawOpaqueSprites;
+        Scene::Query       mQrDrawOpaqueDecals;
         Scene::Query       mQrDrawTransparentSprites;
+        Scene::Query       mQrDrawTransparentDecals;
         Scene::Query       mQrDrawTexts;
-        Scene::Query       mQrDrawRegions;
     };
 }

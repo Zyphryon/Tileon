@@ -219,8 +219,8 @@ namespace Tileon::Editor
             if (const ConstPtr<Region> Region = GetRegion(Snapshot.Actor))
             {
                 Base = Vector2(
-                    static_cast<Real32>(Region->GetX() * Tileon::Region::kTilesPerX),
-                    static_cast<Real32>(Region->GetY() * Tileon::Region::kTilesPerY));
+                    static_cast<Real32>(Region->GetX() * Tileon::Region::kUnitsPerX),
+                    static_cast<Real32>(Region->GetY() * Tileon::Region::kUnitsPerY));
             }
 
             const Real32   StartX = static_cast<Real32>(Snapshot.Start.GetAbsoluteX());
@@ -302,7 +302,7 @@ namespace Tileon::Editor
                 {
                     const Vector2 Ground   = Snapshot.Actor.Get<const Pose>().GetTranslation().GetXZ();
                     const Vector2 Distance = Vector2::Floor(
-                        Ground / Vector2(Tileon::Region::kTilesPerX, Tileon::Region::kTilesPerY));
+                        Ground / Vector2(Tileon::Region::kUnitsPerX, Tileon::Region::kUnitsPerY));
 
                     if (!Distance.IsAlmostZero())
                     {

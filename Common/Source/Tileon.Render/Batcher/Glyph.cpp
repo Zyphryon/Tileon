@@ -10,13 +10,13 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Glyphs.hpp"
+#include "Glyph.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon
+namespace Tileon::Batcher
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -43,7 +43,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Glyphs::Glyphs(ConstRetainer<Graphic::Service> Service, Ref<Render::Collector> Collector)
+    Glyph::Glyph(ConstRetainer<Graphic::Service> Service, Ref<Render::Collector> Collector)
         : mService   { Service },
           mCollector { Collector }
     {
@@ -52,7 +52,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Glyphs::SetTechnique(ConstRetainer<Graphic::Technique> Technique)
+    void Glyph::SetTechnique(ConstRetainer<Graphic::Technique> Technique)
     {
         mTechnique = Technique;
     }
@@ -60,7 +60,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Glyphs::Draw(
+    void Glyph::Draw(
         ConstRef<Lettering>  Lettering,
         ConstRef<Label>      Label,
         ConstRef<Matrix4x3>  Transform,
@@ -74,7 +74,7 @@ namespace Tileon
 
         // The whole run shares one transform and one effect, so they are interned once and every glyph
         // carries only the slot that finds them.
-        const GlyphSlot RunData = Intern(Decoration.GetEffect(), Transform, Size);
+        const Slot RunData = Intern(Decoration.GetEffect(), Transform, Size);
 
         ConstRef<Graphic::Technique>      Technique = (* mTechnique);
         const Render::Collector::Priority Priority  = Render::Collector::GetPriority(Technique);
@@ -92,25 +92,25 @@ namespace Tileon
 
             const ConstPtr<Graphic::Material> Material = &* Font->GetMaterial(Placement.Page);
 
-            Ref<GlyphCommand> Command = mGlyphs.Append();
-            Command.Generation    = RunData.Generation;
-            Command.Material      = Material;
-            Command.Technique     = AddressOf(Technique);
-            Command.Layout.Effect = static_cast<UInt32>(RunData.Slot);
-            Command.Layout.Frame  = Array(
+            Ref<Command> Entry = mCommands.Append();
+            Entry.Generation    = RunData.Generation;
+            Entry.Material      = Material;
+            Entry.Technique     = AddressOf(Technique);
+            Entry.Layout.Effect = static_cast<UInt32>(RunData.Slot);
+            Entry.Layout.Frame  = Array(
                 EncodeUnitCoordinate(Placement.Atlas.GetMinimumX()),
                 EncodeUnitCoordinate(Placement.Atlas.GetMinimumY()),
                 EncodeUnitCoordinate(Placement.Atlas.GetMaximumX()),
                 EncodeUnitCoordinate(Placement.Atlas.GetMaximumY()));
-            Command.Layout.Offset    = Array(
+            Entry.Layout.Offset = Array(
                 EncodeGlyphCoordinate<SInt16>(Placement.Local.GetX()),
                 EncodeGlyphCoordinate<SInt16>(Placement.Local.GetY()));
-            Command.Layout.Size      = Array(
+            Entry.Layout.Size   = Array(
                 EncodeGlyphCoordinate<UInt16>(Placement.Local.GetWidth()),
                 EncodeGlyphCoordinate<UInt16>(Placement.Local.GetHeight()));
-            Command.Layout.Color     = Tint;
+            Entry.Layout.Color  = Tint;
 
-            const Render::Collector::Object Object(Enum::Cast(Batch::Glyph), mGlyphs.GetSize() - 1);
+            const Render::Collector::Object Object(Enum::Cast(Batch::Glyph), mCommands.GetSize() - 1);
             mCollector.Push(Object, Priority, Order, RunData.Generation, Pipeline, Material->GetHandle());
         });
     }
@@ -118,9 +118,9 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Glyphs::Reset()
+    void Glyph::Reset()
     {
-        mGlyphs.Clear();
+        mCommands.Clear();
         mPalettes.Clear();
         mTechnique = nullptr;
     }
@@ -128,42 +128,42 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Glyphs::Prepare()
+    void Glyph::Prepare()
     {
-        if (mGlyphs.IsEmpty())
+        if (mCommands.IsEmpty())
         {
             return;
         }
 
-        for (Ref<GlyphPalette> Palette : mPalettes)
+        for (Ref<Palette> Slot : mPalettes)
         {
-            Graphic::Transient<GlyphRun> Slice = mService->AllocateInFlightUniforms<GlyphRun>(kMaxTextPerBatch);
-            Slice.Copy<GlyphRun>(Palette.Runs);
+            Graphic::Transient<Run> Slice = mService->AllocateInFlightUniforms<Run>(kMaxTextPerBatch);
+            Slice.Copy<Run>(Slot.Runs);
 
-            Palette.Stream = Slice.GetStream();
+            Slot.Stream = Slice.GetStream();
         }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Glyphs::GlyphSlot Glyphs::Intern(ConstRef<Render::FontEffect> Effect, ConstRef<Matrix4x3> Transform, Real32 Size)
+    Glyph::Slot Glyph::Intern(ConstRef<Render::FontEffect> Effect, ConstRef<Matrix4x3> Transform, Real32 Size)
     {
         if (mPalettes.IsEmpty() || mPalettes.GetBack().Runs.GetSize() >= kMaxTextPerBatch)
         {
             mPalettes.Append();
         }
 
-        Ref<GlyphPalette> Palette = mPalettes.GetBack();
+        Ref<Palette> Bucket = mPalettes.GetBack();
 
-        const GlyphSlot Result {
-            .Slot       = static_cast<UInt16>(Palette.Runs.GetSize()),
+        const Slot Result {
+            .Slot       = static_cast<UInt16>(Bucket.Runs.GetSize()),
             .Generation = static_cast<UInt16>(mPalettes.GetSize() - 1)
         };
 
-        Ref<GlyphRun> Run = Palette.Runs.Append();
-        Run.Transform = Matrix4x3::Pack(Matrix4x3::WithScale(Transform, Vector3(Size)));
-        Run.Effect    = Effect;
+        Ref<Run> Entry = Bucket.Runs.Append();
+        Entry.Transform = Matrix4x3::Pack(Matrix4x3::WithScale(Transform, Vector3(Size)));
+        Entry.Effect    = Effect;
 
         return Result;
     }
@@ -171,19 +171,18 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Glyphs::Write(Ref<Render::Encoder> Encoder, ConstSpan<Render::Collector::Command> Commands)
+    void Glyph::Write(Ref<Render::Encoder> Encoder, ConstSpan<Render::Collector::Command> Commands)
     {
         // Every draw call in this batch shares the same font material and run palette.
-        ConstRef<GlyphCommand> First = mGlyphs[Commands.GetFront().Entry.Slot];
+        ConstRef<Command> First = mCommands[Commands.GetFront().Entry.Slot];
 
-        const Graphic::Stream                 Palette = mPalettes[First.Generation].Stream;
-        const Graphic::Transient<GlyphLayout> Instances
-            = Gather<GlyphLayout, GlyphCommand>(* mService, mGlyphs, Commands);
+        const Graphic::Stream            Runs      = mPalettes[First.Generation].Stream;
+        const Graphic::Transient<Layout> Instances = Gather<Layout, Command>(* mService, mCommands, Commands);
 
         const Graphic::Invocation Invocation {
             .Count     = 4,
             .Instances = static_cast<UInt32>(Commands.GetSize())
         };
-        Encoder.Draw(* First.Technique, First.Material, Instances.GetStream(), Palette, Invocation);
+        Encoder.Draw(* First.Technique, First.Material, Instances.GetStream(), Runs, Invocation);
     }
 }

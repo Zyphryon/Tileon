@@ -38,7 +38,7 @@ namespace Tileon
 
         /// \brief Constructs an enclosure from a world-space volume.
         ///
-        /// \param Volume The absolute world-space volume, in tiles.
+        /// \param Volume The absolute world-space volume, in world units.
         ZY_INLINE Enclosure(ConstRef<IntBox> Volume)
             : mVolume { Volume },
               mCell   { kUnlinked }
@@ -55,7 +55,7 @@ namespace Tileon
 
         /// \brief Sets the world-space volume that encloses the entity.
         ///
-        /// \param Volume The absolute world-space volume, in tiles.
+        /// \param Volume The absolute world-space volume, in world units.
         ZY_INLINE void SetVolume(ConstRef<IntBox> Volume)
         {
             mVolume = Volume;
@@ -63,7 +63,7 @@ namespace Tileon
 
         /// \brief Gets the world-space volume that encloses the entity.
         ///
-        /// \return The absolute world-space volume, in tiles.
+        /// \return The absolute world-space volume, in world units.
         ZY_INLINE ConstRef<IntBox> GetVolume() const
         {
             return mVolume;

@@ -11,10 +11,10 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Renderer.hpp"
-#include "Pipeline/Composite.hpp"
-#include "Pipeline/Preview.hpp"
-#include "Pipeline/Geometry.hpp"
-#include "Pipeline/Lightning.hpp"
+#include "Stage/Composite.hpp"
+#include "Stage/Preview.hpp"
+#include "Stage/Geometry.hpp"
+#include "Stage/Lighting.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -25,16 +25,14 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Renderer::Renderer(Ref<Engine::Subsystem::Host> Host, Bool Immediate)
+    Renderer::Renderer(Ref<Engine::Subsystem::Host> Host, Bool Immediate, Real32 Density)
         : Locator    { Host },
           mRenderer  { Host },
-          mTileset   { Host },
           mPreview   { nullptr },
           mOutput    { Target::Final },
           mImmediate { Immediate }
     {
-        OnCreate(Host, Immediate);
-        OnRegister(* Host.GetService<Scene::Service>());
+        OnCreate(Host, Immediate, Density);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -42,7 +40,6 @@ namespace Tileon
 
     void Renderer::Load()
     {
-        mTileset.Load();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -50,7 +47,6 @@ namespace Tileon
 
     void Renderer::Save()
     {
-        mTileset.Save();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -64,28 +60,23 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Renderer::SetDensity(UInt16 Density)
-    {
-        mRenderer.GetPass<Pipeline::Geometry>(Enum::Cast(Phase::Geometry)).SetDensity(Density);
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
     void Renderer::Present(ConstRef<Director> Director)
     {
         // Hand the frame's director to the stages that resolve their draws from it.
-        mRenderer.GetPass<Pipeline::Geometry>(Enum::Cast(Phase::Geometry)).SetDirector(Director);
-        mRenderer.GetPass<Pipeline::Lightning>(Enum::Cast(Phase::Light)).SetDirector(Director);
+        mRenderer.GetPass<Stage::Geometry>(Enum::Cast(Phase::Geometry)).SetDirector(Director);
+        mRenderer.GetPass<Stage::Lighting>(Enum::Cast(Phase::Light)).SetDirector(Director);
 
         if (mPreview)
         {
             mPreview->SetDirector(Director);
         }
 
-        // Build the frame-global uniform (the director's view-projection) the renderer binds for every stage.
-        ConstRef<Matrix4x4> Global = Director.GetViewProjection();
-        mRenderer.Run(GetService<Graphic::Service>().AllocateInFlightUniforms<Matrix4x4>(Global));
+        // Build the frame-global uniform the renderer binds for every stage.
+        const GpuFrameLayout Global {
+            .Camera        = Director.GetViewProjection(),
+            .CameraInverse = Director.GetViewProjectionInverse()
+        };
+        mRenderer.Run(GetService<Graphic::Service>().AllocateInFlightUniforms<GpuFrameLayout>(Global));
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -118,13 +109,10 @@ namespace Tileon
         // Everything past the producer is skipped, except the preview phase, which resolves what it wrote.
         for (const Phase Stage : Enum::GetValues<Phase>())
         {
-            // Composing into the display declares no preview phase, so there is no pass standing behind it.
-            if (Stage == Phase::Preview && !mPreview)
+            if (Stage != Phase::Preview || mPreview)
             {
-                continue;
+                mRenderer.GetPass(Enum::Cast(Stage)).SetActive(Enum::Cast(Stage) <= Enum::Cast(Producer));
             }
-
-            mRenderer.GetPass(Enum::Cast(Stage)).SetActive(Enum::Cast(Stage) <= Enum::Cast(Producer));
         }
 
         // The composed image is already what the view wants, so only a raw buffer needs resolving.
@@ -134,7 +122,7 @@ namespace Tileon
 
             if (Type != Target::Final)
             {
-                mPreview->SetSource(static_cast<Pipeline::Preview::Kind>(Enum::Cast(Type)));
+                mPreview->SetSource(static_cast<Stage::Preview::Kind>(Enum::Cast(Type)));
             }
         }
 
@@ -144,7 +132,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Renderer::OnCreate(Ref<Engine::Subsystem::Host> Host, Bool Immediate)
+    void Renderer::OnCreate(Ref<Engine::Subsystem::Host> Host, Bool Immediate, Real32 Density)
     {
         // Declare the managed targets in the same order as Target, with the preview image last.
         Ref<Render::Target> Albedo   = mRenderer.AddTarget({ .Format = Graphic::TextureFormat::RGBA8UIntNorm_sRGB });
@@ -153,17 +141,17 @@ namespace Tileon
         Ref<Render::Target> Radiance = mRenderer.AddTarget({ .Format = Graphic::TextureFormat::R11G11B10Float     });
 
         // Geometry: rasterize the scene into the albedo and normal buffers, depth-tested.
-        Ref<Pipeline::Geometry> Geometry = mRenderer.AddPass<Pipeline::Geometry>(Host, mTileset);
+        Ref<Stage::Geometry> Geometry = mRenderer.AddPass<Stage::Geometry>(Host, Density);
         Geometry.AddColor({ .Target = AddressOf(Albedo), .Tint = Color::Black() });
         Geometry.AddColor({ .Target = AddressOf(Normal), .Tint = Color(0.5f, 1.0f, 0.5f, 1.0f) });
         Geometry.SetDepth({ .Target = AddressOf(Depth) });
 
         // Light: accumulates each light's contribution into the radiance buffer, sampling the normal buffer.
-        Ref<Pipeline::Lightning> Light = mRenderer.AddPass<Pipeline::Lightning>(Host, Normal, Depth);
+        Ref<Stage::Lighting> Light = mRenderer.AddPass<Stage::Lighting>(Host, Normal, Depth);
         Light.AddColor({ .Target = AddressOf(Radiance), .Tint = Color::Black() });
 
         // Composite: resolves albedo against radiance into the final buffer.
-        Ref<Pipeline::Composite> Composite = mRenderer.AddPass<Pipeline::Composite>(Host, Albedo, Radiance);
+        Ref<Stage::Composite> Composite = mRenderer.AddPass<Stage::Composite>(Host, Albedo, Radiance);
 
         if (Immediate)
         {
@@ -175,28 +163,12 @@ namespace Tileon
             Composite.AddColor({ .Target = AddressOf(Final), .Load = Graphic::Action::Discard });
 
             // Preview: resolves a raw buffer onto the view in place of the composed scene.
-            Ref<Pipeline::Preview> Preview = mRenderer.AddPass<Pipeline::Preview>(Host, Albedo, Normal, Depth, Radiance);
+            Ref<Stage::Preview> Preview = mRenderer.AddPass<Stage::Preview>(Host, Albedo, Normal, Depth, Radiance);
             Preview.AddColor({ .Target = AddressOf(Final), .Tint = Color::Black() });
 
             mPreview = AddressOf(Preview);
         }
 
         SetOutput(mOutput);
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Renderer::OnRegister(Ref<Scene::Service> Scene)
-    {
-        // System for ticking the tileset animations based on the absolute time of the scene.
-        Scene.CreateSystem<>(
-            "Visual::ComputeTilesetAnimation",
-            EcsOnUpdate,
-            Scene::Execution::Immediate,
-            [this](ConstRef<Scene::Clock> Clock)
-            {
-                mTileset.Tick(Clock.GetAbsolute());
-            });
     }
 }

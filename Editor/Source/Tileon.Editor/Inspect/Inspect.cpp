@@ -698,6 +698,12 @@ namespace Tileon::Editor
             Dirty = true;
         }
 
+        if (Sprite::Facing Facing = Component.GetFacing(); InspectEnum("Facing", Facing))
+        {
+            Component.SetFacing(Facing);
+            Dirty = true;
+        }
+
         return Dirty;
     }
 

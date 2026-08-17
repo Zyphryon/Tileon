@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include <Tileon.World/Region.hpp>
+#include <Tileon.World/Component/Region.hpp>
 #include <Tileon.World/Component/Lifecycle.hpp>
 #include <Zyphryon.Graphic/Types.hpp>
 #include <Zyphryon.Scene/Entity.hpp>

@@ -187,7 +187,7 @@ namespace Tileon
             Actor = GetService<Scene::Service>().CreateEntity();
             Actor.SetName(Name);
             Actor.SetAlias(Name);
-            Actor.Emplace<Transform>(IntVector3(RegionX * Region::kTilesPerX, 0.0f, RegionY * Region::kTilesPerY));
+            Actor.Emplace<Transform>(IntVector3(RegionX * Region::kUnitsPerX, 0.0f, RegionY * Region::kUnitsPerY));
 
             const auto OnResult = [this, Handle = Actor.GetID(), RegionX, RegionY, CreateIfMissing](Filesystem::Result Result, Blob File)
             {
@@ -234,7 +234,7 @@ namespace Tileon
         // A pose is local to its region, so anything outside the region's own span belongs to a neighbour.
         const Vector3 Position = Pose.GetTranslation();
         const Vector2 Ground   = Position.GetXZ();
-        const Vector2 Distance = Vector2::Floor(Ground / Vector2(Region::kTilesPerX, Region::kTilesPerY));
+        const Vector2 Distance = Vector2::Floor(Ground / Vector2(Region::kUnitsPerX, Region::kUnitsPerY));
 
         if (Distance.IsAlmostZero())
         {
@@ -256,9 +256,9 @@ namespace Tileon
             // Rebase the pose before re-parenting: outside a deferred scope the attach moves the entity to another
             // table straight away, which would leave the reference pointing at the row it just vacated.
             Pose.SetTranslation(Vector3(
-                Position.GetX() - Distance.GetX() * static_cast<Real32>(Region::kTilesPerX),
+                Position.GetX() - Distance.GetX() * static_cast<Real32>(Region::kUnitsPerX),
                 Position.GetY(),
-                Position.GetZ() - Distance.GetY() * static_cast<Real32>(Region::kTilesPerY)));
+                Position.GetZ() - Distance.GetY() * static_cast<Real32>(Region::kUnitsPerY)));
 
             // Cascades Stale to all static children, making them Kinetic this frame.
             Actor.Attach(Target, Scene::Hierarchy::Open);
@@ -266,8 +266,8 @@ namespace Tileon
         }
         else
         {
-            static constexpr Real32 kSpanX = Region::kTilesPerX * (1.0f - kEpsilon<Real32>);
-            static constexpr Real32 kSpanY = Region::kTilesPerY * (1.0f - kEpsilon<Real32>);
+            static constexpr Real32 kSpanX = Region::kUnitsPerX * (1.0f - kEpsilon<Real32>);
+            static constexpr Real32 kSpanY = Region::kUnitsPerY * (1.0f - kEpsilon<Real32>);
 
             Pose.SetTranslation(Vector3(
                 Clamp(Position.GetX(), 0.0f, kSpanX),

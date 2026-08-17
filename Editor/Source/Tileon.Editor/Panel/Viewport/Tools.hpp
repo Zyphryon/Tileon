@@ -27,7 +27,7 @@ namespace Tileon::Editor
     public:
 
         /// \brief How far above and below the ground a pick ray sweeps, in tiles.
-        static constexpr Real32 kPickElevation  = Director::kMaxHeight;
+        static constexpr Real32 kPickElevation  = Director::kElevation;
 
         /// \brief The share of its own reach a light is lifted by when it is placed without an elevation.
         static constexpr Real32 kLightElevation = 0.5f;
@@ -48,68 +48,12 @@ namespace Tileon::Editor
             Bucket,     ///< A brush used for filling an area with a specific tile type.
         };
 
-        /// \brief Defines the different levels that can be painted on.
-        enum class Level : UInt8
-        {
-            Base,   ///< The floor level, typically representing the base layer of the scene.
-            Detail, /// The detail level, used for painting additional details on top of the base layer.
-        };
-
-        /// \brief Defines the different modes that can be used for editing the scene.
-        enum class Mode : UInt8
-        {
-            Tile,       ///< A mode used for painting tiles in the scene.
-            Entity,     ///< A mode used for painting entities (objects) in the scene.
-        };
-
-        /// \brief Defines where the art of a painted terrain is anchored.
-        enum class Alignment : UInt8
-        {
-            Lattice,    ///< The art follows the lattice the world defines, so neighbouring paint stays seamless.
-            Cursor,     ///< The art starts at the tile being painted, so a pattern lands exactly where it is put.
-        };
-
     public:
 
         /// \brief Constructs a toolbox with the specified context reference.
         ///
         /// \param Context The reference to the context that the toolbox will interact with.
         Tools(Ref<Context> Context);
-
-        /// \brief Updates the toolbox, typically called once per frame.
-        void Tick();
-
-        /// \brief Sets the current editing mode.
-        ///
-        /// \param Mode The mode to set.
-        ZY_INLINE void SetMode(Mode Mode)
-        {
-            mContext.SetEnum("Tools.Mode", Mode);
-        }
-
-        /// \brief Gets the current editing mode.
-        ///
-        /// \return The current editing mode.
-        ZY_INLINE Mode GetMode() const
-        {
-            return mContext.GetEnum("Tools.Mode", Mode::Tile);
-        }
-
-        /// \brief Sets the current level.
-        ///
-        /// \param Level The level to set.
-        ZY_INLINE void SetLevel(Level Level)
-        {
-            mLevel = Level;
-        }
-
-        /// \brief Gets the current level.
-        ///
-        /// \return The current level.
-        ZY_INLINE Level GetLevel() const
-        {
-            return mLevel;
-        }
 
         /// \brief Sets the current brush type.
         ///
@@ -125,38 +69,6 @@ namespace Tileon::Editor
         ZY_INLINE Brush GetBrush() const
         {
             return mBrush;
-        }
-
-        /// \brief Sets where the art of a painted terrain is anchored.
-        ///
-        /// \param Alignment The alignment to set.
-        ZY_INLINE void SetAlignment(Alignment Alignment)
-        {
-            mAlignment = Alignment;
-        }
-
-        /// \brief Gets where the art of a painted terrain is anchored.
-        ///
-        /// \return The current alignment.
-        ZY_INLINE Alignment GetAlignment() const
-        {
-            return mAlignment;
-        }
-
-        /// \brief Lays the art of a painted terrain down with an operation applied on top of its current one.
-        ///
-        /// \param Delta The operation to apply.
-        ZY_INLINE void Reorient(Tile::Orientation Delta)
-        {
-            mOrientation = Tile::Compose(mOrientation, Delta);
-        }
-
-        /// \brief Gets how the art of a painted terrain is laid down.
-        ///
-        /// \return The current orientation.
-        ZY_INLINE Tile::Orientation GetOrientation() const
-        {
-            return mOrientation;
         }
 
         /// \brief Sets whether placed entities snap to the centre of the tile under the cursor.
@@ -282,52 +194,7 @@ namespace Tileon::Editor
         /// \param Placement The placement the group's anchor should land on.
         void Paste(Placement Placement);
 
-        /// \brief Resolves the alignment offset a stroke stamps onto the tiles it paints.
-        ///
-        /// \param Anchor The tile the stroke starts at, in absolute world tiles.
-        /// \param Period The motif's period, in whole tiles.
-        /// \return The alignment offset.
-        ZY_INLINE Tile::Offset Resolve(IntVector2 Anchor, IntVector2 Period) const
-        {
-            return mAlignment == Alignment::Cursor ? Tile::Offset(Tile::Align(Anchor, Period)) : Tile::Offset();
-        }
-
     private:
-
-        /// \brief Represents a tile operation to be applied to a region.
-        struct OpTile
-        {
-            /// The region's actor to apply the operation.
-            Scene::Entity     Actor;
-
-            /// The command to apply (e.g., add or remove).
-            Command           Command;
-
-            /// The layer of the tiles to apply the command to (e.g., base or detail).
-            Tile::Layer       Layer;
-
-            /// The unique identifier for the terrain type to apply when adding tiles.
-            UInt16            Terrain;
-
-            /// The alignment offset to apply when adding tiles.
-            Tile::Offset      Offset;
-
-            /// How the art is laid down when adding tiles.
-            Tile::Orientation Orientation;
-
-            /// The dimensions of the tile being applied.
-            IntVector2        Span;
-
-            /// The rectangular area of tiles to apply the command to, specified in tile coordinates.
-            IntRect           Area;
-        };
-
-        /// \brief Executes a tile editing command at the specified placement in the world.
-        ///
-        /// \param Command   The tile editing command to execute (e.g., add or remove).
-        /// \param Placement The placement in the world where the tile command should be executed.
-        /// \param Object    The unique identifier for the object to be added or removed.
-        void ExecuteOnTiles(Command Command, Placement Placement, UInt32 Object);
 
         /// \brief Executes an entity editing command at the specified placement in the world.
         ///
@@ -432,36 +299,14 @@ namespace Tileon::Editor
         /// \return The entity's absolute placement.
         Placement OriginOf(Scene::Entity Actor) const;
 
-        /// \brief Applies the specified command to a given area of tiles on a specific layer.
-        ///
-        /// \param Command The command to apply (e.g., add or remove).
-        /// \param Area    The rectangular area of tiles to apply the command to, specified in tile coordinates.
-        /// \param Layer   The layer of the tiles to apply the command to (e.g., base or detail).
-        /// \param Handle  The unique identifier for the terrain type to apply when adding tiles.
-        /// \param Offset  The alignment offset to apply when adding tiles.
-        /// \param Facing  How the art is laid down when adding tiles.
-        /// \param Span    The dimensions of the tile being applied.
-        void ApplyTiles(Command Command, IntRect Area,
-            Tile::Layer Layer, UInt16 Handle, Tile::Offset Offset, Tile::Orientation Facing, IntVector2 Span);
-
-        /// \brief Applies the specified operation to an area of tiles.
-        ///
-        /// \param Region    The region to apply the operation to.
-        /// \param Operation The operation containing the details of the tile command to apply.
-        void ApplyTiles(Ptr<Region> Region, ConstRef<OpTile> Operation);
-
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         Ref<Context>      mContext;
-        Level             mLevel;
         Brush             mBrush;
-        Alignment         mAlignment;
-        Tile::Orientation mOrientation;
         Bool              mAligned;
-        Sequence<OpTile>  mOperations;
         Scene::Entity     mPreview;
         Bag<UInt64>       mSelection;
         UInt64            mSelectionPrimary;

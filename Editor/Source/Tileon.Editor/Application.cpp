@@ -13,7 +13,6 @@
 #include "Application.hpp"
 #include "Panel/Archetypes.hpp"
 #include "Panel/Viewport/Viewport.hpp"
-#include "Panel/Terrains.hpp"
 #include "Panel/Hierarchy.hpp"
 #include "Panel/Inspector.hpp"
 #include "Panel/Palette.hpp"
@@ -208,7 +207,6 @@ namespace Tileon::Editor
         mContext = Unique<Context>::Create(* this, Move(Project));
 
         // Add editor activities to the list of activities, which will be rendered in the interface.
-        mPanels.Append(Retainer<Terrains>::Create(* mContext));
         mPanels.Append(Retainer<Archetypes>::Create(* mContext));
         mPanels.Append(Retainer<Inspector>::Create(* mContext));
         mPanels.Append(Retainer<Hierarchy>::Create(* mContext));
@@ -227,9 +225,6 @@ namespace Tileon::Editor
     void Application::DrawEditor(Real64 Delta)
     {
         Ref<History> History = mContext->GetHistory();
-
-        // Retry whatever a restore had to leave waiting on a region that was still streaming in.
-        History.Tick();
 
         // Undo reaches every panel, so it is answered here rather than inside the one that happens to hold focus.
         if (!Toolkit::Composer::IsTextInputActive())

@@ -31,7 +31,7 @@ namespace Tileon
         /// \brief Constructs a transform from a matrix and the origin it is relative to.
         ///
         /// \param Worldspace The transform matrix, relative to \p Origin.
-        /// \param Origin     The whole-tile origin the matrix is expressed against.
+        /// \param Origin     The whole-unit origin the matrix is expressed against.
         ZY_INLINE Transform(ConstRef<Matrix4x3> Worldspace, IntVector3 Origin)
             : mWorldspace { Worldspace },
               mOrigin     { Origin }
@@ -40,7 +40,7 @@ namespace Tileon
 
         /// \brief Constructs an identity transform against the given origin.
         ///
-        /// \param Origin The whole-tile origin the transform is expressed against.
+        /// \param Origin The whole-unit origin the transform is expressed against.
         ZY_INLINE Transform(IntVector3 Origin)
             : mWorldspace { Matrix4x3::Identity() },
               mOrigin     { Origin }
@@ -72,7 +72,7 @@ namespace Tileon
             return mWorldspace;
         }
 
-        /// \brief Sets the whole-tile origin the matrix is expressed against.
+        /// \brief Sets the whole-unit origin the matrix is expressed against.
         ///
         /// \param Origin The origin, inherited from the owning region.
         ZY_INLINE void SetOrigin(IntVector3 Origin)
@@ -80,7 +80,7 @@ namespace Tileon
             mOrigin = Origin;
         }
 
-        /// \brief Gets the whole-tile origin the matrix is expressed against.
+        /// \brief Gets the whole-unit origin the matrix is expressed against.
         ///
         /// \return The origin, inherited from the owning region.
         ZY_INLINE IntVector3 GetOrigin() const

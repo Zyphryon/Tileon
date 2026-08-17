@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tools.hpp"
+#include "Tileon.Render/Component.hpp"
 #include "Tileon.World/Component.hpp"
 #include "Tileon.World/Component/Lifecycle.hpp"
 
@@ -23,12 +24,13 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     Tools::Tools(Ref<Context> Context)
         : mContext          { Context },
-          mLevel            { Level::Base },
           mBrush            { Brush::Pencil },
-          mAlignment        { Alignment::Lattice },
-          mOrientation      { Tile::Orientation::None },
           mAligned          { false },
           mSelectionPrimary { 0 },
           mRevision         { 0 },
@@ -39,65 +41,25 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Tools::Tick()
+    void Tools::Execute(Command Command, Placement Placement, UInt32 Object)
     {
-        if (mOperations.IsEmpty())
-        {
-            return;
-        }
-
-        // A paint that had to wait for its region to stream in lands outside the stroke that asked for it.
         Ref<History> History = mContext.GetHistory();
-        History.Open("Paint");
 
-        mOperations.RemoveFastSomeIf([&](ConstRef<OpTile> Operation) -> Bool
-        {
-            if (Operation.Actor.IsValid())
-            {
-                if (const Ptr<Region> Component = Operation.Actor.TryGet<Region>())
-                {
-                    ApplyTiles(Component, Operation);
-                    return true;
-                }
-            }
-            else
-            {
-                return true;
-            }
-            return false;
-        });
-
+        History.Open(Command == Command::Add ? "Place Entity"_Text : "Remove Entity"_Text);
+        ExecuteOnEntities(Command, Placement, Object);
         History.Close();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Tools::Execute(Command Command, Placement Placement, UInt32 Object)
-    {
-        Ref<History> History = mContext.GetHistory();
-
-        switch (GetMode())
-        {
-        case Mode::Tile:
-            History.Open(Command == Command::Add ? "Paint"_Text : "Erase"_Text);
-            ExecuteOnTiles(Command, Placement, Object);
-            History.Close();
-            break;
-        case Mode::Entity:
-            History.Open(Command == Command::Add ? "Place Entity"_Text : "Remove Entity"_Text);
-            ExecuteOnEntities(Command, Placement, Object);
-            History.Close();
-            break;
-        }
-    }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     void Tools::UpdatePreview(Placement Placement, UInt32 Object)
     {
-        if (GetMode() != Mode::Entity || mBrush != Brush::Pencil || Object == 0)
+        if (mBrush != Brush::Pencil || Object == 0)
         {
             ClearPreview();
             return;
@@ -183,59 +145,6 @@ namespace Tileon::Editor
 
         mPreview.Add<Stale>();
         return mPreview;
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Tools::ExecuteOnTiles(Command Command, Placement Placement, UInt32 Object)
-    {
-        // Gets the tileset entry for the specified object ID and retrieves the period its art repeats on.
-        const IntVector2 Period = Object ? mContext.GetTileset().GetMotif(Object).GetPeriod() : IntVector2::One();
-
-        // A transposed motif lays its axes the other way round, so it covers the ground the other way round too.
-        const IntVector2 Span = Tile::Has(GetOrientation(), Tile::Orientation::Transpose)
-            ? IntVector2(Period.GetY(), Period.GetX())
-            : Period;
-
-        // Apply the command based on the current brush type and the placement of the cursor in the world.
-        switch (mBrush)
-        {
-        case Brush::Hand:
-        case Brush::Select:
-            break;
-        case Brush::Pencil:
-        {
-            const SInt32  TileX = Floor(Placement.GetAbsoluteX());
-            const SInt32  TileY = Floor(Placement.GetAbsoluteY());
-            const IntRect Area(TileX, TileY, TileX + Span.GetX(), TileY + Span.GetY());
-
-            ApplyTiles(
-                Command,
-                Area,
-                static_cast<Tile::Layer>(Enum::Cast(mLevel)),
-                Object,
-                Resolve(IntVector2(TileX, TileY), Span),
-                GetOrientation(),
-                Span);
-            break;
-        }
-        case Brush::Bucket:
-        {
-            const SInt32  TileX = Placement.GetRegionX() * Region::kTilesPerX;
-            const SInt32  TileY = Placement.GetRegionY() * Region::kTilesPerY;
-            const IntRect Area(TileX, TileY, TileX + Region::kTilesPerX, TileY + Region::kTilesPerY);
-
-            ApplyTiles(
-                Command,
-                Area,
-                static_cast<Tile::Layer>(Enum::Cast(mLevel)),
-                Object,
-                Resolve(IntVector2(TileX, TileY), Span),
-                GetOrientation(),
-                Span);
-        }
-        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -728,81 +637,5 @@ namespace Tileon::Editor
         History.Close();
 
         SetPrimary(Primary);
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Tools::ApplyTiles(Command Command, IntRect Area,
-        Tile::Layer Layer, UInt16 Handle, Tile::Offset Offset, Tile::Orientation Facing, IntVector2 Span)
-    {
-        Ref<Supervisor> Supervisor = mContext.GetSupervisor();
-
-        // Compute the range of regions that the global tile rect overlaps.
-        const SInt16 RegionMinX = Coordinate::GetRegionX(Area.GetMinimumX());
-        const SInt16 RegionMinY = Coordinate::GetRegionY(Area.GetMinimumY());
-        const SInt16 RegionMaxX = Coordinate::GetRegionX(Area.GetMaximumX() - 1);
-        const SInt16 RegionMaxY = Coordinate::GetRegionY(Area.GetMaximumY() - 1);
-
-        for (SInt16 RegionY = RegionMinY; RegionY <= RegionMaxY; ++RegionY)
-        {
-            for (SInt16 RegionX = RegionMinX; RegionX <= RegionMaxX; ++RegionX)
-            {
-                Scene::Entity Actor = Supervisor.GetOrLoadRegion(RegionX, RegionY, true);
-
-                if (Actor.IsValid())
-                {
-                    const OpTile Operation(Actor, Command, Layer, Handle, Offset, Facing, Span, Area);
-
-                    if (const Ptr<Region> Component = Actor.TryGet<Region>())
-                    {
-                        ApplyTiles(Component, Operation);
-                    }
-                    else
-                    {
-                        mOperations.Append(Operation);
-                    }
-                }
-            }
-        }
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Tools::ApplyTiles(Ptr<Region> Region, ConstRef<OpTile> Operation)
-    {
-        // Compute this region's global tile origin.
-        const SInt32 OriginX = Region->GetX() * Region::kTilesPerX;
-        const SInt32 OriginY = Region->GetY() * Region::kTilesPerY;
-
-        // Clip the global area to this region's tile range and convert to region-local coordinates.
-        const SInt32 GlobalClipMinX = Max(Operation.Area.GetMinimumX(), OriginX);
-        const SInt32 GlobalClipMinY = Max(Operation.Area.GetMinimumY(), OriginY);
-        const SInt32 GlobalClipMaxX = Min(Operation.Area.GetMaximumX(), OriginX + Region::kTilesPerX);
-        const SInt32 GlobalClipMaxY = Min(Operation.Area.GetMaximumY(), OriginY + Region::kTilesPerY);
-
-        const IntRect LocalArea(
-            GlobalClipMinX - OriginX,
-            GlobalClipMinY - OriginY,
-            GlobalClipMaxX - OriginX,
-            GlobalClipMaxY - OriginY);
-
-        mContext.GetHistory().CaptureRegion(Operation.Actor);
-
-        if (Operation.Command == Command::Add)
-        {
-            Region->Fill(LocalArea, Operation.Layer, Operation.Terrain, Operation.Offset, Operation.Orientation);
-        }
-        else
-        {
-            Region->Erase(LocalArea, Operation.Layer);
-        }
-
-        // Mark the region as dirty so it gets saved and reloaded with the updated tile data.
-        Operation.Actor.Add<Persist>();
-
-        // The tiles were mutated in place, so signal the change for the render-side block cache.
-        Operation.Actor.Notify<Tileon::Region>();
     }
 }

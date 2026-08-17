@@ -2,9 +2,14 @@
 // Uniforms
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+cbuffer cb_Global : register(b0)
+{
+    float4x4 u_Camera;
+    float4x4 u_CameraInverse;
+};
+
 cbuffer cb_Pass : register(b1)
 {
-    float4x4 u_Inverse;
     float2   u_Dimension;
 };
 
@@ -38,8 +43,8 @@ fs_Input main(uint ID : SV_VertexID)
     const float2 Corner = float2((ID << 1) & 2, ID & 2);
     Result.Position = float4(Corner * 2.0 - 1.0, 0.0, 1.0);
 
-    const float4 Head = mul(u_Inverse, float4(Result.Position.xy, 0.0, 1.0));
-    const float4 Tail = mul(u_Inverse, float4(Result.Position.xy, 1.0, 1.0));
+    const float4 Head = mul(u_CameraInverse, float4(Result.Position.xy, 0.0, 1.0));
+    const float4 Tail = mul(u_CameraInverse, float4(Result.Position.xy, 1.0, 1.0));
 
     const float3 Origin    = Head.xyz / Head.w;
     const float3 Direction = Tail.xyz / Tail.w - Origin;

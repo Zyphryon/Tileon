@@ -32,14 +32,11 @@ namespace Tileon
         /// \brief The delay duration for camera movements and zoom transitions, in seconds.
         static constexpr Real32 kDelay     = 0.25f;
 
-        /// \brief The minimum zoom value, representing the furthest the camera can zoom in.
-        static constexpr Real32 kMinZoom   = 0.125f;
-
-        /// \brief The maximum zoom value, representing the furthest the camera can zoom out.
-        static constexpr Real32 kMaxZoom   = 16.0f;
+        /// \brief The zoom levels the camera may rest at, every one a power of two.
+        static constexpr auto   kZoom      = Array(0.125f, 0.25f, 0.5f, 1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f);
 
         /// \brief The greatest height the view keeps, in tiles.
-        static constexpr Real32 kMaxHeight = 64.0f;
+        static constexpr Real32 kElevation = 64.0f;
 
         /// \brief The depth the world begins at, reserving the range in front of it for content drawn over it.
         static constexpr Real32 kMinDepth  = 0.10f;
@@ -49,8 +46,10 @@ namespace Tileon
 
     public:
 
-        /// \brief Constructs it with default camera settings.
-        Director();
+        /// \brief Constructs a director that measures its view at the specified density.
+        ///
+        /// \param Density The pixel density of the camera's viewport, in pixels per logical unit.
+        explicit Director(Real32 Density);
 
         /// \brief Advances any active position and zoom transitions.
         ///
@@ -80,18 +79,10 @@ namespace Tileon
             return mProjection;
         }
 
-        /// \brief Sets the pixel density of the camera's viewport.
-        ///
-        /// \param Density The pixel density of the camera's viewport, in pixels per logical unit.
-        ZY_INLINE void SetDensity(UInt16 Density)
-        {
-            mDensity = Density;
-        }
-
         /// \brief Gets the pixel density of the camera's viewport.
         ///
         /// \return The pixel density of the camera's viewport, in pixels per logical unit.
-        ZY_INLINE UInt16 GetDensity() const
+        ZY_INLINE Real32 GetDensity() const
         {
             return mDensity;
         }
@@ -142,8 +133,11 @@ namespace Tileon
             // Reset any active zoom tween to immediately apply the new zoom.
             mTweenZoom = Tween<Real32>();
 
-            mZoom = Clamp(Magnitude, kMinZoom, kMaxZoom);
+            mZoom = Quantize(Magnitude);
             SetViewport(mViewport.GetX(), mViewport.GetY());
+
+            // The quantum a snap rounds to comes from the zoom, so the translation has to re-land on the new grid.
+            mCamera.SetTranslation(Snap(mPosition.GetOffsetX()), 0.0f, Snap(mPosition.GetOffsetY()));
         }
 
         /// \brief Gets the current zoom level of the camera.
@@ -186,7 +180,7 @@ namespace Tileon
         {
             if (mTweenZoom.IsComplete())
             {
-                mTweenZoom = Tween(mZoom, Clamp(mZoom + Magnitude, kMinZoom, kMaxZoom), kDelay);
+                mTweenZoom = Tween(mZoom, Quantize(mZoom + Magnitude), kDelay);
             }
         }
 
@@ -198,7 +192,7 @@ namespace Tileon
         {
             if (mTweenZoom.IsComplete() && mTweenPosition.IsComplete())
             {
-                const Real32 Magnitude   = Clamp(Zoom, kMinZoom, kMaxZoom);
+                const Real32 Magnitude   = Quantize(Zoom);
                 const Real32 Scale       = Magnitude / mZoom;
 
                 const Real64 AnchorAbsX  = Anchor.GetAbsoluteX();
@@ -311,6 +305,36 @@ namespace Tileon
             return Round(Input / Scale) * Scale;
         }
 
+        /// \brief Settles a requested zoom onto the level nearest it in the direction the change is heading.
+        ///
+        /// \param Magnitude The zoom level being asked for.
+        /// \return The level the camera settles on.
+        ZY_INLINE Real32 Quantize(Real32 Magnitude) const
+        {
+            const Real32 Bounded = Clamp(Magnitude, kZoom.GetFront(), kZoom.GetBack());
+
+            if (Bounded < mZoom)
+            {
+                for (UInt Index = kZoom.GetSize(); Index > 0; --Index)
+                {
+                    if (kZoom[Index - 1] <= Bounded)
+                    {
+                        return kZoom[Index - 1];
+                    }
+                }
+                return kZoom.GetFront();
+            }
+
+            for (const Real32 Level : kZoom)
+            {
+                if (Level >= Bounded)
+                {
+                    return Level;
+                }
+            }
+            return kZoom.GetBack();
+        }
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -318,9 +342,9 @@ namespace Tileon
 
         Render::Camera   mCamera;
         Real32           mZoom;
+        Real32           mDensity;
         Vector2          mViewport;
         Projection       mProjection;
-        UInt16           mDensity;
         IntRect          mFrustum;
         Placement        mPosition;
         Rect             mScreen;

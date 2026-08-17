@@ -20,8 +20,9 @@
   },
   "Signature": {
     "Uniforms": [
-      { "Frequency": "Pass", "Name": "Camera",    "Type": "Float4", "Count": 4 },
-      { "Frequency": "Pass", "Name": "Dimension", "Type": "Float2" }
+      { "Frequency": "Frame", "Name": "Camera",        "Type": "Float4", "Count": 4 },
+      { "Frequency": "Frame", "Name": "CameraInverse", "Type": "Float4", "Count": 4 },
+      { "Frequency": "Pass",  "Name": "Dimension",     "Type": "Float2" }
     ]
   },
   "Program": {

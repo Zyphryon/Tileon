@@ -35,31 +35,6 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void History::Tick()
-    {
-        mDeferred.RemoveFastSomeIf([this](ConstRef<Deferred> Entry) -> Bool
-        {
-            const Scene::Entity Actor = mContext.GetSupervisor().GetRegion(
-                static_cast<SInt16>(Entry.Key >> 16), static_cast<SInt16>(Entry.Key));
-
-            if (!Actor.IsValid())
-            {
-                return true;
-            }
-
-            if (!Actor.Has<Region>())
-            {
-                return false;
-            }
-
-            WriteRegion(Actor, Entry.State);
-            return true;
-        });
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
     void History::Open(Text Label)
     {
         if (mDepth++ == 0)
@@ -95,17 +70,6 @@ namespace Tileon::Editor
             case Target::Singleton:
                 Entry.After = SaveSingleton(mContext.GetScene().GetEntity(Entry.Key));
                 break;
-            case Target::Region:
-            {
-                const Scene::Entity Actor = mContext.GetSupervisor().GetRegion(
-                    static_cast<SInt16>(Entry.Key >> 16), static_cast<SInt16>(Entry.Key));
-
-                if (const ConstPtr<Region> Component = Actor.IsValid() ? Actor.TryGet<const Region>() : nullptr)
-                {
-                    Entry.After = SaveRegion(* Component);
-                }
-                break;
-            }
             }
             Entry.Resolved = true;
         }
@@ -211,33 +175,6 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void History::CaptureRegion(Scene::Entity Actor)
-    {
-        const ConstPtr<Region> Component = Actor.IsValid() ? Actor.TryGet<const Region>() : nullptr;
-
-        if (!Component)
-        {
-            return;
-        }
-
-        const UInt64 Key = GetKey(Component->GetX(), Component->GetY());
-
-        // The region came back from disk since the stack was built, so what it holds is no longer a step behind.
-        if (!Bind(Key, Actor))
-        {
-            Forget();
-        }
-
-        if (const Ptr<Change> Entry = Reach(Target::Region, Key); Entry && !Entry->Captured)
-        {
-            Entry->Before   = SaveRegion(* Component);
-            Entry->Captured = true;
-        }
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
     void History::Undo()
     {
         if (CanUndo())
@@ -274,7 +211,6 @@ namespace Tileon::Editor
     void History::Forget()
     {
         mSteps.Clear();
-        mDeferred.Clear();
         mTokens.Clear();
         mEntities.Clear();
         mRegions.Clear();
@@ -504,110 +440,6 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Blob History::SaveRegion(ConstRef<Region> Component) const
-    {
-        Writer Output;
-
-        for (UInt8 Y = 0; Y < Region::kTilesPerY; ++Y)
-        {
-            for (UInt8 X = 0; X < Region::kTilesPerX; ++X)
-            {
-                const Tile Tile = Component.GetTile(X, Y);
-
-                for (UInt8 Index = 0; Index < Enum::Count<Tile::Layer>(); ++Index)
-                {
-                    const Tile::Layer  Layer  = static_cast<Tile::Layer>(Index);
-                    const Tile::Offset Offset = Tile.GetOffset(Layer);
-
-                    Output.Write<UInt16>(Tile.GetHandle(Layer));
-                    Output.Write<UInt8>(Offset.GetX());
-                    Output.Write<UInt8>(Offset.GetY());
-                    Output.Write<Tile::Orientation>(Tile.GetOrientation(Layer));
-                }
-            }
-        }
-        return Output.Detach();
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void History::ApplyRegion(UInt64 Key, ConstRef<Blob> State)
-    {
-        if (State == nullptr)
-        {
-            return;
-        }
-
-        const SInt16 RegionX = static_cast<SInt16>(Key >> 16);
-        const SInt16 RegionY = static_cast<SInt16>(Key);
-
-        const Scene::Entity Actor = mContext.GetSupervisor().GetOrLoadRegion(RegionX, RegionY, true);
-
-        if (!Actor.IsValid())
-        {
-            return;
-        }
-
-        // A region that came back from disk holds tiles the recorded steps never saw, so they no longer apply.
-        if (!Bind(Key, Actor))
-        {
-            mStale = true;
-            return;
-        }
-
-        // A region that is still streaming in has no tiles to write over yet, so the write waits for it.
-        if (Actor.Has<Region>())
-        {
-            WriteRegion(Actor, State);
-        }
-        else
-        {
-            Blob Copy = Blob::Allocate<Byte>(State.GetSize());
-            Copy.Copy(State.GetData(), State.GetSize());
-
-            mDeferred.Append(Deferred(Key, Move(Copy)));
-        }
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void History::WriteRegion(Scene::Entity Actor, ConstRef<Blob> State)
-    {
-        Ref<Region> Component = Actor.Get<Region>();
-
-        Reader Input(State.GetData(), State.GetSize());
-
-        for (UInt8 Y = 0; Y < Region::kTilesPerY; ++Y)
-        {
-            for (UInt8 X = 0; X < Region::kTilesPerX; ++X)
-            {
-                Tile Tile;
-
-                for (UInt8 Index = 0; Index < Enum::Count<Tileon::Tile::Layer>(); ++Index)
-                {
-                    const Tileon::Tile::Layer Layer  = static_cast<Tileon::Tile::Layer>(Index);
-                    const UInt16              Handle = Input.Read<UInt16>();
-                    const UInt8               X0     = Input.Read<UInt8>();
-                    const UInt8               Y0     = Input.Read<UInt8>();
-                    const Tile::Orientation   Facing = Input.Read<Tileon::Tile::Orientation>();
-
-                    Tile.SetLayer(Layer, Handle, Tileon::Tile::Offset(X0, Y0), Facing);
-                }
-                Component.SetTile(X, Y, Move(Tile));
-            }
-        }
-
-        Actor.Add<Persist>();
-
-        // The tiles were written in place, so signal the change for the render-side block cache.
-        Actor.Notify<Region>();
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
     void History::Apply(Ref<Step> Step, Bool Backward)
     {
         mRemap.Clear();
@@ -627,9 +459,6 @@ namespace Tileon::Editor
                 break;
             case Target::Singleton:
                 ApplySingleton(Entry.Key, State);
-                break;
-            case Target::Region:
-                ApplyRegion(Entry.Key, State);
                 break;
             }
         }

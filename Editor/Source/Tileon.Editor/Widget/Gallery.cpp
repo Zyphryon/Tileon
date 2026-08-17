@@ -257,9 +257,6 @@ namespace Tileon::Editor
 
         const Ptr<ImDrawList> DrawList = Toolkit::Composer::GetWindowDrawList();
 
-        // A motif is baked into the array holding its frame size and an entity into whichever atlas its
-        // sheet landed in, so neighbouring cells alternate between textures and each alternation costs a
-        // command. Cells cover disjoint rectangles, so which one is drawn first is not visible.
         mCells.Sort([](ConstRef<Cell> Left, ConstRef<Cell> Right)
         {
             return Left.Texture < Right.Texture;

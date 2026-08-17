@@ -38,8 +38,42 @@ namespace Tileon::Editor
         mRequest = Key;
         mResult  = 0;
         mAnswer  = "";
-        mFilter  = Filter;
         mOpen    = true;
+
+        // A field may take more than one kind of file, so the filter is a list of suffixes separated by spaces.
+        mFilters.Clear();
+
+        for (UInt Cursor = 0; Cursor < Filter.GetSize(); )
+        {
+            const SInt Break  = StrFind(Filter.Slice(Cursor), ' ');
+            const UInt Length = (Break < 0 ? Filter.GetSize() - Cursor : static_cast<UInt>(Break));
+
+            if (Length > 0)
+            {
+                mFilters.Append(Str(Filter.Slice(Cursor, Length)));
+            }
+            Cursor += Length + 1;
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    Bool Browser::Accepts(Text Name) const
+    {
+        if (mFilters.IsEmpty())
+        {
+            return true;
+        }
+
+        for (ConstRef<Str> Suffix : mFilters)
+        {
+            if (StrEndsWith(Name, Suffix))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -263,7 +297,7 @@ namespace Tileon::Editor
             }
 
             // Apply the current filter, skipping it if it doesn't match.
-            if (!mFilter.IsEmpty() && !StrEndsWith(Entry.Name, mFilter))
+            if (!Accepts(Entry.Name))
             {
                 continue;
             }

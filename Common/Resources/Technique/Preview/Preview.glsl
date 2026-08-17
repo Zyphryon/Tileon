@@ -3,9 +3,10 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #if defined(PREVIEW_DEPTH)
-layout(std140, binding = 1) uniform cb_Pass
+layout(std140, binding = 0) uniform cb_Global
 {
-    mat4 u_Inverse;    // turns a clip-space probe back into world space
+    mat4 u_Camera;
+    mat4 u_CameraInverse;
 };
 #endif
 
@@ -55,7 +56,7 @@ void main()
 #elif defined(PREVIEW_DEPTH)
 
     float Depth = texture(t_Source, v_Texture).r;
-    vec4  Probe = u_Inverse * vec4(v_Probe, Depth, 1.0);
+    vec4  Probe = u_CameraInverse * vec4(v_Probe, Depth, 1.0);
     vec3  World = Probe.xyz / Probe.w;
 
     float Elevation = clamp(World.y / ELEVATION_SCALE, 0.0, 1.0);

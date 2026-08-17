@@ -20,6 +20,7 @@ in vec4 a_Transform2;
 in vec4 a_Frame;
 in vec2 a_Size;
 in vec4 a_Color;
+in uint a_Facing;
 
 out vec2 v_Texture;
 out vec4 v_Color;
@@ -45,7 +46,14 @@ vec2 TessellateRect(int VertexID)
 void main()
 {
     vec2 Corner = TessellateRect(gl_VertexID);
-    vec3 Local  = vec3(Corner * a_Size, 0.0);
+
+#ifdef ENABLE_DECAL_PROJECTION
+    // A decal lies against the ground rather than standing upright, so its quad spans the local x and z
+    // axes; whatever the pose turns about y then spins it on the ground.
+    vec3 Local = vec3(Corner.x * a_Size.x, 0.0, Corner.y * a_Size.y);
+#else
+    vec3 Local = vec3(Corner * a_Size, 0.0);
+#endif
 
     vec3 Position = vec3(
         dot(Local, a_Transform0.xyz) + a_Transform0.w,
@@ -56,16 +64,43 @@ void main()
     // affine put it at; it carries no bias of its own.
     gl_Position = u_Camera * vec4(Position, 1.0);
 
-    v_Texture = mix(a_Frame.xy, a_Frame.zw, vec2(Corner.x, 1.0 - Corner.y));
+#ifdef ENABLE_DECAL_PROJECTION
+    // A decal is coplanar with the ground it is painted on, so without this it would z-fight the terrain.
+    gl_Position.z -= DECAL_DEPTH_BIAS;
+#endif
+
+    // The art is laid down mirrored or turned by exchanging the corner before it picks a point in the frame.
+    vec2 Sample = vec2(Corner.x, 1.0 - Corner.y);
+
+    if ((a_Facing & FACING_MIRROR_X) != 0u)
+    {
+        Sample.x = 1.0 - Sample.x;
+    }
+    if ((a_Facing & FACING_MIRROR_Y) != 0u)
+    {
+        Sample.y = 1.0 - Sample.y;
+    }
+
+    v_Texture = mix(a_Frame.xy, a_Frame.zw, Sample);
     v_Color   = a_Color;
 
 
+#ifdef ENABLE_DECAL_PROJECTION
+    // The quad spans local x and z, so its surface normal is local y and the tangent frame follows suit.
+#ifdef ENABLE_NORMAL_MAPPING
+    v_AxisX = normalize(vec3(a_Transform0.x, a_Transform1.x, a_Transform2.x));
+    v_AxisY = normalize(vec3(a_Transform0.z, a_Transform1.z, a_Transform2.z));
+#endif
+
+    v_AxisZ = -normalize(vec3(a_Transform0.y, a_Transform1.y, a_Transform2.y));
+#else
 #ifdef ENABLE_NORMAL_MAPPING
     v_AxisX = normalize(vec3(a_Transform0.x, a_Transform1.x, a_Transform2.x));
     v_AxisY = normalize(vec3(a_Transform0.y, a_Transform1.y, a_Transform2.y));
 #endif
 
     v_AxisZ = normalize(vec3(a_Transform0.z, a_Transform1.z, a_Transform2.z));
+#endif
 }
 
 #endif // VERTEX_SHADER

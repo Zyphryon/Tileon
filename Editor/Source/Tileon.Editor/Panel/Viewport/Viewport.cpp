@@ -55,9 +55,7 @@ namespace Tileon::Editor
           mTilt         { kMaxTilt },
           mMarquee      { false },
           mMarqueeMoved { false },
-          mStroke       { false },
-          mPaintTileX   { INT32_MIN },
-          mPaintTileY   { INT32_MIN }
+          mStroke       { false }
     {
         // The preview phase resolves one target, so it starts on the one the viewport opens with.
         Context.GetRenderer().SetOutput(mTarget);
@@ -79,7 +77,6 @@ namespace Tileon::Editor
 
     void Viewport::OnDraw()
     {
-        mTools.Tick();
 
         // A stroke ends wherever the button is let go, which may well be outside the viewport it started in.
         if (mStroke
@@ -120,27 +117,6 @@ namespace Tileon::Editor
 
     void Viewport::DrawToolbar()
     {
-        // Draw mode switch button to toggle between tile editing and entity editing modes.
-        switch (mTools.GetMode())
-        {
-        case Tools::Mode::Tile:
-            if (Toolkit::Composer::Button(ICON_FA_MAP "##mode", 32.0f))
-            {
-                mTools.SetBrush(Tools::Brush::Pencil);
-                mTools.SetMode(Tools::Mode::Entity);
-            }
-            Toolkit::Composer::Tooltip("Switch to entity mode");
-            break;
-        case Tools::Mode::Entity:
-            if (Toolkit::Composer::Button(ICON_FA_CUBE "##mode", 32.0f))
-            {
-                mTools.SetBrush(Tools::Brush::Pencil);
-                mTools.SetMode(Tools::Mode::Tile);
-            }
-            Toolkit::Composer::Tooltip("Switch to tile mode");
-            break;
-        }
-        Toolkit::Composer::SameLine();
 
         // Draw common toolbar elements that are always visible.
         if (Toolkit::Composer::Button(ICON_FA_MAGNIFYING_GLASS_PLUS "##zoom_in", 32.0f))
@@ -199,16 +175,7 @@ namespace Tileon::Editor
 
         Toolkit::Composer::SeparatorEx(ImGuiSeparatorFlags_Vertical);
         Toolkit::Composer::SameLine();
-
-        switch (mTools.GetMode())
-        {
-        case Tools::Mode::Tile:
-            DrawTileToolbar();
-            break;
-        case Tools::Mode::Entity:
-            DrawEntityToolbar();
-            break;
-        }
+        DrawEntityToolbar();
         Toolkit::Composer::SameLine();
 
         Toolkit::Composer::SeparatorEx(ImGuiSeparatorFlags_Vertical);
@@ -418,114 +385,6 @@ namespace Tileon::Editor
         {
             Toolkit::Composer::PopStyleColor(2);
         }
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Viewport::DrawTileToolbar()
-    {
-        DrawBrushButton(Tools::Brush::Hand,   ICON_FA_HAND,          "Pan the view");
-        Toolkit::Composer::SameLine();
-
-        DrawBrushButton(Tools::Brush::Select, ICON_FA_ARROW_POINTER, "Select");
-        Toolkit::Composer::SameLine();
-
-        DrawBrushButton(Tools::Brush::Pencil, ICON_FA_BRUSH,         "Paint tiles");
-        Toolkit::Composer::SameLine();
-
-        DrawBrushButton(Tools::Brush::Bucket, ICON_FA_FILL_DRIP,     "Fill the region");
-        Toolkit::Composer::SameLine();
-
-        Toolkit::Composer::SeparatorEx(ImGuiSeparatorFlags_Vertical);
-        Toolkit::Composer::SameLine();
-
-        // Draw the layer selection buttons for switching between layers.
-        const auto DrawLayerButton = [&](Tools::Level Level, Text Icon, Text Hint)
-        {
-            const Bool Active = (mTools.GetLevel() == Level);
-
-            if (Active)
-            {
-                Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-                Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            }
-
-            if (Toolkit::Composer::Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Level)), 32.0f))
-            {
-                mTools.SetLevel(Level);
-            }
-
-            Toolkit::Composer::Tooltip(Hint);
-
-            if (Active)
-            {
-                Toolkit::Composer::PopStyleColor(2);
-            }
-        };
-
-        Toolkit::Composer::Label(ICON_FA_LAYER_GROUP);
-        Toolkit::Composer::SameLine();
-
-        DrawLayerButton(Tools::Level::Base,   ICON_FA_1, "Base layer");
-        Toolkit::Composer::SameLine();
-
-        DrawLayerButton(Tools::Level::Detail, ICON_FA_2, "Detail layer");
-        Toolkit::Composer::SameLine();
-
-        Toolkit::Composer::SeparatorEx(ImGuiSeparatorFlags_Vertical);
-        Toolkit::Composer::SameLine();
-
-        const Bool Anchored = (mTools.GetAlignment() == Tools::Alignment::Cursor);
-
-        if (Anchored)
-        {
-            Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        }
-
-        if (Toolkit::Composer::Button(ICON_FA_CROSSHAIRS "##Alignment", 32.0f))
-        {
-            mTools.SetAlignment(Anchored ? Tools::Alignment::Lattice : Tools::Alignment::Cursor);
-        }
-
-        if (Anchored)
-        {
-            Toolkit::Composer::Tooltip("Anchor the art where it is painted");
-        }
-        else
-        {
-            Toolkit::Composer::Tooltip("Follow the lattice, keeping neighbouring paint seamless");
-        }
-
-        if (Anchored)
-        {
-            Toolkit::Composer::PopStyleColor(2);
-        }
-
-        Toolkit::Composer::SameLine();
-
-        const Bool Turned = (mTools.GetOrientation() != Tile::Orientation::None);
-
-        if (Turned)
-        {
-            Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        }
-
-        if (Toolkit::Composer::Button(ICON_FA_ROTATE_RIGHT "##Orientation", 32.0f))
-        {
-            mTools.Reorient(Tile::Orientation::Opposite);
-        }
-
-        Toolkit::Composer::Tooltip("Turn the art a quarter (W), or mirror it across x (Q) or y (E)");
-
-        if (Turned)
-        {
-            Toolkit::Composer::PopStyleColor(2);
-        }
-
-        Toolkit::Composer::SameLine();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -1088,175 +947,6 @@ namespace Tileon::Editor
                     {
                         mTools.SelectSingle(Cursor);
                     }
-                }
-            }
-            else if (mTools.GetMode() == Tools::Mode::Tile)
-            {
-                mTools.ClearPreview();
-
-                const UInt32    Selection = GetContext().GetInteger("Selection.Tile", 0);
-                const Placement Cursor    = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
-
-                if (!Toolkit::Composer::IsKeyDown(ImGuiMod_Ctrl) && !Toolkit::Composer::IsTextInputActive())
-                {
-                    if (Toolkit::Composer::IsKeyPressed(ImGuiKey_W))
-                    {
-                        mTools.Reorient(Tile::Orientation::Opposite);
-                    }
-                    else if (Toolkit::Composer::IsKeyPressed(ImGuiKey_Q))
-                    {
-                        mTools.Reorient(Tile::Orientation::MirrorX);
-                    }
-                    else if (Toolkit::Composer::IsKeyPressed(ImGuiKey_E))
-                    {
-                        mTools.Reorient(Tile::Orientation::MirrorY);
-                    }
-                }
-
-                // Footprint preview: show exactly which cells the stamp covers before it is committed.
-                {
-                    const Bool              IsBucket = (mTools.GetBrush() == Tools::Brush::Bucket);
-                    const Tile::Orientation Facing   = mTools.GetOrientation();
-
-                    const IntVector2 Authored = Selection
-                        ? mContext.GetTileset().GetMotif(Selection).GetPeriod()
-                        : IntVector2::One();
-                    const IntVector2 Period(Max(Authored.GetX(), 1), Max(Authored.GetY(), 1));
-
-                    // A transposed motif lays its axes the other way round, so it covers the ground that way too.
-                    const IntVector2 Span = Tile::Has(Facing, Tile::Orientation::Transpose)
-                        ? IntVector2(Period.GetY(), Period.GetX())
-                        : Period;
-
-                    IntRect Footprint;
-
-                    if (IsBucket)
-                    {
-                        Footprint = IntRect(
-                            Cursor.GetBaseX(), Cursor.GetBaseY(),
-                            Cursor.GetBaseX() + Tileon::Region::kTilesPerX,
-                            Cursor.GetBaseY() + Tileon::Region::kTilesPerY);
-                    }
-                    else
-                    {
-                        const SInt32 TileX = static_cast<SInt32>(Floor(Cursor.GetAbsoluteX()));
-                        const SInt32 TileY = static_cast<SInt32>(Floor(Cursor.GetAbsoluteY()));
-
-                        Footprint = IntRect(TileX, TileY, TileX + Span.GetX(), TileY + Span.GetY());
-                    }
-
-                    const auto Project = [&](SInt32 X, SInt32 Y)
-                    {
-                        return Camera.Project(Placement(0, 0, X, Y));
-                    };
-
-                    const ImVec2 Corner0 = Project(Footprint.GetMinimumX(), Footprint.GetMinimumY());
-                    const ImVec2 Corner1 = Project(Footprint.GetMaximumX(), Footprint.GetMinimumY());
-                    const ImVec2 Corner2 = Project(Footprint.GetMaximumX(), Footprint.GetMaximumY());
-                    const ImVec2 Corner3 = Project(Footprint.GetMinimumX(), Footprint.GetMaximumY());
-
-                    const Ptr<ImDrawList> List = Toolkit::Composer::GetWindowDrawList();
-
-                    ConstRef<Tileset::Glyph> Glyph = mContext.GetTileset().GetGlyph(Selection);
-
-                    if (Selection != 0 && !IsBucket && Glyph.GetTexture(Motif::Source::Albedo))
-                    {
-                        // Every slice shares one identifier, so which of them is drawn rides in the coordinates.
-                        const ImTextureID Slice  = Plugin::ImGuiRenderer::GetLayeredTextureID(Glyph.GetTexture(Motif::Source::Albedo));
-                        const auto        Sample = [&](Real32 U, Real32 V)
-                        {
-                            return Plugin::ImGuiRenderer::GetLayeredTextureUV(Glyph.Slice, ImVec2(U, V));
-                        };
-
-                        const UInt32 Base    = Glyph.Tint.ToRGBA8();
-                        const UInt32 Alpha   = static_cast<UInt32>(((Base >> 24) & 0xFF) * 0.7f) << 24;
-                        const UInt32 Preview = (Base & 0x00FFFFFF) | Alpha;
-
-                        const IntVector2 Origin(Footprint.GetMinimumX(), Footprint.GetMinimumY());
-                        const IntVector2 Anchor = IntVector2(mTools.Resolve(Origin, Span));
-
-                        const auto Locate = [&](SInt32 LatticeX, SInt32 LatticeY)
-                        {
-                            Real32 X = static_cast<Real32>(LatticeX);
-                            Real32 Y = static_cast<Real32>(LatticeY);
-
-                            if (Tile::Has(Facing, Tile::Orientation::Transpose))
-                            {
-                                Swap(X, Y);
-                            }
-                            if (Tile::Has(Facing, Tile::Orientation::MirrorX))
-                            {
-                                X = Period.GetX() - X;
-                            }
-                            if (Tile::Has(Facing, Tile::Orientation::MirrorY))
-                            {
-                                Y = Period.GetY() - Y;
-                            }
-                            return Sample(X / Period.GetX(), (Period.GetY() - Y) / Period.GetY());
-                        };
-
-                        // Draw the motif cell-by-cell so each cell shows the exact sub-tile the paint will store.
-                        for (SInt32 CellY = Footprint.GetMinimumY(); CellY < Footprint.GetMaximumY(); ++CellY)
-                        {
-                            for (SInt32 CellX = Footprint.GetMinimumX(); CellX < Footprint.GetMaximumX(); ++CellX)
-                            {
-                                const IntVector2 Phase  = Tile::Align(IntVector2(CellX, CellY) - Anchor, Span);
-                                const SInt32     Column = Phase.GetX();
-                                const SInt32     Row    = Phase.GetY();
-
-                                List->AddImageQuad(Slice,
-                                    Project(CellX,     CellY),     Project(CellX + 1, CellY),
-                                    Project(CellX + 1, CellY + 1), Project(CellX,     CellY + 1),
-                                    Locate(Column,     Row),       Locate(Column + 1, Row),
-                                    Locate(Column + 1, Row + 1),   Locate(Column,     Row + 1),
-                                    Preview);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        List->AddQuadFilled(Corner0, Corner1, Corner2, Corner3, Toolkit::Theme::kBrushWash);
-                    }
-
-                    // Outline always, so the footprint boundary stays legible over any art.
-                    List->AddQuad(Corner0, Corner1, Corner2, Corner3, Toolkit::Theme::kBrush, 1.5f);
-                }
-
-                // Pencil paints a continuous stroke while held; Bucket fills once per click.
-                const Bool   Continuous = (mTools.GetBrush() == Tools::Brush::Pencil);
-                const SInt32 TileX      = static_cast<SInt32>(Floor(Cursor.GetAbsoluteX()));
-                const SInt32 TileY      = static_cast<SInt32>(Floor(Cursor.GetAbsoluteY()));
-                const Bool   NewTile    = (TileX != mPaintTileX) || (TileY != mPaintTileY);
-
-                const Bool LeftClick  = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Left);
-                const Bool RightClick = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Right);
-                const Bool LeftHeld   = Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left);
-                const Bool RightHeld  = Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Right);
-
-                const Bool Erase = RightClick || (Continuous && RightHeld && NewTile);
-                const Bool Paint = (LeftClick || (Continuous && LeftHeld && NewTile)) && Selection != 0;
-
-                // A stroke held across many tiles is one edit, so it keeps a single step open until it is let go.
-                if ((LeftHeld || RightHeld) && !mStroke)
-                {
-                    mStroke = true;
-
-                    GetContext().GetHistory().Open("Paint");
-                }
-
-                if (Erase)
-                {
-                    mTools.Execute(Tools::Command::Remove, Cursor, Selection);
-                }
-                else if (Paint)
-                {
-                    mTools.Execute(Tools::Command::Add, Cursor, Selection);
-                }
-
-                if (LeftHeld || RightHeld)
-                {
-                    mPaintTileX = TileX;
-                    mPaintTileY = TileY;
                 }
             }
             else

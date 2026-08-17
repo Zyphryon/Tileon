@@ -113,14 +113,6 @@ namespace Tileon::Editor
             return mPresenter.GetRenderer();
         }
 
-        /// \brief Gets a reference to the tileset from the renderer associated with the controller.
-        ///
-        /// \return A reference to the tileset from the renderer associated with the controller.
-        ZY_INLINE Ref<Tileset> GetTileset()
-        {
-            return mPresenter.GetRenderer().GetTileset();
-        }
-
         /// \brief Gets a reference to the registry of inspectable components.
         ///
         /// \return A reference to the registry associated with the context.

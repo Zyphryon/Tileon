@@ -23,10 +23,10 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Pipeline
+namespace Tileon::Stage
 {
     /// \brief Represents the light stage of the rendering pipeline, responsible for applying lighting effects to the scene.
-    class Lightning final : public Render::Pass, public Engine::Locator<Graphic::Service>
+    class Lighting final : public Render::Pass, public Engine::Locator<Graphic::Service>
     {
     public:
 
@@ -35,7 +35,7 @@ namespace Tileon::Pipeline
         /// \param Host   The service host to associate with the stage.
         /// \param Normal The target holding the scene's surface normals, sampled by every light technique.
         /// \param Depth  The target holding the scene's depth, which the placed lights unproject into world space.
-        Lightning(Ref<Engine::Subsystem::Host> Host, ConstRef<Render::Target> Normal, ConstRef<Render::Target> Depth);
+        Lighting(Ref<Engine::Subsystem::Host> Host, ConstRef<Render::Target> Normal, ConstRef<Render::Target> Depth);
 
         /// \brief Sets the director the stage resolves its draws against for the current frame.
         ///
@@ -72,13 +72,6 @@ namespace Tileon::Pipeline
         ///
         /// \param Content The content service used to load resources for the stage.
         void OnLoad(Ref<Content::Service> Content);
-
-        /// \brief Represents the per-pass data the placed light techniques unproject depth with.
-        struct GpuPassLayout final
-        {
-            /// The inverse of the camera's view-projection, which turns a clip-space probe back into world space.
-            Matrix4x4 Inverse;
-        };
 
         /// \brief Represents the per-instance data for the ambient lighting effect of the skylight technique.
         struct GpuSkylightLayout final

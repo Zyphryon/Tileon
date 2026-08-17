@@ -21,24 +21,11 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Presenter::Presenter(Ref<Engine::Subsystem::Host> Host, Bool Immediate)
+    Presenter::Presenter(Ref<Engine::Subsystem::Host> Host, Bool Immediate, Real32 Density)
         : Session   { Host },
-          mRenderer { Host, Immediate }
+          mDirector { Density },
+          mRenderer { Host, Immediate, Density }
     {
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Presenter::Init(UInt16 Width, UInt16 Height, UInt16 Density)
-    {
-        // Initialize the director with the display dimensions and density specified in the configuration.
-        mDirector.SetDensity(Density);
-        mDirector.SetViewport(Width / static_cast<Real32>(Density), Height / static_cast<Real32>(Density));
-
-        // Resize the renderer to match the display dimensions specified in the configuration.
-        mRenderer.SetDensity(Density);
-        mRenderer.Resize(Width, Height);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -71,9 +58,7 @@ namespace Tileon
     void Presenter::Resize(UInt16 Width, UInt16 Height)
     {
         // Update the director's viewport dimensions based on the new output size.
-        mDirector.SetViewport(
-            Width  / static_cast<Real32>(mDirector.GetDensity()),
-            Height / static_cast<Real32>(mDirector.GetDensity()));
+        mDirector.SetViewport(Width / mDirector.GetDensity(), Height / mDirector.GetDensity());
 
         // Resize the renderer to match the new output dimensions.
         mRenderer.Resize(Width, Height);

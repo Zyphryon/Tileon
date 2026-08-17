@@ -22,6 +22,7 @@ struct vs_Input
     float4 Frame      : SLOT3;
     float2 Size       : SLOT4;
     float4 Color      : SLOT5;
+    uint   Facing     : SLOT6;
 };
 
 struct fs_Input
@@ -66,7 +67,13 @@ fs_Input main(vs_Input Input)
     fs_Input Result;
 
     float2 Corner = TessellateRect(Input.VertexID);
-    float3 Local  = float3(Corner * Input.Size, 0.0);
+
+#ifdef ENABLE_DECAL_PROJECTION
+    // A decal lies against the ground rather than standing upright, so its quad spans the local x and z axes.
+    float3 Local = float3(Corner.x * Input.Size.x, 0.0, Corner.y * Input.Size.y);
+#else
+    float3 Local = float3(Corner * Input.Size, 0.0);
+#endif
 
     float3 Position = float3(
         dot(Local, Input.Transform0.xyz) + Input.Transform0.w,
@@ -76,15 +83,44 @@ fs_Input main(vs_Input Input)
     // A sprite stands upright, so the projection already resolves its depth from the world position the
     // affine put it at; it carries no bias of its own.
     Result.Position = mul(u_Camera, float4(Position, 1.0));
-    Result.Texture  = lerp(Input.Frame.xy, Input.Frame.zw, float2(Corner.x, 1.0 - Corner.y));
-    Result.Color    = Input.Color;
 
-#ifdef ENABLE_NORMAL_MAPPING
-    Result.AxisX = normalize(float3(Input.Transform0.x, Input.Transform1.x, Input.Transform2.x));
-    Result.AxisY = normalize(float3(Input.Transform0.y, Input.Transform1.y, Input.Transform2.y));
+#ifdef ENABLE_DECAL_PROJECTION
+    // A decal is coplanar with the ground it is painted on, so without this it would z-fight the terrain.
+    Result.Position.z -= DECAL_DEPTH_BIAS;
 #endif
 
+    // The art is laid down mirrored or turned by exchanging the corner before it picks a point in the frame.
+    float2 Sample = float2(Corner.x, 1.0 - Corner.y);
+
+    if ((Input.Facing & 1u) != 0u)
+    {
+        Sample.x = 1.0 - Sample.x;
+    }
+    if ((Input.Facing & 2u) != 0u)
+    {
+        Sample.y = 1.0 - Sample.y;
+    }
+
+    Result.Texture  = lerp(Input.Frame.xy, Input.Frame.zw, Sample);
+    Result.Color    = Input.Color;
+
+#ifdef ENABLE_DECAL_PROJECTION
+
+    #ifdef ENABLE_NORMAL_MAPPING
+        Result.AxisX = normalize(float3(Input.Transform0.x, Input.Transform1.x, Input.Transform2.x));
+        Result.AxisY = normalize(float3(Input.Transform0.z, Input.Transform1.z, Input.Transform2.z));
+    #endif
+
+    Result.AxisZ = -normalize(float3(Input.Transform0.y, Input.Transform1.y, Input.Transform2.y));
+#else
+
+    #ifdef ENABLE_NORMAL_MAPPING
+        Result.AxisX = normalize(float3(Input.Transform0.x, Input.Transform1.x, Input.Transform2.x));
+        Result.AxisY = normalize(float3(Input.Transform0.y, Input.Transform1.y, Input.Transform2.y));
+    #endif
+
     Result.AxisZ = normalize(float3(Input.Transform0.z, Input.Transform1.z, Input.Transform2.z));
+#endif
 
     return Result;
 }
@@ -121,22 +157,24 @@ fs_Output main(fs_Input Input)
     float4 Sampled = t_Normal.Sample(s_Normal, Input.Texture);
     float3 Tangent = normalize(Sampled.rgb * 2.0 - 1.0);
     float3 Normal  = normalize(Tangent.x * Input.AxisX + Tangent.y * Input.AxisY - Tangent.z * Input.AxisZ);
-#if   defined(ENABLE_TRANSLUCENCY)
-    const float Opacity = Sampled.a;
-#elif defined(ENABLE_ALPHA_TEST)
-    const float Opacity = 1.0;
-#else
-    const float Opacity = Result.Albedo.a;
-#endif
+
+    #if   defined(ENABLE_TRANSLUCENCY)
+        const float Opacity = Sampled.a;
+    #elif defined(ENABLE_ALPHA_TEST)
+        const float Opacity = 1.0;
+    #else
+        const float Opacity = Result.Albedo.a;
+    #endif
 
     Result.Normal = float4(Normal * 0.5 + 0.5, Opacity);
 #else
 
-#if defined(ENABLE_ALPHA_TEST)
-    const float Opacity = 1.0;
-#else
-    const float Opacity = Result.Albedo.a;
-#endif
+    #if defined(ENABLE_ALPHA_TEST)
+        const float Opacity = 1.0;
+    #else
+        const float Opacity = Result.Albedo.a;
+    #endif
+
     Result.Normal = float4(-Input.AxisZ * 0.5 + 0.5, Opacity);
 #endif
 

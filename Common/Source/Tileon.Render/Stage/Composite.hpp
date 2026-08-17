@@ -23,7 +23,7 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Pipeline
+namespace Tileon::Stage
 {
     /// \brief Represents the composite stage of the rendering pipeline, responsible for compositing the final image.
     class Composite final : public Render::Pass, public Engine::Locator<Graphic::Service>

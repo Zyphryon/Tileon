@@ -48,13 +48,6 @@ namespace Tileon
                 LoadArchetypeDatabase(Result, Move(Data));
             });
         });
-        Content.Read(kTerrainUri, [this](Filesystem::Result Result, Blob Data)
-        {
-            GetService<Job::Service>().Dispatch(Job::Lane::Main, [this, Result, Data = Move(Data)] mutable
-            {
-                LoadTerrainDatabase(Result, Move(Data));
-            });
-        });
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -64,7 +57,6 @@ namespace Tileon
     {
         SaveManifest();
         SaveArchetypeDatabase();
-        SaveTerrainDatabase();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -160,33 +152,6 @@ namespace Tileon
         });
     }
 
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    Ref<Terrain> Repository::CreateTerrain()
-    {
-        const UInt32 ID = mTerrains.AllocateWithHandle();
-        return mTerrains[ID];
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    Ref<Terrain> Repository::CloneTerrain(UInt16 ID)
-    {
-        ZY_ASSERT(HasTerrain(ID), "Must be an existing terrain.");
-
-        const UInt32 Handle = mTerrains.AllocateWithHandle(mTerrains[ID]);
-        return mTerrains[Handle];
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Repository::DeleteTerrain(UInt16 ID)
-    {
-        mTerrains.Free(ID);
-    }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -240,32 +205,5 @@ namespace Tileon
         GetService<Scene::Service>().SaveArchetypes(Output);
 
         GetService<Content::Service>().Write(kArchetypeUri, Output.Detach(), { });
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Repository::LoadTerrainDatabase(Filesystem::Result Result, AnyRef<Blob> Data)
-    {
-        if (Result == Filesystem::Result::Success)
-        {
-            Reader  Input(Data.GetData(), Data.GetSize());
-            Archive(Input).Serialize(mTerrains);
-        }
-        else
-        {
-            LOG_W("Failed to load terrains from '{}'", kTerrainUri);
-        }
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Repository::SaveTerrainDatabase()
-    {
-        Writer  Output;
-        Archive(Output).Serialize(mTerrains);
-
-        GetService<Content::Service>().Write(kTerrainUri, Output.Detach(), { });
     }
 }

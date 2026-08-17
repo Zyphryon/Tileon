@@ -24,7 +24,7 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Pipeline
+namespace Tileon::Stage
 {
     /// \brief Represents the preview stage, which resolves one raw buffer onto the view and annotates it.
     class Preview final : public Render::Pass, public Engine::Locator<Graphic::Service>
@@ -117,21 +117,11 @@ namespace Tileon::Pipeline
         /// \brief Defines a type alias for the buffers the stage can resolve, indexed by \ref Kind.
         using Sources    = Array<ConstPtr<Render::Target>, Enum::Count<Kind>()>;
 
-        /// \brief Represents the per-pass data the elevation preview unprojects with.
-        struct GpuPreviewLayout final
-        {
-            /// The inverse of the camera's view-projection, which turns a clip-space probe back into world space.
-            Matrix4x4 Inverse;
-        };
-
         /// \brief Represents the per-pass data for the grid technique.
         struct GpuGridLayout final
         {
-            /// The inverse view-projection, which recovers the world position of every pixel.
-            Matrix4x4 Camera;
-
             /// The size of a region in tiles, which sets the period of the accented lines.
-            Vector2   Dimension;
+            Vector2 Dimension;
         };
 
         /// \brief Represents the per-instance data for the bounding box of an entity.
@@ -180,7 +170,7 @@ namespace Tileon::Pipeline
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Scene::Query                mQrDrawGeometryBoundaries;
-        Scene::Query                mQrDrawLightBoundaries;
+        Scene::Query                 mQrDrawGeometryBoundaries;
+        Scene::Query                 mQrDrawLightingBoundaries;
     };
 }

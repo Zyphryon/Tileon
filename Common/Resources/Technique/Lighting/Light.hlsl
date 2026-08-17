@@ -13,11 +13,7 @@
 cbuffer cb_Global : register(b0)
 {
     float4x4 u_Camera;
-};
-
-cbuffer cb_Pass : register(b1)
-{
-    float4x4 u_Inverse;    // turns a clip-space probe back into world space
+    float4x4 u_CameraInverse;
 };
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -74,9 +70,7 @@ fs_Input main(vs_Input Input)
     const float3 Center = Input.Params0.xyz;
     const float  Extent = Input.Params0.w;
 
-    // The projection is affine, so each screen axis is a fixed combination of the three world axes. The
-    // furthest a unit sphere reaches along one is the length of that combination, not the sum of its parts:
-    // summing bounds the box the sphere sits in, which is wider by half again on an isometric camera.
+    // A sphere reaches the length of each screen axis' world mix; summing instead bounds the box around it.
     const float2 Ex = mul(u_Camera, float4(1.0, 0.0, 0.0, 0.0)).xy;
     const float2 Ey = mul(u_Camera, float4(0.0, 1.0, 0.0, 0.0)).xy;
     const float2 Ez = mul(u_Camera, float4(0.0, 0.0, 1.0, 0.0)).xy;
@@ -85,8 +79,7 @@ fs_Input main(vs_Input Input)
                                  length(float3(Ex.y, Ey.y, Ez.y)));
 
 #if defined(LIGHT_SPOT)
-    // A cone fits inside its range's sphere but barely fills it. Its hull is the apex together with the disc
-    // it opens onto, so bounding those two and boxing the pair is far tighter wherever the beam is narrow.
+    // A cone barely fills its range sphere, so bound the apex and the disc it opens onto instead.
     const float  Widest = Extent * sqrt(saturate(1.0 - Input.Outer * Input.Outer));
     const float2 Apex   = mul(u_Camera, float4(Center, 1.0)).xy;
     const float2 Mouth  = mul(u_Camera, float4(Center + Input.Params1.xyz * Extent, 1.0)).xy;
@@ -128,11 +121,10 @@ SamplerState s_Depth  : register(s1);
 
 float3 main(fs_Input Input) : SV_Target0
 {
-    // Depth is position compressed to one channel: the pixel's clip coordinates plus its depth are three
-    // knowns, and the inverse of the camera turns them back into the one world point that produced them.
+    // Clip position and depth recover the world point through the inverse camera.
     const int3   Texel = int3(Input.Position.xy, 0);
     const float  Depth = t_Depth.Load(Texel).r;
-    const float4 Probe = mul(u_Inverse, float4(Input.Probe.xy, Depth, 1.0));
+    const float4 Probe = mul(u_CameraInverse, float4(Input.Probe.xy, Depth, 1.0));
     const float3 World = Probe.xyz / Probe.w;
 
     const float3 Relative = Input.Light.xyz - World;
@@ -149,26 +141,22 @@ float3 main(fs_Input Input) : SV_Target0
     clip(Attenuation - 0.001);
 
 #if defined(ENABLE_NORMAL_MAPPING)
-    // Filtering a normal across an edge blends two unrelated surfaces, so it is read by texel as well.
+    // Filtering a normal across an edge blends two surfaces, so read it by texel.
     const float4 Surface    = t_Normal.Load(Texel);
     const float3 Normal     = normalize(Surface.rgb * 2.0 - 1.0);
 
-    // The alpha of the normal buffer is opacity, which doubles as thickness: the more of it a surface
-    // lets through, the more a light behind it shows. That is what gives foliage its backlight, and it
-    // is why nothing else may claim that channel.
+    // Normal alpha is opacity, reused as thickness so a light behind a surface bleeds through. Nothing
+    // else may claim that channel.
     const float  Lambert    = saturate(dot(Normal, Incident));
     const float  Through    = saturate(dot(-Normal, Incident)) * (1.0 - Surface.a);
 
-    // The two dots are exact negatives, so at most one of them survives saturation and the sum is the
-    // one that did. Written as a sum rather than a maximum because it stays correct if either ever
-    // gains a wrap term and stops being mutually exclusive.
+    // The dots are negatives, so at most one survives the clamp. A sum, not a max, so it still holds if
+    // either gains a wrap term.
     const float  NormalDotL = Lambert + Through;
 #else
     const float  NormalDotL = 1.0;
 #endif
 
-    // Three channels, because that is what the radiance target has. The accumulation blend is a plain
-    // additive on colour alone, so the contribution is the whole of what this pass has to say.
     return Input.Color.rgb * (Attenuation * NormalDotL);
 }
 

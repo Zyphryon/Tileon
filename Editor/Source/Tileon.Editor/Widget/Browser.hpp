@@ -39,7 +39,7 @@ namespace Tileon::Editor
         /// \brief Opens the browser on behalf of the field identified by the given key.
         ///
         /// \param Key    The key identifying the requesting field.
-        /// \param Filter The extension filter limiting which assets are offered.
+        /// \param Filter The extensions the field takes, separated by spaces, or empty to take everything.
         void Open(UInt64 Key, Text Filter);
 
         /// \brief Draws the browser, which must be called once per frame at window scope.
@@ -78,6 +78,12 @@ namespace Tileon::Editor
             /// The earliest time, in seconds, at which a new enumeration may be issued.
             Real64  Refresh = 0.0;
         };
+
+        /// \brief Checks whether an entry is one of the kinds the open field asked for.
+        ///
+        /// \param Name The file name to test.
+        /// \return `true` when the field takes the entry, `false` otherwise.
+        Bool Accepts(Text Name) const;
 
         /// \brief Draws the browser as a popup window, providing a dedicated interface for browsing content items.
         ///
@@ -120,7 +126,7 @@ namespace Tileon::Editor
 
         Bool                     mOpen;
         Str                      mSelection;
-        Str                      mFilter;
+        Sequence<Str>            mFilters;
         UInt64                   mRequest;
         UInt64                   mResult;
         Str                      mAnswer;

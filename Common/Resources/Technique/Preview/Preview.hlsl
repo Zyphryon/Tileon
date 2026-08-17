@@ -3,9 +3,10 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #if defined(PREVIEW_DEPTH)
-cbuffer cb_Pass : register(b1)
+cbuffer cb_Global : register(b0)
 {
-    float4x4 u_Inverse;    // turns a clip-space probe back into world space
+    float4x4 u_Camera;
+    float4x4 u_CameraInverse;
 };
 #endif
 
@@ -65,7 +66,7 @@ float4 main(fs_Input Input) : SV_Target0
 #elif defined(PREVIEW_DEPTH)
 
     const float  Depth = t_Source.Sample(s_Source, Input.Texture).r;
-    const float4 Probe = mul(u_Inverse, float4(Input.Probe, Depth, 1.0));
+    const float4 Probe = mul(u_CameraInverse, float4(Input.Probe, Depth, 1.0));
     const float3 World = Probe.xyz / Probe.w;
 
     const float Elevation = saturate(World.y / ELEVATION_SCALE);

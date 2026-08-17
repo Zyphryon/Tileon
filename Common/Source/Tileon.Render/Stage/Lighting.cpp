@@ -10,7 +10,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Lightning.hpp"
+#include "Lighting.hpp"
 #include "Tileon.Render/Component.hpp"
 #include "Tileon.World/Component.hpp"
 
@@ -18,12 +18,12 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Pipeline
+namespace Tileon::Stage
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Lightning::Lightning(Ref<Engine::Subsystem::Host> Host, ConstRef<Render::Target> Normal, ConstRef<Render::Target> Depth)
+    Lighting::Lighting(Ref<Engine::Subsystem::Host> Host, ConstRef<Render::Target> Normal, ConstRef<Render::Target> Depth)
         : Locator { Host },
           mNormal { AddressOf(Normal) },
           mDepth  { AddressOf(Depth) }
@@ -35,9 +35,9 @@ namespace Tileon::Pipeline
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Lightning::Run(Ref<Render::Encoder> Encoder)
+    void Lighting::Run(Ref<Render::Encoder> Encoder)
     {
-        ZY_PROFILE_SCOPE("Pipeline::Lightning::Run");
+        ZY_PROFILE_SCOPE("Stage::Lighting::Run");
 
         Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
 
@@ -126,11 +126,6 @@ namespace Tileon::Pipeline
             mSpotlightData.Append(Center, Light.GetRange() * Length, BasisX / Length, Inner, Packed, Outer);
         });
 
-        if (!mGlowlightData.IsEmpty() || !mSpotlightData.IsEmpty())
-        {
-            Encoder.SetPass(GpuPassLayout { .Inverse = mDirector->GetViewProjectionInverse() });
-        }
-
         // Render the accumulated glowlights in batches to minimize draw calls and state changes.
         if (const ConstSpan<GpuGlowlightLayout> Data = mGlowlightData; !Data.IsEmpty())
         {
@@ -166,7 +161,7 @@ namespace Tileon::Pipeline
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Lightning::OnRegister(Ref<Scene::Service> Scene)
+    void Lighting::OnRegister(Ref<Scene::Service> Scene)
     {
         Scene.Register(
             Scene::DSL::Declare<Glowlight, Spotlight>(Scene::DSL::Authored),
@@ -174,7 +169,7 @@ namespace Tileon::Pipeline
 
         // Observes changes to the light radial component and updates the corresponding spatial properties of the actor.
         Scene.CreateObserver<>(
-            "Render::Lightning::ObsUpdateGlowlightBoundaries",
+            "Render::Lighting::ObsUpdateGlowlightBoundaries",
             EcsOnSet,
             [](Scene::Entity Actor, ConstRef<Glowlight> Light)
             {
@@ -184,7 +179,7 @@ namespace Tileon::Pipeline
 
         // Observes changes to the light cone component and updates the corresponding spatial properties of the actor.
         Scene.CreateObserver<>(
-            "Render::Lightning::ObsUpdateSpotlightBoundaries",
+            "Render::Lighting::ObsUpdateSpotlightBoundaries",
             EcsOnSet,
             [](Scene::Entity Actor, ConstRef<Spotlight> Light)
             {
@@ -227,25 +222,25 @@ namespace Tileon::Pipeline
         // Creates the queries for the light stage.
         mQrDrawGlowlights = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Enclosure, const Glowlight, ConstPtr<IntColor8>>
-        >("Render::Lightning::DrawGlowlights", Scene::Cache::Auto);
+        >("Render::Lighting::DrawGlowlights", Scene::Cache::Auto);
 
         mQrDrawSpotlights = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Enclosure, const Spotlight, ConstPtr<IntColor8>>
-        >("Render::Lightning::DrawSpotlights", Scene::Cache::Auto);
+        >("Render::Lighting::DrawSpotlights", Scene::Cache::Auto);
 
         mQrDrawSkylight = Scene.CreateQuery<
             Scene::DSL::In<const Skylight>
-        >("Render::Lightning::DrawSkylight", Scene::Cache::Auto);
+        >("Render::Lighting::DrawSkylight", Scene::Cache::Auto);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Lightning::OnLoad(Ref<Content::Service> Content)
+    void Lighting::OnLoad(Ref<Content::Service> Content)
     {
         for (const Kind Type : Enum::GetValues<Kind>())
         {
-            Str Path = Str::Print<"Resources://Technique/Lightning/{0}.vfx">(Enum::GetName(Type));
+            Str Path = Str::Print<"Resources://Technique/Lighting/{0}.vfx">(Enum::GetName(Type));
 
             mTechniques[Enum::Cast(Type)] = Content.Load<Graphic::Technique>(Move(Path));
         }

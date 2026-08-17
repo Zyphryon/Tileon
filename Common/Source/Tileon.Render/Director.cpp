@@ -21,10 +21,10 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Director::Director()
+    Director::Director(Real32 Density)
         : mZoom       { 1.0f },
-          mProjection { Projection::Ortho() },
-          mDensity    { 32 }
+          mDensity    { Density },
+          mProjection { Projection::Ortho() }
     {
     }
 
@@ -33,7 +33,6 @@ namespace Tileon
 
     void Director::Tick(Real64 Delta)
     {
-        // Ensure that the camera's position changes in discrete steps that align with the pixel grid.
         if (!mTweenPosition.IsComplete())
         {
             mPosition = mTweenPosition.Tick(Delta);
@@ -41,12 +40,13 @@ namespace Tileon
             mCamera.SetTranslation(Snap(mPosition.GetOffsetX()), 0.0f, Snap(mPosition.GetOffsetY()));
         }
 
-        // Ensure that the zoom level changes in discrete steps that align with the pixel grid.
         if (!mTweenZoom.IsComplete())
         {
             mZoom = mTweenZoom.Tick(Delta);
 
             SetViewport(mViewport.GetX(), mViewport.GetY());
+
+            mCamera.SetTranslation(Snap(mPosition.GetOffsetX()), 0.0f, Snap(mPosition.GetOffsetY()));
         }
     }
 
@@ -68,10 +68,10 @@ namespace Tileon
 
         const Vector2 Extent = mProjection.GetGroundExtent(Vector2(HalfWidth, HalfHeight));
 
-        mFrustum.Set(Max(Floor(AbsoluteX - Extent.GetX()), Placement::kMinTileX),
-                     Max(Floor(AbsoluteY - Extent.GetY()), Placement::kMinTileY),
-                     Min( Ceil(AbsoluteX + Extent.GetX()), Placement::kMaxTileX),
-                     Min( Ceil(AbsoluteY + Extent.GetY()), Placement::kMaxTileY));
+        mFrustum.Set(Max(Floor(AbsoluteX - Extent.GetX()), Placement::kMinUnitX),
+                     Max(Floor(AbsoluteY - Extent.GetY()), Placement::kMinUnitY),
+                     Min( Ceil(AbsoluteX + Extent.GetX()), Placement::kMaxUnitX),
+                     Min( Ceil(AbsoluteY + Extent.GetY()), Placement::kMaxUnitY));
 
         const Vector2 Offset(mPosition.GetOffsetX(), mPosition.GetOffsetY());
         const Vector2 Origin = mProjection.Project(Vector3::FromXZ(Offset));
@@ -94,7 +94,7 @@ namespace Tileon
 
         // Depth reserves a band of the buffer so the layers either side of the world keep their own room.
         const Vector2 Ground = mProjection.GetGroundExtent(Vector2(HalfWidth, HalfHeight));
-        const Real32  Extent = mProjection.GetDepthExtent(Ground, kMaxHeight);
+        const Real32  Extent = mProjection.GetDepthExtent(Ground, kElevation);
         const Real32  Span   = (2.0f * Extent) / (kMaxDepth - kMinDepth);
         const Real32  Near   = -Extent - kMinDepth * Span;
 

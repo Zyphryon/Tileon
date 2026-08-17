@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Common.hpp"
+#include "Batch.hpp"
 #include "Tileon.Render/Component/Decoration.hpp"
 #include "Tileon.Render/Component/Label.hpp"
 #include "Tileon.Render/Component/Lettering.hpp"
@@ -22,10 +22,10 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon
+namespace Tileon::Batcher
 {
     /// \brief Records the text of a pass and writes back the batches the collector hands it.
-    class Glyphs final
+    class Glyph final
     {
     public:
 
@@ -33,7 +33,7 @@ namespace Tileon
         ///
         /// \param Service   The service the transient streams are allocated from.
         /// \param Collector The collector the glyphs are ordered and batched by.
-        Glyphs(ConstRetainer<Graphic::Service> Service, Ref<Render::Collector> Collector);
+        Glyph(ConstRetainer<Graphic::Service> Service, Ref<Render::Collector> Collector);
 
         /// \brief Sets the technique subsequent glyphs are recorded under.
         ///
@@ -72,7 +72,7 @@ namespace Tileon
         static constexpr UInt32 kMaxTextPerBatch = 128;
 
         /// \brief Defines the per-run data a batch's glyphs index into, in the layout the shaders consume.
-        struct GlyphRun final
+        struct Run final
         {
             /// The transform the run is placed by, with the text's size folded into the basis.
             Array<Real32, 12>  Transform;
@@ -82,7 +82,7 @@ namespace Tileon
         };
 
         /// \brief Defines a structure representing the input data for drawing a glyph in the GPU.
-        struct GlyphLayout final
+        struct Layout final
         {
             /// The atlas rectangle the glyph samples, as normalized minimum and maximum edges.
             Array<UInt16, 4> Frame;
@@ -101,7 +101,7 @@ namespace Tileon
         };
 
         /// \brief Structure representing a draw command for a glyph, containing its input data.
-        struct GlyphCommand final
+        struct Command final
         {
             /// The graphics technique to use for rendering the glyph.
             ConstPtr<Graphic::Technique> Technique;
@@ -113,11 +113,11 @@ namespace Tileon
             UInt16                       Generation;
 
             /// The input data for the glyph.
-            GlyphLayout                  Layout;
+            Batcher::Glyph::Layout       Layout;
         };
 
         /// \brief Structure representing the slot a glyph indexes its run by.
-        struct GlyphSlot final
+        struct Slot final
         {
             /// The slot of the run within its palette.
             UInt16 Slot;
@@ -127,13 +127,13 @@ namespace Tileon
         };
 
         /// \brief Structure representing a palette of text runs, containing the stream and the runs it holds.
-        struct GlyphPalette final
+        struct Palette final
         {
             /// The stream containing the run data.
             Graphic::Stream    Stream;
 
             /// The runs in the palette, indexed by the slot each glyph carries.
-            Sequence<GlyphRun> Runs;
+            Sequence<Run>      Runs;
         };
 
     private:
@@ -144,7 +144,7 @@ namespace Tileon
         /// \param Transform The transform the run is placed by.
         /// \param Size      The size the text is set at, folded into the transform's basis.
         /// \return The interned run.
-        GlyphSlot Intern(ConstRef<Render::FontEffect> Effect, ConstRef<Matrix4x3> Transform, Real32 Size);
+        Slot Intern(ConstRef<Render::FontEffect> Effect, ConstRef<Matrix4x3> Transform, Real32 Size);
 
     private:
 
@@ -154,7 +154,7 @@ namespace Tileon
         Retainer<Graphic::Service>   mService;
         Ref<Render::Collector>       mCollector;
         Retainer<Graphic::Technique> mTechnique;
-        Sequence<GlyphCommand>       mGlyphs;
-        Sequence<GlyphPalette>       mPalettes;
+        Sequence<Command>            mCommands;
+        Sequence<Palette>            mPalettes;
     };
 }
