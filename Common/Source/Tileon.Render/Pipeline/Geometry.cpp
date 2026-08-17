@@ -75,7 +75,7 @@ namespace Tileon::Pipeline
                 ConstRef<Appearance> Appearance,
                 ConstPtr<IntColor8>  Tint)
             {
-                if (ConstRef<IntBox> AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                if (mDirector->IsVisible(Enclosure.GetVolume()))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
@@ -143,7 +143,7 @@ namespace Tileon::Pipeline
                 ConstRef<Appearance> Appearance,
                 ConstPtr<IntColor8>  Tint)
             {
-                if (ConstRef<IntBox> AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                if (mDirector->IsVisible(Enclosure.GetVolume()))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
@@ -163,7 +163,7 @@ namespace Tileon::Pipeline
                 ConstPtr<IntColor8>  Tint,
                 ConstPtr<Decoration> Decoration)
             {
-                if (ConstRef<IntBox> AABB = Enclosure.GetVolume(); AABB.IsAlmostZero() || mDirector->IsVisible(AABB))
+                if (mDirector->IsVisible(Enclosure.GetVolume()))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
