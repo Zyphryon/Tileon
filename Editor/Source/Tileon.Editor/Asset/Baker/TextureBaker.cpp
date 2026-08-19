@@ -63,8 +63,7 @@ namespace Tileon::Editor
         Toolkit::Composer::Checkbox("Mipmaps", mMipmaps);
 
         // Naming a format has already said whether the art is sRGB, since sRGB is a format rather than a
-        // flag, so the toggle follows it instead of contradicting it. It is only a question of its own when
-        // the format is left to the source, which is why it goes dead the moment one is chosen.
+        // flag, so the toggle follows it instead of contradicting it.
         const Bool Named = (mFormat != Graphic::TextureFormat::Unspecified);
 
         if (Named)
@@ -108,25 +107,9 @@ namespace Tileon::Editor
             return false;
         }
 
-        // A normal map is named after the art it belongs to, so the pair is imported together or not at all.
-        const Str Sibling = Str::Print<"{0}_n.{1}">(StrBeforeLast(Source, '.'), Type);
-
-        Filesystem::Handle Handle;
-        const Bool Normal = (Filesystem::Open(Sibling, Filesystem::Access::Read, Handle) == Filesystem::Result::Success);
-
-        if (Normal)
-        {
-            Filesystem::Close(Handle);
-
-            // A normal map carries direction rather than color, so it is never treated as sRGB.
-            Settings.Linear = true;
-
-            Baker.Bake(Sibling, Str::Print<"{0}/{1}_n.tex">(Folder, Stem), Settings);
-        }
-
         if (mMaterial)
         {
-            WriteMaterial(Folder, Stem, Normal);
+            WriteMaterial(Folder, Stem);
         }
         return true;
     }
@@ -134,20 +117,13 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void TextureBaker::WriteMaterial(Text Folder, Text Stem, Bool Normal)
+    void TextureBaker::WriteMaterial(Text Folder, Text Stem)
     {
         Sequence<MaterialEditor::Binding> Bindings;
 
         Ref<MaterialEditor::Binding> Albedo = Bindings.Append();
         Albedo.Name = Enum::GetName(TextureID::Albedo);
         Albedo.Path = Str::Print<"{0}.tex">(Stem);
-
-        if (Normal)
-        {
-            Ref<MaterialEditor::Binding> Direction = Bindings.Append();
-            Direction.Name = Enum::GetName(TextureID::Normal);
-            Direction.Path = Str::Print<"{0}_n.tex">(Stem);
-        }
 
         MaterialEditor::Write(Str::Print<"{0}/{1}.mtl">(Folder, Stem), Bindings);
     }

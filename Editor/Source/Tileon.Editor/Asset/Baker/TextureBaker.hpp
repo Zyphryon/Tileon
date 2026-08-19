@@ -56,8 +56,7 @@ namespace Tileon::Editor
         ///
         /// \param Folder The folder the material is written into.
         /// \param Stem   The file name the material and its textures share.
-        /// \param Normal Whether a normal map was baked beside the albedo.
-        static void WriteMaterial(Text Folder, Text Stem, Bool Normal);
+        static void WriteMaterial(Text Folder, Text Stem);
 
     private:
 

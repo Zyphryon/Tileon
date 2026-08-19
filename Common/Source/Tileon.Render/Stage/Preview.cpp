@@ -144,12 +144,12 @@ namespace Tileon::Stage
     {
         mQrDrawGeometryBoundaries = Scene.CreateQuery<
             Scene::DSL::In<const Enclosure>,
-            Scene::DSL::With<Sprite, Lettering>
+            Scene::DSL::Or<Sprite, Lettering>
         >("Render::Preview::DrawGeometryBoundaries", Scene::Cache::Auto);
 
         mQrDrawLightingBoundaries = Scene.CreateQuery<
             Scene::DSL::In<const Enclosure>,
-            Scene::DSL::With<Glowlight, Spotlight>
+            Scene::DSL::Or<Glowlight, Spotlight>
         >("Render::Preview::DrawLightingBoundaries", Scene::Cache::Auto);
     }
 
