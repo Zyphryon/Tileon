@@ -12,7 +12,6 @@
 
 #include "Palette.hpp"
 #include "Tileon.Editor/Utility.hpp"
-#include "Tileon.Editor/Panel/Viewport/Tools.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -44,6 +43,7 @@ namespace Tileon::Editor
         Toolkit::Composer::End();
     }
 
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     void Palette::DrawEntityTab()
@@ -90,7 +90,7 @@ namespace Tileon::Editor
 
                 if (Material && Material->HasCompleted())
                 {
-                    if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(TextureUsage::Albedo)))
+                    if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(TextureID::Albedo)))
                     {
                         Thumbnail = Albedo->GetHandle();
                         Crop      = Visual->GetSource();
@@ -142,8 +142,6 @@ namespace Tileon::Editor
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     void Palette::DrawHint(Text Hint)

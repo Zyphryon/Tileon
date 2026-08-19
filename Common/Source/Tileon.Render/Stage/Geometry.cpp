@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Geometry.hpp"
+#include <Tileon.Render/Types.hpp>
 #include "Tileon.Render/Component.hpp"
 #include "Tileon.World/Component.hpp"
 
@@ -43,7 +44,6 @@ namespace Tileon::Stage
         : Locator   { Host },
           mDirector { nullptr },
           mDensity  { Density },
-          mCutout   { 0 },
           mSprites  { Host.GetService<Graphic::Service>(), mCollector },
           mGlyphs   { Host.GetService<Graphic::Service>(), mCollector }
     {
@@ -71,7 +71,10 @@ namespace Tileon::Stage
             mSprites.Reset();
 
             // Draw opaque sprite entities.
-            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite)], mCutout, Render::Collector::Priority::Opaque);
+            mSprites.SetTechnique(
+                mTechniques[Enum::Cast(Kind::Sprite)],
+                mTechniques[Enum::Cast(Kind::Sprite)]->ResolveByName("Cutout"),
+                Render::Collector::Priority::Opaque);
             mQrDrawOpaqueSprites.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
@@ -87,10 +90,11 @@ namespace Tileon::Stage
                 }
             });
 
-            // Decals ride the same batch as sprites and differ only in technique, which lays their quad against
-            // the ground and biases its depth so it wins over the terrain it is painted on. Both variants stay
-            // in the g-buffer so the lighting that follows reaches them; only the blend differs.
-            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Decal)], mCutout, Render::Collector::Priority::Opaque);
+            // Draw opaque decal entities.
+            mSprites.SetTechnique(
+                mTechniques[Enum::Cast(Kind::Decal)],
+                mTechniques[Enum::Cast(Kind::Decal)]->ResolveByName("Cutout"),
+                Render::Collector::Priority::Opaque);
             mQrDrawOpaqueDecals.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
@@ -180,10 +184,6 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
     void Geometry::Drain(Ref<Render::Encoder> Encoder)
     {
         ZY_PROFILE_SCOPE("Stage::Geometry::Drain");
@@ -228,8 +228,7 @@ namespace Tileon::Stage
             });
 
         // A decal's quad spans a different pair of axes than a sprite's, so the box has to be measured again
-        // when the tag arrives on art that was already resolved. Without this the box keeps the axes it was
-        // measured on and the draw reads a zero along one of them, which is a quad with no area.
+        // when the tag arrives on art that was already resolved.
         Scene.CreateObserver<Scene::DSL::With<Decal>>(
             "Render::Geometry::ObsRemeasureOnDecalAttach",
             EcsOnAdd,
@@ -282,7 +281,7 @@ namespace Tileon::Stage
 
                         if (Material->HasCompleted())
                         {
-                            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage("Albedo"_Hash))
+                            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(TextureID::Albedo)))
                             {
                                 Resolution = Vector2(Albedo->GetWidth(), Albedo->GetHeight());
                             }
@@ -406,8 +405,5 @@ namespace Tileon::Stage
 
             mTechniques[Enum::Cast(Type)] = Content.Load<Graphic::Technique>(Move(Path));
         }
-
-        // Both sprite and decal declare the same feature, so one key selects the cutout variant of either.
-        mCutout = mTechniques[Enum::Cast(Kind::Sprite)]->ResolveByName("Cutout");
     }
 }

@@ -26,6 +26,7 @@ namespace Tileon::Editor
           mPresenter { Host, false, static_cast<Real32>(Project.GetDensity()) },
           mProject   { Move(Project) },
           mCatalog   { GetService<Scene::Service>() },
+          mBrowser   { GetService<Content::Service>() },
           mHistory   { * this }
     {
         mPresenter.Resize(320, 200);

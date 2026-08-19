@@ -63,7 +63,6 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         Ref<ComponentCatalog> mCatalog;
-        Browser               mBrowser;
         Action                mAction;
         Scene::Entity         mSubject;
         Bool                  mEditing;

@@ -14,6 +14,7 @@
 
 #include "Tileon.Session/Presenter.hpp"
 #include "Inspect/ComponentCatalog.hpp"
+#include "Tileon.Editor/Toolkit/Browser.hpp"
 #include "History.hpp"
 #include "Project.hpp"
 #include "Session.hpp"
@@ -25,7 +26,7 @@
 namespace Tileon::Editor
 {
     /// \brief Represents the context for the editor, providing access to various services.
-    class Context final : public Session, Engine::Locator<Content::Service, Graphic::Service, Job::Service,  Scene::Service>
+    class Context final : public Session, Engine::Locator<Content::Service, Graphic::Service, Job::Service, Scene::Service>
     {
     public:
 
@@ -121,6 +122,17 @@ namespace Tileon::Editor
             return mCatalog;
         }
 
+        /// \brief Gets the browser every field that asks for an asset is answered by.
+        ///
+        /// \remark One browser serves the whole editor: it is keyed by the field that opened it, so a second
+        ///         one would only be a second popup with its own idea of where the user had navigated to.
+        ///
+        /// \return The shared asset browser.
+        ZY_INLINE Ref<Toolkit::Browser> GetBrowser()
+        {
+            return mBrowser;
+        }
+
         /// \brief Gets a reference to the project the editor has open.
         ///
         /// \return A reference to the project associated with the context.
@@ -153,6 +165,7 @@ namespace Tileon::Editor
         Presenter        mPresenter;
         Project          mProject;
         ComponentCatalog mCatalog;
+        Toolkit::Browser mBrowser;
         History          mHistory;
     };
 }

@@ -14,8 +14,7 @@
 
 #include "Tileon.Editor/Project.hpp"
 #include "Tileon.Editor/Toolkit/Composer.hpp"
-#include "Tileon.Editor/Toolkit/Theme.hpp"
-#include "Tileon.Editor/Widget/Explorer.hpp"
+#include "Tileon.Editor/Toolkit/Explorer.hpp"
 #include <Zyphryon.Base/Container/Sequence.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -118,9 +117,9 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        State           mState;
-        Project         mProject;
-        Explorer        mExplorer;
-        Sequence<Str>   mRecent;
+        State             mState;
+        Project           mProject;
+        Toolkit::Explorer mExplorer;
+        Sequence<Str>     mRecent;
     };
 }

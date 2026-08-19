@@ -26,7 +26,6 @@ namespace Tileon::Editor
     ComponentList::ComponentList(Ref<Context> Context)
         : mContext { Context },
           mCatalog { Context.GetCatalog() },
-          mBrowser { Context.GetContent() },
           mAction  { Action::None }
     {
     }
@@ -90,7 +89,7 @@ namespace Tileon::Editor
         const String<128>          Label = String<128>::Print<"{0}  {1}##{2}">(Info->GetIcon(), Info->GetLabel(), Component.GetID());
 
         // The browser belongs to this assembler, so two views can each have one open on their own subject.
-        Workspace Workspace(mContext, mBrowser);
+        Workspace Workspace(mContext, mContext.GetBrowser());
 
         const Bool Open = Toolkit::Composer::TreeNode(Label, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth);
 

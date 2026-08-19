@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Launcher.hpp"
+#include "Tileon.Editor/Toolkit/Theme.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -51,7 +52,8 @@ namespace Tileon::Editor
         }
 
         // Draw a solid background to cover the entire display area.
-        Toolkit::Composer::GetBackgroundDrawList()->AddRectFilled(ImVec2(0, 0), Toolkit::Composer::GetDisplaySize(), Toolkit::Theme::kBackdrop);
+        Toolkit::Composer::GetBackgroundDrawList()->AddRectFilled(ImVec2(0, 0),
+            Toolkit::Composer::GetDisplaySize(), Toolkit::Theme::kBackdrop);
 
         switch (mState)
         {
@@ -256,7 +258,7 @@ namespace Tileon::Editor
 
     void Launcher::BrowseToOpen()
     {
-        mExplorer.Open(Explorer::Mode::Open, Filesystem::GetRootFolder(), Project::kFileExtension,
+        mExplorer.Open(Toolkit::Explorer::Mode::Open, Filesystem::GetRootFolder(), Project::kFileExtension,
             [this](Text Path)
             {
                 OnBrowseResult(Path);
@@ -268,7 +270,7 @@ namespace Tileon::Editor
 
     void Launcher::BrowseToSave()
     {
-        mExplorer.Open(Explorer::Mode::Save, Filesystem::GetRootFolder(), Project::kFileExtension,
+        mExplorer.Open(Toolkit::Explorer::Mode::Save, Filesystem::GetRootFolder(), Project::kFileExtension,
             [this](Text Path)
             {
                 OnBrowseResult(Path);
@@ -418,7 +420,7 @@ namespace Tileon::Editor
         {
             if (const Text Path = Items.GetString(Index); !Path.IsEmpty())
             {
-                mRecent.Append(Str(Path));
+                mRecent.Append(Path);
             }
         }
     }
@@ -452,7 +454,7 @@ namespace Tileon::Editor
         {
             return Existing == Path;
         });
-        mRecent.Insert(0, Str(Path));
+        mRecent.Insert(0, Path);
 
         // Drop the oldest entries once the cap is exceeded.
         while (mRecent.GetSize() > kMaxRecent)

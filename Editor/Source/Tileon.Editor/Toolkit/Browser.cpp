@@ -10,13 +10,13 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Browser.hpp"
+#include "Tileon.Editor/Toolkit/Browser.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Editor
+namespace Tileon::Editor::Toolkit
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -50,7 +50,7 @@ namespace Tileon::Editor
 
             if (Length > 0)
             {
-                mFilters.Append(Str(Filter.Slice(Cursor, Length)));
+                mFilters.Append(Filter.Slice(Cursor, Length));
             }
             Cursor += Length + 1;
         }
@@ -61,6 +61,7 @@ namespace Tileon::Editor
 
     Bool Browser::Accepts(Text Name) const
     {
+        // A field that named no kind at all takes whatever the folder holds.
         if (mFilters.IsEmpty())
         {
             return true;
@@ -88,23 +89,23 @@ namespace Tileon::Editor
 
         Bool WasFinished = false;
 
-        Toolkit::Composer::PushID(this);
+        Composer::PushID(this);
 
         if (mOpen)
         {
-            Toolkit::Composer::OpenPopup("##browser_modal");
+            Composer::OpenPopup("##browser_modal");
             mOpen = false;
         }
 
-        Toolkit::Composer::SetNextWindowSize(800.0f, 520.0f, ImGuiCond_Always);
-        if (Toolkit::Composer::BeginPopupModal("##browser_modal", ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
+        Composer::SetNextWindowSize(800.0f, 520.0f, ImGuiCond_Always);
+        if (Composer::BeginPopupModal("##browser_modal", ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
         {
             WasFinished = DrawPopup();
 
-            Toolkit::Composer::EndPopup();
+            Composer::EndPopup();
         }
 
-        Toolkit::Composer::PopID();
+        Composer::PopID();
 
         if (!WasFinished)
         {
@@ -147,40 +148,40 @@ namespace Tileon::Editor
     Bool Browser::DrawPopup()
     {
         // Draw the main content area of the popup.
-        const Real32 FooterHeight = Toolkit::Composer::GetFrameHeightWithSpacing() + 6.0f;
-        Toolkit::Composer::BeginChild("##browser_modal_content", ImVec2(0.0f, -FooterHeight), ImGuiChildFlags_Borders);
+        const Real32 FooterHeight = Composer::GetFrameHeightWithSpacing() + 6.0f;
+        Composer::BeginChild("##browser_modal_content", ImVec2(0.0f, -FooterHeight), ImGuiChildFlags_Borders);
         DrawBody();
-        Toolkit::Composer::EndChild();
+        Composer::EndChild();
 
-        Toolkit::Composer::Separator();
+        Composer::Separator();
 
         // Draw the action buttons at the bottom of the popup.
         Bool WasFinished = false;
 
-        if (Toolkit::Composer::DisabledButton("Open", mSelection.IsEmpty()))
+        if (Composer::DisabledButton("Open", mSelection.IsEmpty()))
         {
             WasFinished = true;
 
-            Toolkit::Composer::CloseCurrentPopup();
+            Composer::CloseCurrentPopup();
         }
 
-        Toolkit::Composer::SameLine();
+        Composer::SameLine();
 
-        if (Toolkit::Composer::Button("Cancel"))
+        if (Composer::Button("Cancel"))
         {
             Reset();
 
             WasFinished = true;
 
-            Toolkit::Composer::CloseCurrentPopup();
+            Composer::CloseCurrentPopup();
         }
 
         // Display the currently selected item, if any.
         if (!mSelection.IsEmpty())
         {
-            Toolkit::Composer::SameLine();
+            Composer::SameLine();
 
-            Toolkit::Composer::TextDisabled(mSelection);
+            Composer::TextDisabled(mSelection);
         }
         return WasFinished;
     }
@@ -190,21 +191,21 @@ namespace Tileon::Editor
 
     void Browser::DrawBody()
     {
-        Toolkit::Composer::BeginChild("##browser_sidebar", ImVec2(180.0f, 0.0f), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX);
-        Toolkit::Composer::SetNextItemOpen(true, ImGuiCond_Once);
-        if (Toolkit::Composer::TreeNode("Content", ImGuiTreeNodeFlags_SpanFullWidth))
+        Composer::BeginChild("##browser_sidebar", ImVec2(180.0f, 0.0f), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX);
+        Composer::SetNextItemOpen(true, ImGuiCond_Once);
+        if (Composer::TreeNode("Content", ImGuiTreeNodeFlags_SpanFullWidth))
         {
             DrawSidebarTree("Resources://");  // TODO: Specify Schema?
 
-            Toolkit::Composer::TreePop();
+            Composer::TreePop();
         }
-        Toolkit::Composer::EndChild();
+        Composer::EndChild();
 
-        Toolkit::Composer::SameLine();
+        Composer::SameLine();
 
-        Toolkit::Composer::BeginChild("##browser_content", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
+        Composer::BeginChild("##browser_content", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
         DrawContent();
-        Toolkit::Composer::EndChild();
+        Composer::EndChild();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -261,9 +262,9 @@ namespace Tileon::Editor
                 Flags |= ImGuiTreeNodeFlags_Selected;
             }
 
-            const Bool Open = Toolkit::Composer::TreeNode(Entry.Name, Flags);
+            const Bool Open = Composer::TreeNode(Entry.Name, Flags);
 
-            if (Toolkit::Composer::IsItemClicked() && !Toolkit::Composer::IsItemToggledOpen())
+            if (Composer::IsItemClicked() && !Composer::IsItemToggledOpen())
             {
                 mPath      = ChildUri;
                 mSelection = "";
@@ -274,7 +275,7 @@ namespace Tileon::Editor
             {
                 DrawSidebarTree(ChildUri);
 
-                Toolkit::Composer::TreePop();
+                Composer::TreePop();
             }
         }
     }
@@ -285,7 +286,7 @@ namespace Tileon::Editor
     void Browser::DrawContent()
     {
         mItems.DrawToolbar();
-        Toolkit::Composer::Separator();
+        Composer::Separator();
 
         mItems.Begin();
 
@@ -328,7 +329,7 @@ namespace Tileon::Editor
 
             Ref<Directory> Slot = mEntries.FindOrInsert(Key);
 
-            if (const Real64 Now = Toolkit::Composer::GetTime(); !Slot.Pending && Now >= Slot.Refresh)
+            if (const Real64 Now = Composer::GetTime(); !Slot.Pending && Now >= Slot.Refresh)
             {
                 Slot.Pending = true;
                 Slot.Refresh = Now + kInterval;

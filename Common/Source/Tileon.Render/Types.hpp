@@ -12,29 +12,34 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include <Tileon.Render/Types.hpp>
-#include <Tileon.World/Component/Region.hpp>
-#include <Tileon.World/Component/Lifecycle.hpp>
 #include <Zyphryon.Graphic/Types.hpp>
-#include <Zyphryon.Scene/Entity.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Editor
+namespace Tileon
 {
-    /// \brief Marks the region an entity was placed in as needing a save.
-    ///
-    /// \param Actor The entity that was edited.
-    ZY_INLINE static void Touch(Scene::Entity Actor)
+    /// \brief Specifies the conventional names given to the textures a signature declares.
+    enum class TextureID : UInt8
     {
-        for (Scene::Entity Cursor = Actor; Cursor.IsValid(); Cursor = Cursor.GetParent())
+        Albedo,       ///< Base color map, sampled by every technique that puts art on the target.
+        Normal,       ///< Tangent-space normal map, which gives a flat surface the relief it lacks.
+    };
+
+    /// \brief Gets the hash a technique's reflection stores for a texture name.
+    ///
+    /// \param Usage The texture to resolve.
+    /// \return The hash of the texture's name.
+    ZY_INLINE constexpr UInt64 GetTextureID(TextureID Usage)
+    {
+        switch (Usage)
         {
-            if (Cursor.Has<Region>())
-            {
-                Cursor.Add<Persist>();
-                return;
-            }
+        case TextureID::Albedo:
+            return "Albedo"_Hash;
+        case TextureID::Normal:
+            return "Normal"_Hash;
         }
+        return 0;
     }
 }

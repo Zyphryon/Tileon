@@ -10,13 +10,13 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Gallery.hpp"
+#include "Tileon.Editor/Toolkit/Gallery.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Editor
+namespace Tileon::Editor::Toolkit
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -35,66 +35,66 @@ namespace Tileon::Editor
 
     void Gallery::DrawToolbar()
     {
-        const Real32 Spacing = Toolkit::Composer::GetStyle().ItemSpacing.x;
-        const Real32 Padding = Toolkit::Composer::GetStyle().FramePadding.x;
+        const Real32 Spacing = Composer::GetStyle().ItemSpacing.x;
+        const Real32 Padding = Composer::GetStyle().FramePadding.x;
 
         // Pre-compute widths of the fixed controls.
-        const Real32 ListBtnW  = Toolkit::Composer::CalcTextSize(ICON_FA_LIST).x              + Padding * 2.0f;
-        const Real32 GridBtnW  = Toolkit::Composer::CalcTextSize(ICON_FA_TABLE_CELLS_LARGE).x + Padding * 2.0f;
+        const Real32 ListBtnW  = Composer::CalcTextSize(ICON_FA_LIST).x              + Padding * 2.0f;
+        const Real32 GridBtnW  = Composer::CalcTextSize(ICON_FA_TABLE_CELLS_LARGE).x + Padding * 2.0f;
         const Real32 SliderW   = (mMode == Mode::Grid) ? 80.0f : 0.0f;
         const Real32 SliderGap = (mMode == Mode::Grid) ? (Spacing + SliderW) : 0.0f;
 
         // Filter input stretches to fill remaining space.
-        const Real32 FilterW = Toolkit::Composer::GetContentRegionAvail().x - ListBtnW - GridBtnW - SliderGap - Spacing * 2.0f;
+        const Real32 FilterW = Composer::GetContentRegionAvail().x - ListBtnW - GridBtnW - SliderGap - Spacing * 2.0f;
 
-        Toolkit::Composer::SetNextItemWidth(FilterW > 0.0f ? FilterW : 1.0f);
-        Toolkit::Composer::InputText("##gallery_filter", mFilter, [this](Text Value)
+        Composer::SetNextItemWidth(FilterW > 0.0f ? FilterW : 1.0f);
+        Composer::InputText("##gallery_filter", mFilter, [this](Text Value)
         {
             mFilter = Value;
         });
 
-        Toolkit::Composer::SameLine();
+        Composer::SameLine();
 
         // List mode toggle button.
         const Bool ListActive = (mMode == Mode::List);
         if (ListActive)
         {
-            Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            Composer::PushStyleColor(ImGuiCol_Button,        Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            Composer::PushStyleColor(ImGuiCol_ButtonHovered, Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
         }
-        if (Toolkit::Composer::Button(ICON_FA_LIST))
+        if (Composer::Button(ICON_FA_LIST))
         {
             mMode = Mode::List;
         }
         if (ListActive)
         {
-            Toolkit::Composer::PopStyleColor(2);
+            Composer::PopStyleColor(2);
         }
 
-        Toolkit::Composer::SameLine();
+        Composer::SameLine();
 
         // Grid mode toggle button.
         const Bool GridActive = (mMode == Mode::Grid);
         if (GridActive)
         {
-            Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            Composer::PushStyleColor(ImGuiCol_Button,        Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            Composer::PushStyleColor(ImGuiCol_ButtonHovered, Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
         }
-        if (Toolkit::Composer::Button(ICON_FA_TABLE_CELLS_LARGE))
+        if (Composer::Button(ICON_FA_TABLE_CELLS_LARGE))
         {
             mMode = Mode::Grid;
         }
         if (GridActive)
         {
-            Toolkit::Composer::PopStyleColor(2);
+            Composer::PopStyleColor(2);
         }
 
         // Cell-size slider, visible in grid mode only.
         if (mMode == Mode::Grid)
         {
-            Toolkit::Composer::SameLine();
-            Toolkit::Composer::SetNextItemWidth(SliderW);
-            Toolkit::Composer::SliderFloat("##gallery_cellsize", mSize, kThumbnailMinSize, kThumbnailMaxSize, "%.0f");
+            Composer::SameLine();
+            Composer::SetNextItemWidth(SliderW);
+            Composer::SliderFloat("##gallery_cellsize", mSize, kThumbnailMinSize, kThumbnailMaxSize, "%.0f");
         }
     }
 
@@ -110,17 +110,17 @@ namespace Tileon::Editor
 
         if (mMode == Mode::Grid)
         {
-            const ImVec2 Available = Toolkit::Composer::GetContentRegionAvail();
-            const Real32 Spacing   = Toolkit::Composer::GetStyle().ItemSpacing.x;
+            const ImVec2 Available = Composer::GetContentRegionAvail();
+            const Real32 Spacing   = Composer::GetStyle().ItemSpacing.x;
             const SInt32 Columns   = Max(1, static_cast<SInt32>((Available.x + Spacing) / (mSize + Spacing)));
 
-            mActive = Toolkit::Composer::BeginTable("##gallery", Columns);
+            mActive = Composer::BeginTable("##gallery", Columns);
 
             if (mActive)
             {
                 for (SInt32 I = 0; I < Columns; ++I)
                 {
-                    Toolkit::Composer::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, mSize);
+                    Composer::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, mSize);
                 }
             }
         }
@@ -144,10 +144,10 @@ namespace Tileon::Editor
         {
             const Text Label = String<128>::Print<"{0}##{1}">(Name, ID);
 
-            const Bool Chosen = Toolkit::Composer::Selectable(Label, WasSelected);
+            const Bool Chosen = Composer::Selectable(Label, WasSelected);
 
             // A right-click both selects the item and flags it for opening in its dedicated editor.
-            if (Toolkit::Composer::IsItemClicked(ImGuiMouseButton_Right))
+            if (Composer::IsItemClicked(ImGuiMouseButton_Right))
             {
                 mSelection = ID;
                 mActivated = ID;
@@ -167,22 +167,22 @@ namespace Tileon::Editor
             return false;
         }
 
-        Toolkit::Composer::TableNextColumn();
+        Composer::TableNextColumn();
 
         // A cell scrolled out of view still costs an id, a hit test and a textured draw command, and a
         // thumbnail of its own defeats batching, so the row is only reserved and nothing is submitted.
-        if (!Toolkit::Composer::IsRectVisible(ImVec2(mSize, mSize)))
+        if (!Composer::IsRectVisible(ImVec2(mSize, mSize)))
         {
-            Toolkit::Composer::Dummy(ImVec2(mSize, mSize));
+            Composer::Dummy(ImVec2(mSize, mSize));
 
             return false;
         }
 
-        const ImVec2 Origin    = Toolkit::Composer::GetCursorScreenPos();
+        const ImVec2 Origin    = Composer::GetCursorScreenPos();
         const ImVec2 BR(Origin.x + mSize, Origin.y + mSize);
 
-        const Bool IsClicked = Toolkit::Composer::InvisibleButton(String<128>::Print<"##gallery_cell_{0}">(ID), ImVec2(mSize, mSize));
-        const Bool IsHovered = Toolkit::Composer::IsItemHovered();
+        const Bool IsClicked = Composer::InvisibleButton(String<128>::Print<"##gallery_cell_{0}">(ID), ImVec2(mSize, mSize));
+        const Bool IsHovered = Composer::IsItemHovered();
 
         if (IsClicked)
         {
@@ -190,7 +190,7 @@ namespace Tileon::Editor
         }
 
         // A right-click both selects the item and flags it for opening in its dedicated editor.
-        if (Toolkit::Composer::IsItemClicked(ImGuiMouseButton_Right))
+        if (Composer::IsItemClicked(ImGuiMouseButton_Right))
         {
             mSelection = ID;
             mActivated = ID;
@@ -207,24 +207,24 @@ namespace Tileon::Editor
         // Background highlight for selected or hovered state.
         if (WasSelected || IsClicked)
         {
-            Record.Fill = Toolkit::Composer::GetColorU32(ImGuiCol_ButtonActive, 0.5f);
+            Record.Fill = Composer::GetColorU32(ImGuiCol_ButtonActive, 0.5f);
         }
         else if (IsHovered)
         {
-            Record.Fill = Toolkit::Composer::GetColorU32(ImGuiCol_ButtonHovered, 0.5f);
+            Record.Fill = Composer::GetColorU32(ImGuiCol_ButtonHovered, 0.5f);
         }
 
         // Cell border; changes colour for selected / hovered states.
         Record.Border = (WasSelected || IsClicked)
-            ? Toolkit::Composer::GetColorU32(ImGuiCol_ButtonActive)
+            ? Composer::GetColorU32(ImGuiCol_ButtonActive)
             : (IsHovered
-                ? Toolkit::Composer::GetColorU32(ImGuiCol_ButtonHovered)
-                : Toolkit::Composer::GetColorU32(ImGuiCol_Border));
+                ? Composer::GetColorU32(ImGuiCol_ButtonHovered)
+                : Composer::GetColorU32(ImGuiCol_Border));
 
         // Show item name as a tooltip on hover.
         if (IsHovered)
         {
-            Toolkit::Composer::SetTooltip(Name);
+            Composer::SetTooltip(Name);
         }
 
         return IsClicked;
@@ -237,7 +237,7 @@ namespace Tileon::Editor
     {
         if (mActive)
         {
-            Toolkit::Composer::EndTable();
+            Composer::EndTable();
         }
 
         Flush();
@@ -255,7 +255,7 @@ namespace Tileon::Editor
             return;
         }
 
-        const Ptr<ImDrawList> DrawList = Toolkit::Composer::GetWindowDrawList();
+        const Ptr<ImDrawList> DrawList = Composer::GetWindowDrawList();
 
         mCells.Sort([](ConstRef<Cell> Left, ConstRef<Cell> Right)
         {
@@ -280,8 +280,8 @@ namespace Tileon::Editor
 
         constexpr Text kPlaceholder = "?";
 
-        const ImVec2 TextSize  = Toolkit::Composer::CalcTextSize(kPlaceholder);
-        const ImU32  TextColor = Toolkit::Composer::GetColorU32(ImGuiCol_TextDisabled);
+        const ImVec2 TextSize  = Composer::CalcTextSize(kPlaceholder);
+        const ImU32  TextColor = Composer::GetColorU32(ImGuiCol_TextDisabled);
 
         for (ConstRef<Cell> Item : mCells)
         {

@@ -104,8 +104,6 @@ namespace Tileon::Editor
 
     Bool Gizmo::Draw(ConstRef<Bag<UInt64>> Selection, Scene::Entity Primary, ImVec2 Origin, ImVec2 Size)
     {
-        // The handles anchor on the primary: whether the selection is the instance root or one of its parts,
-        // transform the root, whose Pose cascades down to every part through World::ComputeWorldspace.
         Primary = Primary.IsValid() ? Scene::Entity::ResolveRecursively(Primary, Scene::Hierarchy::Fixed) : Primary;
 
         if (!Primary.IsValid() || !Primary.Has<Pose>())
@@ -351,7 +349,7 @@ namespace Tileon::Editor
                     return;
                 }
             }
-            mSnapshots.Append(Snapshot(Actor, GetOrigin(Actor), Actor.Get<const Pose>()));
+            mSnapshots.Append(Actor, GetOrigin(Actor), Actor.Get<const Pose>());
         };
 
         if (Selection.IsEmpty())

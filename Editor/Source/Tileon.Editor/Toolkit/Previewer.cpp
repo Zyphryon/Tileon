@@ -10,39 +10,40 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Previewer.hpp"
+#include "Tileon.Editor/Toolkit/Previewer.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Editor
+namespace Tileon::Editor::Toolkit
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Previewer::Previewer()
-         : mZoom { 1.0f }
-     {
-     }
+        : mZoom { 1.0f },
+          mSlice { 0 }
+    {
+    }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     void Previewer::Draw(ImTextureID Texture, Vector2 Size, Rect Source, Color Tint)
     {
-        const ImVec2 Available = Toolkit::Composer::GetContentRegionAvail();
-        const ImVec2 Origin    = Toolkit::Composer::GetCursorScreenPos();
+        const ImVec2 Available = Composer::GetContentRegionAvail();
+        const ImVec2 Origin    = Composer::GetCursorScreenPos();
 
         // Reserve the entire content area so ImGui tracks hover / active state.
-        Toolkit::Composer::InvisibleButton("##previewer_area", Available,
+        Composer::InvisibleButton("##previewer_area", Available,
             ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonMiddle);
 
-        const Bool   Hovered = Toolkit::Composer::IsItemHovered();
-        const ImVec2 Mouse   = Toolkit::Composer::GetMousePos();
+        const Bool   Hovered = Composer::IsItemHovered();
+        const ImVec2 Mouse   = Composer::GetMousePos();
 
         // R key resets zoom and pan while the viewer is hovered.
-        if (Hovered && Toolkit::Composer::IsKeyPressed(ImGuiKey_R))
+        if (Hovered && Composer::IsKeyPressed(ImGuiKey_R))
         {
             Reset();
         }
@@ -50,7 +51,7 @@ namespace Tileon::Editor
         // Zoom at mouse position, keeping the point under the cursor fixed in place.
         if (Hovered)
         {
-            const Real32 Wheel = Toolkit::Composer::GetMouseWheel();
+            const Real32 Wheel = Composer::GetMouseWheel();
 
             if (Wheel != 0.0f)
             {
@@ -76,9 +77,9 @@ namespace Tileon::Editor
         }
 
         // Dragging moves the image with the cursor, and holds on even once the drag leaves the viewer.
-        if (Toolkit::Composer::IsItemActive())
+        if (Composer::IsItemActive())
         {
-            const ImVec2 Delta = Toolkit::Composer::GetMouseDelta();
+            const ImVec2 Delta = Composer::GetMouseDelta();
             mPan += Vector2(Delta.x, Delta.y);
         }
 
@@ -90,13 +91,13 @@ namespace Tileon::Editor
         const ImVec2 ImageBR(ImageTL.x + Display.x, ImageTL.y + Display.y);
 
         // PushClipRect restricts all draw calls to exactly that area so panning can't bleed outside.
-        const Ptr<ImDrawList> DrawList = Toolkit::Composer::GetWindowDrawList();
+        const Ptr<ImDrawList> DrawList = Composer::GetWindowDrawList();
         DrawList->PushClipRect(Origin, ImVec2(Origin.x + Available.x, Origin.y + Available.y), true);
 
         // Clear the background with a checkerboard pattern to indicate transparency.
         constexpr Real32 kTileSize = 16.0f;
-        constexpr ImU32  kColorA   = Toolkit::Theme::kCheckerDark;
-        constexpr ImU32  kColorB   = Toolkit::Theme::kCheckerLite;
+        constexpr ImU32  kColorA   = Theme::kCheckerDark;
+        constexpr ImU32  kColorB   = Theme::kCheckerLite;
 
         const SInt32 NumCols = static_cast<SInt32>(Available.x / kTileSize) + 1;
         const SInt32 NumRows = static_cast<SInt32>(Available.y / kTileSize) + 1;
@@ -124,7 +125,7 @@ namespace Tileon::Editor
         // Draw a border around the image area.
         if (Size.GetX() > 0.0f && Size.GetY() > 0.0f)
         {
-            DrawList->AddRect(ImageTL, ImageBR, Toolkit::Theme::kMarkerFaint, 0.0f, 0, 1.0f);
+            DrawList->AddRect(ImageTL, ImageBR, Theme::kMarkerFaint, 0.0f, 0, 1.0f);
         }
 
         // Draw the status bar in the bottom-right corner (zoom + pixel coords when hovered).
@@ -143,9 +144,9 @@ namespace Tileon::Editor
             CoordLabel = String<128>::Print<"{0}    drag to pan, R to reset">(ZoomLabel);
         }
 
-        const ImVec2 LabelSize = Toolkit::Composer::CalcTextSize(CoordLabel);
+        const ImVec2 LabelSize = Composer::CalcTextSize(CoordLabel);
         const ImVec2 LabelPos(Origin.x + Available.x - LabelSize.x - 6.0f, Origin.y + Available.y - LabelSize.y - 6.0f);
-        DrawList->AddText(LabelPos, Toolkit::Theme::kMarkerSoft, CoordLabel.GetData());
+        DrawList->AddText(LabelPos, Theme::kMarkerSoft, CoordLabel.GetData());
 
         DrawList->PopClipRect();
      }

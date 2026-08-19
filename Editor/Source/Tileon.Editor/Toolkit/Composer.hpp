@@ -426,6 +426,11 @@ namespace Tileon::Editor::Toolkit
             return ImGui::GetIO().MouseWheel;
         }
 
+        ZY_INLINE static void ConsumeMouseWheel()
+        {
+            ImGui::GetIO().MouseWheel = 0.0f;
+        }
+
         ZY_INLINE static Bool IsMouseClicked(ImGuiMouseButton Button = ImGuiMouseButton_Left, Bool Repeat = false)
         {
             return ImGui::IsMouseClicked(Button, Repeat);

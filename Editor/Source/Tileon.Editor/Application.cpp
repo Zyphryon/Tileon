@@ -12,12 +12,12 @@
 
 #include "Application.hpp"
 #include "Panel/Archetypes.hpp"
-#include "Panel/Viewport/Viewport.hpp"
+#include "Panel/Viewport.hpp"
 #include "Panel/Hierarchy.hpp"
 #include "Panel/Inspector.hpp"
 #include "Panel/Palette.hpp"
 #include "Panel/Environment.hpp"
-#include "Panel/Resources.hpp"
+#include "Panel/Assets.hpp"
 #include "Tileon.Editor/Toolkit/Theme.hpp"
 #include "Tileon_Editor.Modules.hpp"
 #include "Tileon_Editor.Embedded.hpp"
@@ -212,7 +212,7 @@ namespace Tileon::Editor
         mPanels.Append(Retainer<Hierarchy>::Create(* mContext));
         mPanels.Append(Retainer<Palette>::Create(* mContext));
         mPanels.Append(Retainer<Environment>::Create(* mContext));
-        mPanels.Append(Retainer<Resources>::Create(* mContext));
+        mPanels.Append(Retainer<Assets>::Create(* mContext));
         mPanels.Append(Retainer<Viewport>::Create(* mContext));
 
         // Signal that we are waiting for the content service to finish loading all queued assets.
@@ -370,7 +370,7 @@ namespace Tileon::Editor
             Layout.Attach("Inspector",   Right);
             Layout.Attach("Environment", Right);
             Layout.Attach("Scene",       Center);
-            Layout.Attach("Resources",   Bottom);
+            Layout.Attach("Assets",      Bottom);
         });
 
         // Honour a pending navigation request from another panel.
@@ -395,6 +395,10 @@ namespace Tileon::Editor
                 Panel->OnDraw();
             }
         }
+
+        // The browser is one window serving every field that asks for an asset, so it is drawn once here
+        // rather than by each of them, which would stack a popup per owner.
+        mContext->GetBrowser().Draw();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

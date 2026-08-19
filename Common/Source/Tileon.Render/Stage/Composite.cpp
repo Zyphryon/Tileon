@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Composite.hpp"
+#include <Tileon.Render/Types.hpp>
 #include "Tileon.Render/Component/Skylight.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -62,7 +63,7 @@ namespace Tileon::Stage
 
         // Each buffer binds under the name the signature declares it by, rather than by the order it is passed in.
         Encoder.Begin(* Technique)
-               .SetImage("Albedo"_Hash,   mAlbedo->GetTexture())
+               .SetImage(GetTextureID(TextureID::Albedo), mAlbedo->GetTexture())
                .SetImage("Radiance"_Hash, mRadiance->GetTexture())
                .SetVariant(Variant)
                .DrawFullscreen();

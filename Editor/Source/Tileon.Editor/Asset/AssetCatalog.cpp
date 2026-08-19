@@ -10,7 +10,10 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Project.hpp"
+#include "AssetCatalog.hpp"
+#include <Zyphryon.Graphic/Material.hpp>
+#include <Zyphryon.Graphic/Technique.hpp>
+#include <Zyphryon.Render/2D/Font.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -21,41 +24,39 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Project::Project()
-        : mName        { "Untitled" },
-          mAuthor      { "Unknown"  },
-          mDescription { "No description provided." },
-          mDensity     { 32.0f }
+    AssetCatalog::AssetCatalog()
     {
+        OnRegister();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Project::Load(JsonObject Archive)
+    void AssetCatalog::OnRegister()
     {
-        const JsonObject Metadata = Archive.GetObject("Metadata");
-        mName        = Metadata.GetString("name",        mName);
-        mAuthor      = Metadata.GetString("author",      mAuthor);
-        mDescription = Metadata.GetString("description", mDescription);
+        Add<Graphic::Material> (".mtl", "Material",  ICON_FA_PALETTE, AssetType::Trait::All);
+        Add<Graphic::Image>    (".tex", "Texture",   ICON_FA_IMAGE,   AssetType::Trait::All);
+        Add<Graphic::Technique>(".vfx", "Technique", ICON_FA_WAND_MAGIC_SPARKLES);
+        Add<Render::Font>      (".fnt", "Font",      ICON_FA_FONT);
 
-        const JsonObject Configuration = Archive.GetObject("Configuration");
-        mDensity = Configuration.GetNumber("density", mDensity);
-
-        return true;
+        Add(".png", "Image",    ICON_FA_FILE_IMPORT);
+        Add(".jpg", "Image",    ICON_FA_FILE_IMPORT);
+        Add(".ttf", "Typeface", ICON_FA_FILE_IMPORT);
+        Add(".otf", "Typeface", ICON_FA_FILE_IMPORT);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Project::Save(JsonObject Archive) const
+    ConstPtr<AssetType> AssetCatalog::Find(Text Name) const
     {
-        JsonObject Metadata = Archive.SetObject("Metadata");
-        Metadata.SetString("name",        mName);
-        Metadata.SetString("author",      mAuthor);
-        Metadata.SetString("description", mDescription);
-
-        JsonObject Configuration = Archive.SetObject("Configuration");
-        Configuration.SetNumber("density", mDensity);
+        for (ConstRef<AssetType> Type : mTypes)
+        {
+            if (StrEndsWith(Name, Type.GetExtension()))
+            {
+                return AddressOf(Type);
+            }
+        }
+        return nullptr;
     }
 }

@@ -20,7 +20,7 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Editor
+namespace Tileon::Editor::Toolkit
 {
     /// \brief A responsive widget that previews a texture, with zooming and panning.
     class Previewer final
@@ -81,6 +81,22 @@ namespace Tileon::Editor
             mPan = Pan;
         }
 
+        /// \brief Sets the slice of an array texture the previewer is showing.
+        ///
+        /// \param Slice The zero-based slice within the array.
+        ZY_INLINE void SetSlice(UInt16 Slice)
+        {
+            mSlice = Slice;
+        }
+
+        /// \brief Gets the slice of an array texture the previewer is showing.
+        ///
+        /// \return The slice currently shown.
+        ZY_INLINE UInt16 GetSlice() const
+        {
+            return mSlice;
+        }
+
         /// \brief Resets both the zoom level and pan offset to their default values.
         ZY_INLINE void Reset()
         {
@@ -95,5 +111,6 @@ namespace Tileon::Editor
 
         Real32  mZoom;
         Vector2 mPan;
+        UInt16  mSlice;
     };
 }

@@ -10,7 +10,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Materializer.hpp"
+#include "Tileon.Editor/Asset/Editor/MaterialEditor.hpp"
 #include <Zyphryon.Graphic/Material.hpp>
 #include <Zyphryon.Graphic/Metadata.hpp>
 
@@ -23,16 +23,17 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Materializer::Materializer(Ref<Context> Context)
+    MaterialEditor::MaterialEditor(Ref<Context> Context)
         : mContext { Context },
-          mBrowser { Context.GetContent() }
+          mDirty   { false },
+          mClosing { false }
     {
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Materializer::Create(Text Path, AnyRef<Content::Uri> Key)
+    Bool MaterialEditor::Create(Text Path, AnyRef<Content::Uri> Key)
     {
         // An empty material is still a valid one, which is what lets the editor open it and fill it in.
         if (!Write(Path, ConstSpan<Binding>()))
@@ -41,8 +42,10 @@ namespace Tileon::Editor
         }
 
         // Creating and editing are one motion, so the material opens where it was just written.
-        mPath = Str(Path);
-        mKey  = Move(Key);
+        mPath    = Path;
+        mKey     = Move(Key);
+        mDirty   = false;
+        mClosing = false;
 
         mBindings.Clear();
         mConstants.Clear();
@@ -53,10 +56,12 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Materializer::Open(Text Path, AnyRef<Content::Uri> Key)
+    void MaterialEditor::Open(Text Path, AnyRef<Content::Uri> Key)
     {
-        mPath = Str(Path);
-        mKey  = Move(Key);
+        mPath    = Path;
+        mKey     = Move(Key);
+        mDirty   = false;
+        mClosing = false;
 
         mBindings.Clear();
         mConstants.Clear();
@@ -65,7 +70,7 @@ namespace Tileon::Editor
 
         if (Filesystem::Read(mPath, File) != Filesystem::Result::Success)
         {
-            LOG_E("Materializer: failed to read '{0}'", mPath);
+            LOG_E("MaterialEditor: failed to read '{0}'", mPath);
             return;
         }
 
@@ -73,7 +78,7 @@ namespace Tileon::Editor
 
         if (!Document.IsObject())
         {
-            LOG_E("Materializer: '{0}' is not a material", mPath);
+            LOG_E("MaterialEditor: '{0}' is not a material", mPath);
             return;
         }
 
@@ -88,15 +93,16 @@ namespace Tileon::Editor
             for (ConstRef<JsonValue::Object::Pair> Pair : Images.GetNode()->GetObject())
             {
                 Binding Entry;
-                Entry.Name = Str(Pair.First);
-                Entry.Path = Str(Images.GetObject(Pair.First).GetString("Path"));
+                Entry.Name = Pair.First;
+                Entry.Path = Images.GetObject(Pair.First).GetString("Path");
 
                 // A texture is read through the sampler that shares its name, when the material declares one.
-                if (const JsonObject Sampler = Samplers.IsValid() ? Samplers.GetObject(Pair.First) : JsonObject();
-                    Sampler.IsValid())
+                if (const JsonObject Sampler = Samplers.IsValid() ? Samplers.GetObject(Pair.First) : JsonObject(); Sampler.IsValid())
                 {
-                    Entry.Filter  = Sampler.GetEnum("Filter", Graphic::TextureFilter::Point);
-                    Entry.Address = Sampler.GetEnum("AddressModeU", Graphic::TextureAddress::Clamp);
+                    Entry.Filter   = Sampler.GetEnum("Filter", Graphic::TextureFilter::Point);
+                    Entry.AddressU = Sampler.GetEnum("AddressModeU", Graphic::TextureAddress::Clamp);
+                    Entry.AddressV = Sampler.GetEnum("AddressModeV", Graphic::TextureAddress::Clamp);
+                    Entry.AddressW = Sampler.GetEnum("AddressModeW", Graphic::TextureAddress::Clamp);
                 }
 
                 mBindings.Append(Move(Entry));
@@ -110,7 +116,7 @@ namespace Tileon::Editor
                 const JsonObject Source = Parameters.GetObject(Pair.First);
 
                 Constant Entry;
-                Entry.Name = Str(Pair.First);
+                Entry.Name = Pair.First;
                 Entry.Type = Enum::Cast(Source.GetString("Type"), Graphic::Uniform::Float);
 
                 const Graphic::UniformMetadata Metadata = Graphic::GetUniformMetadata(Entry.Type);
@@ -150,7 +156,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Materializer::Draw()
+    Bool MaterialEditor::Draw()
     {
         if (mPath.IsEmpty())
         {
@@ -166,8 +172,9 @@ namespace Tileon::Editor
         {
             Toolkit::Composer::TextDisabled(StrAfterLast(mPath, '/'));
 
-            // Textures.
             Toolkit::Composer::Section("Textures");
+
+            constexpr Text kHint = "Choose a name";
 
             SInt32 Discard = -1;
 
@@ -178,37 +185,68 @@ namespace Tileon::Editor
                 Toolkit::Composer::PushID(Index);
 
                 Toolkit::Composer::FieldInline("Name");
-                Toolkit::Composer::InputText("##Name", Entry.Name, [&Entry](Text Value)
+
+                if (Toolkit::Composer::BeginCombo("##Name", Entry.Name.IsEmpty() ? kHint : Text(Entry.Name)))
                 {
-                    Entry.Name = Str(Value);
-                });
+                    Bool Known = false;
+
+                    for (const TextureID Usage : Enum::GetValues<TextureID>())
+                    {
+                        const Text Name     = Enum::GetName(Usage);
+                        const Bool Selected = (Entry.Name == Name);
+                        Known = Known || Selected;
+
+                        if (Toolkit::Composer::Selectable(Name, Selected))
+                        {
+                            Entry.Name = Name;
+                            mDirty     = true;
+                        }
+                    }
+
+                    // A material may bind a name the list no longer covers, and opening it is no reason to
+                    // lose that, so whatever it already carries is offered alongside the names that are.
+                    if (!Known && !Entry.Name.IsEmpty())
+                    {
+                        Toolkit::Composer::Selectable(Entry.Name, true);
+                    }
+
+                    Toolkit::Composer::EndCombo();
+                }
 
                 const UInt64 Key = HashCombine("Assets.Material.Path", Index);
 
-                if (Str Selection; mBrowser.Consume(Key, Selection))
+                if (Str Selection; mContext.GetBrowser().Consume(Key, Selection))
                 {
                     Entry.Path = Move(Selection);
+                    mDirty     = true;
                 }
 
                 Toolkit::Composer::FieldInline("Path");
                 Toolkit::Composer::InputTextWithButton("##Path", Entry.Path,
-                    [&Entry](Text Value)
+                    [this, &Entry](Text Value)
                     {
-                        Entry.Path = Str(Value);
+                        Entry.Path = Value;
+                        mDirty     = true;
                     },
                     ICON_FA_ELLIPSIS,
                     [this, Key]
                     {
-                        mBrowser.Open(Key, ".tex");
+                        mContext.GetBrowser().Open(Key, ".tex");
                     },
                     ImGuiInputTextFlags_EnterReturnsTrue);
 
-                // A texture and the sampler that reads it are authored together, since one is useless alone.
+                // A texture and the sampler that reads it are authored together.
                 Toolkit::Composer::FieldInline("Filter");
-                Toolkit::Composer::Combo("##Filter", Entry.Filter);
+                mDirty |= Toolkit::Composer::Combo("##Filter", Entry.Filter);
 
-                Toolkit::Composer::FieldInline("Address");
-                Toolkit::Composer::Combo("##Address", Entry.Address);
+                Toolkit::Composer::FieldInline("Address U");
+                mDirty |= Toolkit::Composer::Combo("##AddressU", Entry.AddressU);
+
+                Toolkit::Composer::FieldInline("Address V");
+                mDirty |= Toolkit::Composer::Combo("##AddressV", Entry.AddressV);
+
+                Toolkit::Composer::FieldInline("Address W");
+                mDirty |= Toolkit::Composer::Combo("##AddressW", Entry.AddressW);
 
                 if (Toolkit::Composer::Button(ICON_FA_TRASH "  Remove"))
                 {
@@ -222,14 +260,32 @@ namespace Tileon::Editor
             if (Discard >= 0)
             {
                 mBindings.Remove(static_cast<UInt32>(Discard));
+
+                mDirty = true;
             }
 
             if (Toolkit::Composer::Button(ICON_FA_PLUS "  Add Texture"))
             {
-                mBindings.Append(Binding());
+                Ref<Binding> Entry = mBindings.Append();
+
+                for (const TextureID Usage : Enum::GetValues<TextureID>())
+                {
+                    const Text Name  = Enum::GetName(Usage);
+                    const Bool Taken = mBindings.Contains([&Name](ConstRef<Binding> Other)
+                    {
+                        return Other.Name == Name;
+                    });
+
+                    if (!Taken)
+                    {
+                        Entry.Name = Name;
+                        break;
+                    }
+                }
+
+                mDirty = true;
             }
 
-            // Parameters.
             Toolkit::Composer::Section("Parameters");
 
             Discard = -1;
@@ -248,21 +304,21 @@ namespace Tileon::Editor
                     Toolkit::Composer::TableNextColumn();
                     Toolkit::Composer::PushID(Index);
 
-                    Toolkit::Composer::InputText("##Name", Entry.Name, [&Entry](Text Value)
+                    Toolkit::Composer::InputText("##Name", Entry.Name, [this, &Entry](Text Value)
                     {
-                        Entry.Name = Str(Value);
+                        Entry.Name = Value;
+                        mDirty     = true;
                     });
 
                     Toolkit::Composer::TableNextColumn();
 
-                    Toolkit::Composer::Combo("##Type", Entry.Type);
+                    mDirty |= Toolkit::Composer::Combo("##Type", Entry.Type);
 
                     Toolkit::Composer::TableNextColumn();
 
-                    // A value is edited as what it is, so a boolean toggles and a whole number never drifts.
                     if (Entry.Type == Graphic::Uniform::Bool)
                     {
-                        Toolkit::Composer::Checkbox("##Value", Entry.Boolean);
+                        mDirty |= Toolkit::Composer::Checkbox("##Value", Entry.Boolean);
                     }
                     else
                     {
@@ -283,11 +339,11 @@ namespace Tileon::Editor
 
                             if (Integral)
                             {
-                                Toolkit::Composer::DragInt("##Value", Entry.Integer[Component]);
+                                mDirty |= Toolkit::Composer::DragInt("##Value", Entry.Integer[Component]);
                             }
                             else
                             {
-                                Toolkit::Composer::DragFloat("##Value", Entry.Decimal[Component], 0.01f);
+                                mDirty |= Toolkit::Composer::DragFloat("##Value", Entry.Decimal[Component], 0.01f);
                             }
                             Toolkit::Composer::PopID();
                         }
@@ -309,47 +365,60 @@ namespace Tileon::Editor
             if (Discard >= 0)
             {
                 mConstants.Remove(static_cast<UInt32>(Discard));
+
+                mDirty = true;
             }
 
             if (Toolkit::Composer::Button(ICON_FA_PLUS "  Add Parameter"))
             {
-                mConstants.Append(Constant());
+                mConstants.Append();
+
+                mDirty = true;
             }
 
             Toolkit::Composer::Separator();
 
-            if (Toolkit::Composer::Button("Save", 96.0f))
-            {
-                Save();
+            const Text Blocked = Reason();
 
-                Saved   = true;
-                Visible = false;
+            if (Toolkit::Composer::DisabledButton("Save", !mDirty || !Blocked.IsEmpty(), 96.0f))
+            {
+                // Only a write that landed counts as saved; a failed one keeps the window and the edits.
+                Saved = Save();
             }
 
             Toolkit::Composer::SameLine();
 
-            if (Toolkit::Composer::Button("Cancel", 96.0f))
+            if (Toolkit::Composer::Button("Close", 96.0f))
             {
-                Visible = false;
+                mClosing = true;
             }
+
+            if (!Blocked.IsEmpty())
+            {
+                Toolkit::Composer::SameLine();
+                Toolkit::Composer::TextDisabled(Blocked);
+            }
+            else if (mDirty)
+            {
+                Toolkit::Composer::SameLine();
+                Toolkit::Composer::TextDisabled("Unsaved changes");
+            }
+
+            DrawClosing();
         }
         Toolkit::Composer::End();
 
         if (!Visible)
         {
-            mPath = Str();
+            mClosing = true;
         }
-
-        // The fields have had their chance to claim a selection, which is what the shared browser expects.
-        mBrowser.Draw();
-
         return Saved;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Materializer::Write(Text Path, ConstSpan<Binding> Bindings, ConstSpan<Constant> Constants)
+    Bool MaterialEditor::Write(Text Path, ConstSpan<Binding> Bindings, ConstSpan<Constant> Constants)
     {
         JsonValue Document;
         Document.SetObject();
@@ -362,6 +431,7 @@ namespace Tileon::Editor
         {
             if (Entry.Name.IsEmpty())
             {
+                LOG_W("MaterialEditor: dropped an unnamed texture bound to '{0}'", Entry.Path);
                 continue;
             }
 
@@ -370,9 +440,9 @@ namespace Tileon::Editor
             // Every texture leaves with the sampler that reads it, named the same, as the loader expects.
             JsonObject Sampler = Samplers.SetObject(Entry.Name);
             Sampler.SetEnum("Filter", Entry.Filter);
-            Sampler.SetEnum("AddressModeU", Entry.Address);
-            Sampler.SetEnum("AddressModeV", Entry.Address);
-            Sampler.SetEnum("AddressModeW", Entry.Address);
+            Sampler.SetEnum("AddressModeU", Entry.AddressU);
+            Sampler.SetEnum("AddressModeV", Entry.AddressV);
+            Sampler.SetEnum("AddressModeW", Entry.AddressW);
         }
 
         if (!Constants.IsEmpty())
@@ -383,6 +453,7 @@ namespace Tileon::Editor
             {
                 if (Entry.Name.IsEmpty())
                 {
+                    LOG_W("MaterialEditor: dropped an unnamed parameter");
                     continue;
                 }
 
@@ -429,7 +500,7 @@ namespace Tileon::Editor
 
         if (Filesystem::Write(Path, Data) != Filesystem::Result::Success)
         {
-            LOG_E("Materializer: failed to write '{0}'", Path);
+            LOG_E("MaterialEditor: failed to write '{0}'", Path);
             return false;
         }
         return true;
@@ -438,16 +509,116 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Materializer::Save()
+    void MaterialEditor::DrawClosing()
     {
-        if (!Write(mPath, mBindings, mConstants))
+        if (!mClosing)
         {
             return;
         }
+
+        // Nothing is at stake, so leaving needs no answer.
+        if (!mDirty)
+        {
+            mClosing = false;
+            mPath.Clear();
+            return;
+        }
+
+        Toolkit::Composer::OpenPopup("Discard Changes");
+
+        if (!Toolkit::Composer::BeginPopupModal("Discard Changes"))
+        {
+            return;
+        }
+
+        Toolkit::Composer::Label("The changes made since the last save have not been written.");
+        Toolkit::Composer::Separator();
+
+        if (Toolkit::Composer::Button("Discard", 96.0f))
+        {
+            mClosing = false;
+            mPath.Clear();
+
+            Toolkit::Composer::CloseCurrentPopup();
+        }
+
+        Toolkit::Composer::SameLine();
+
+        if (Toolkit::Composer::Button("Cancel", 96.0f))
+        {
+            mClosing = false;
+
+            Toolkit::Composer::CloseCurrentPopup();
+        }
+
+        Toolkit::Composer::EndPopup();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    Text MaterialEditor::Reason() const
+    {
+        for (UInt32 Index = 0; Index < mBindings.GetSize(); ++Index)
+        {
+            ConstRef<Binding> Entry = mBindings[Index];
+
+            if (Entry.Name.IsEmpty())
+            {
+                return "Name every texture before saving";
+            }
+
+            if (Entry.Path.IsEmpty())
+            {
+                return "Give every texture a file before saving";
+            }
+
+            for (UInt32 Other = 0; Other < Index; ++Other)
+            {
+                if (mBindings[Other].Name == Entry.Name)
+                {
+                    return "Two textures share a name";
+                }
+            }
+        }
+
+        for (UInt32 Index = 0; Index < mConstants.GetSize(); ++Index)
+        {
+            ConstRef<Constant> Entry = mConstants[Index];
+
+            if (Entry.Name.IsEmpty())
+            {
+                return "Name every parameter before saving";
+            }
+
+            for (UInt32 Other = 0; Other < Index; ++Other)
+            {
+                if (mConstants[Other].Name == Entry.Name)
+                {
+                    return "Two parameters share a name";
+                }
+            }
+        }
+        return Text();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    Bool MaterialEditor::Save()
+    {
+        if (!Write(mPath, mBindings, mConstants))
+        {
+            return false;
+        }
+
+        mDirty = false;
 
         // Saving is only half of it; the material in memory is still the one that was read.
         Ref<Content::Service> Service = mContext.GetContent();
 
         Service.Reload(Service.Load<Graphic::Material>(mKey));
+
+        return true;
     }
 }

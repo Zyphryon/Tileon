@@ -1,4 +1,4 @@
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+ // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // Copyright (C) 2025-2026 Tileon contributors (see AUTHORS.md)
 //
 // This work is licensed under the terms of the MIT license.
@@ -73,9 +73,6 @@ namespace Tileon::Editor
             Toolkit::Composer::EndChild();
         }
         Toolkit::Composer::End();
-
-        // The browser is modal, so it is drawn outside the window that hosts the fields which opened it.
-        mComponents.DrawSelector();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

@@ -35,12 +35,6 @@ namespace Tileon::Editor
         /// \param Actor The entity whose components are being edited.
         void Draw(Scene::Entity Actor);
 
-        /// \brief Draws the asset browser a field opened, if any.
-        ZY_INLINE void DrawSelector()
-        {
-            mBrowser.Draw();
-        }
-
     private:
 
         /// \brief Defines the structural changes that can be requested while drawing.
@@ -87,7 +81,6 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Browser               mBrowser;
         Action                mAction;
         Scene::Entity         mSubject;
     };

@@ -12,8 +12,9 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Baking/Importer.hpp"
-#include "Baking/Materializer.hpp"
+#include "Tileon.Editor/Asset/AssetCatalog.hpp"
+#include "Tileon.Editor/Asset/AssetEditor.hpp"
+#include "Tileon.Editor/Asset/Importer.hpp"
 #include "Tileon.Editor/Panel.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -22,87 +23,77 @@
 
 namespace Tileon::Editor
 {
-    /// \brief Presents the project's resources as a folder tree and the files inside the folder in view.
-    class Resources final : public Panel
+    /// \brief Presents the project's assets as a folder tree and the files inside the folder in view.
+    class Assets final : public Panel
     {
     public:
 
         /// \brief Constructs the activity with the specified context.
         ///
         /// \param Context The context associated with this activity.
-        Resources(Ref<Context> Context);
+        Assets(Ref<Context> Context);
 
         /// \see Panel::OnDraw()
         void OnDraw() override;
 
     private:
 
-        /// \brief Enumerates what the naming prompt is about to create.
-        enum class Creation : UInt8
+        /// \brief Enumerates the keys the listing can be ordered by, in column order.
+        enum class Column : UInt8
         {
-            None,       ///< Nothing is being created.
-            Folder,     ///< A folder is waiting on its name.
-            Material,   ///< A material is waiting on its name.
-        };
-
-        /// \brief Enumerates the kinds of resource the panel knows how to act on.
-        enum class Kind : UInt8
-        {
-            Folder,     ///< A directory, which can be opened and imported into.
-            Material,   ///< A material, whose images and parameters are authored.
-            Font,       ///< A baked font.
-            Technique,  ///< A shader technique.
-            Texture,    ///< A baked texture.
-            Source,     ///< Art or a typeface sitting in the project, which nothing baked loads.
-            Other,      ///< Anything the editor has nothing to say about.
+            Name, ///< Ordered by file name, without regard to case.
+            Size, ///< Ordered by size on disk.
         };
 
         /// \brief Describes one entry of the folder in view.
         struct Entry final
         {
+            /// The entry's file name, without its folder.
+            Str                 Name;
+
+            /// The kind the entry belongs to, or `nullptr` for a folder or a file nothing knows about.
+            ConstPtr<AssetType> Type;
+
+            /// `true` when the entry is a directory.
+            Bool                Folder;
+
+            /// The entry's size on disk, in bytes.
+            UInt64              Size;
+
             /// \brief Constructs an entry standing for nothing.
             ZY_INLINE Entry()
-                : Kind { Kind::Other },
-                  Size { 0 }
+                : Type   { nullptr },
+                  Folder { false },
+                  Size   { 0 }
             {
             }
 
             /// \brief Constructs an entry with the specified name, kind and size.
             ///
-            /// \param Name The entry's file name, without its folder.
-            /// \param Kind What the editor takes the entry to be.
-            /// \param Size The entry's size on disk, in bytes.
-            ZY_INLINE Entry(AnyRef<Str> Name, Resources::Kind Kind, UInt64 Size)
-                : Name { Move(Name) },
-                  Kind { Kind },
-                  Size { Size }
+            /// \param Name   The entry's file name, without its folder.
+            /// \param Type   The kind the entry belongs to, or `nullptr` for a folder or an unknown file.
+            /// \param Folder `true` when the entry is a directory.
+            /// \param Size   The entry's size on disk, in bytes.
+            ZY_INLINE Entry(AnyRef<Str> Name, ConstPtr<AssetType> Type, Bool Folder, UInt64 Size)
+                : Name   { Move(Name) },
+                  Type   { Type },
+                  Folder { Folder },
+                  Size   { Size }
             {
             }
-
-            /// The entry's file name, without its folder.
-            Str          Name;
-
-            /// What the editor takes the entry to be.
-            Resources::Kind Kind;
-
-            /// The entry's size on disk, in bytes.
-            UInt64       Size;
         };
 
-        /// \brief Gets what the editor takes a file to be, from its extension.
+        /// \brief Gets the glyph an entry is listed with.
         ///
-        /// \param Name The file name to classify.
-        /// \return The kind the file is treated as.
-        static Kind Classify(Text Name);
-
-        /// \brief Gets the icon a kind is listed with.
-        ///
-        /// \param Kind The kind to look up.
-        /// \return The icon for the kind.
-        static Text GetIcon(Kind Kind);
+        /// \param Item The entry the row stands for.
+        /// \return The icon for the entry.
+        static Text GetIcon(ConstRef<Entry> Item);
 
         /// \brief Rereads the folder in view, which is what every action that touches disk ends with.
         void Refresh();
+
+        /// \brief Reorders the folder in view by whichever column the header row asks for.
+        void Sort();
 
         /// \brief Opens the specified folder, relative to the project's root.
         ///
@@ -115,6 +106,12 @@ namespace Tileon::Editor
         /// \brief Draws the folder in view as a table of its entries.
         void DrawEntries();
 
+        /// \brief Gets the editor that authors a kind of asset.
+        ///
+        /// \param Type The kind to look up.
+        /// \return The editor for the kind, or `nullptr` when nothing authors it.
+        Ptr<AssetEditor> Reach(ConstRef<AssetType> Type) const;
+
         /// \brief Draws the menu an entry opens on right click.
         ///
         /// \param Item The entry the row stands for.
@@ -126,10 +123,14 @@ namespace Tileon::Editor
         /// \brief Draws the prompt that names a folder before it is created.
         void DrawFolderPrompt();
 
-        /// \brief Reloads the asset an entry stands for, so an edit made outside the editor is picked up.
+        /// \brief Draws the prompt that stands between an entry and its removal from disk.
+        void DrawDeletePrompt();
+
+        /// \brief Drops from memory whatever an entry holds, so nothing outlives the file it was read from.
         ///
-        /// \param Item The entry to reload.
-        void Reload(ConstRef<Entry> Item);
+        /// \param Name   The entry to drop, relative to the folder in view.
+        /// \param Folder `true` when the entry is a directory, whose contents are dropped instead.
+        void Evict(Text Name, Bool Folder);
 
         /// \brief Gets the absolute path of a name inside the folder in view.
         ///
@@ -148,16 +149,24 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Str             mFolder;
-        Sequence<Entry> mEntries;
-        Str             mSelection;
-        Creation        mCreating;
-        Str             mCreation;
+        Str                           mFolder;
+        Sequence<Entry>               mEntries;
+        Str                           mSelection;
+        ConstPtr<AssetType>           mCreating;
+        Bool                          mCreatingFolder;
+        Str                           mCreation;
+        Str                           mDeleting;
+        Bool                          mDeletingFolder;
+        Column                        mColumn;
+        Bool                          mAscending;
+        Str                           mHovered;
+        UInt32                        mStep;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Importer        mImporter;
-        Materializer    mMaterializer;
+        AssetCatalog                  mCatalog;
+        Importer                      mImporter;
+        Sequence<Unique<AssetEditor>> mEditors;
     };
 }

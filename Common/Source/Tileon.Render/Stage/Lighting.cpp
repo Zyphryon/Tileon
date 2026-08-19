@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Lighting.hpp"
+#include <Tileon.Render/Types.hpp>
 #include "Tileon.Render/Component.hpp"
 #include "Tileon.World/Component.hpp"
 
@@ -68,7 +69,7 @@ namespace Tileon::Stage
 
             // The ambient term reads the surface it lights, so the normals are all the skylight binds.
             Encoder.Begin(* mTechniques[Enum::Cast(Kind::Skylight)])
-                   .SetImage("Normal"_Hash, mNormal->GetTexture())
+                   .SetImage(GetTextureID(TextureID::Normal), mNormal->GetTexture())
                    .DrawFullscreen();
         });
 
@@ -136,7 +137,7 @@ namespace Tileon::Stage
                 .Instances = static_cast<UInt32>(Data.GetSize())
             };
             Encoder.Begin(* mTechniques[Enum::Cast(Kind::Glowlight)])
-                   .SetImage("Normal"_Hash, mNormal->GetTexture())
+                   .SetImage(GetTextureID(TextureID::Normal), mNormal->GetTexture())
                    .SetImage("Depth"_Hash,  mDepth->GetTexture())
                    .Draw(Graphics.AllocateInFlightVertices<GpuGlowlightLayout>(Data), Invocation);
         }
@@ -152,7 +153,7 @@ namespace Tileon::Stage
                 .Instances = static_cast<UInt32>(Data.GetSize())
             };
             Encoder.Begin(* mTechniques[Enum::Cast(Kind::Spotlight)])
-                   .SetImage("Normal"_Hash, mNormal->GetTexture())
+                   .SetImage(GetTextureID(TextureID::Normal), mNormal->GetTexture())
                    .SetImage("Depth"_Hash,  mDepth->GetTexture())
                    .Draw(Graphics.AllocateInFlightVertices<GpuSpotlightLayout>(Data), Invocation);
         }

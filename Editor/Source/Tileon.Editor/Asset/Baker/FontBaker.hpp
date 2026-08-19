@@ -12,9 +12,8 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Editor/Panel.hpp"
-#include "Tileon.Editor/Toolkit/Gallery.hpp"
-#include "Tileon.World/Repository.hpp"
+#include "Tileon.Editor/Context.hpp"
+#include "Tileon.Editor/Asset/AssetBaker.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -22,41 +21,45 @@
 
 namespace Tileon::Editor
 {
-    /// \brief Provides a palette interface for browsing and selecting terrains or archetypes in the editor.
-    class Palette final : public Panel
+    /// \brief Bakes a typeface into the atlas and metrics a font is drawn from.
+    class FontBaker final : public AssetBaker
     {
     public:
 
-        /// \brief Constructs the activity with the specified context.
+        /// \brief Constructs the baker with the specified context.
         ///
-        /// \param Context The context associated with this activity.
-        Palette(Ref<Context> Context);
+        /// \param Context The context associated with this baker.
+        explicit FontBaker(Ref<Context> Context);
 
-        /// \see Panel::OnDraw()
-        void OnDraw() override;
+        /// \see AssetBaker::GetSources()
+        ZY_INLINE Text GetSources() const override
+        {
+            return ".ttf .otf";
+        }
 
-    private:
+        /// \see AssetBaker::GetLabel()
+        ZY_INLINE Text GetLabel() const override
+        {
+            return "Font";
+        }
 
-        /// \brief Draws the tab listing the archetypes available in the repository.
-        void DrawEntityTab();
+        /// \see AssetBaker::DrawSettings()
+        void DrawSettings() override;
 
-        /// \brief Draws the gallery of archetypes available in the repository.
-        void DrawEntityGallery();
-
-        /// \brief Draws the status bar contents describing the selected archetype.
-        void DrawEntityStatus();
-
-        /// \brief Draws a centered, dimmed hint inside the status bar.
-        ///
-        /// \param Hint The message to display.
-        void DrawHint(Text Hint);
+        /// \see AssetBaker::Bake(Text, Text)
+        Bool Bake(Text Source, Text Folder) override;
 
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Ref<Repository>  mRepository;
-        Toolkit::Gallery mEntities;
+        Ref<Context> mContext;
+        Str          mCharset;
+        Real32       mSize;
+        Real32       mRange;
+        Real32       mUnderline;
+        UInt32       mPadding;
+        UInt32       mLimit;
     };
 }

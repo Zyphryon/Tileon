@@ -116,7 +116,7 @@ namespace Tileon::Editor
         /// \brief Sets the tile density (pixels per world unit) for the project.
         ///
         /// \param Density The density value to assign (e.g. 32 pixels per tile).
-        ZY_INLINE void SetDensity(UInt16 Density)
+        ZY_INLINE void SetDensity(Real32 Density)
         {
             mDensity = Density;
         }
@@ -124,7 +124,7 @@ namespace Tileon::Editor
         /// \brief Gets the tile density (pixels per world unit) of the project.
         ///
         /// \return The density value of the project.
-        ZY_INLINE UInt16 GetDensity() const
+        ZY_INLINE Real32 GetDensity() const
         {
             return mDensity;
         }
@@ -138,6 +138,6 @@ namespace Tileon::Editor
         Str    mName;
         Str    mAuthor;
         Str    mDescription;
-        UInt16 mDensity;
+        Real32 mDensity;
     };
 }

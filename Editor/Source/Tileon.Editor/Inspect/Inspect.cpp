@@ -367,8 +367,8 @@ namespace Tileon::Editor
         ConstRef<Content::Uri> Value,
         AnyRef<Callback>       Action)
     {
-        Ref<Browser> Browser = Workspace.Browser;
-        Ref<Content::Service>  Service  = Workspace.Context.GetContent();
+        Ref<Toolkit::Browser> Browser = Workspace.Browser;
+        Ref<Content::Service> Service = Workspace.Context.GetContent();
 
         const UInt64 Key = Toolkit::Composer::IsDisabled() ? 0 : HashCombine(Label, Actor.GetID());
 
@@ -683,7 +683,7 @@ namespace Tileon::Editor
 
         if (Material && Material->HasCompleted())
         {
-            ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(TextureUsage::Albedo));
+            ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(TextureID::Albedo));
 
             if (Albedo && Albedo->GetWidth() > 0 && Albedo->GetHeight() > 0)
             {

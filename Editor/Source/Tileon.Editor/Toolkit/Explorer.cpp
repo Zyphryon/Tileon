@@ -10,13 +10,15 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Explorer.hpp"
+#include "Tileon.Editor/Toolkit/Composer.hpp"
+#include "Tileon.Editor/Toolkit/Explorer.hpp"
+#include "Tileon.Editor/Toolkit/Filter.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Editor
+namespace Tileon::Editor::Toolkit
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -27,6 +29,7 @@ namespace Tileon::Editor
           mColumn    { Column::Name },
           mAscending { true },
           mEditing   { false },
+          mSelected  { 0 },
           mCursor    { -1 }
     {
     }
@@ -36,13 +39,27 @@ namespace Tileon::Editor
 
     void Explorer::Open(Mode Mode, Text Directory, Text Extension, AnyRef<OnResult> Callback)
     {
+        // A caller with nothing to choose between still gets a group, just an unnamed one.
+        const Filter Only(Text(), Extension);
+
+        Open(Mode, Directory, ConstSpan<Filter>(AddressOf(Only), 1), Move(Callback));
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Explorer::Open(Mode Mode, Text Directory, ConstSpan<Filter> Filters, AnyRef<OnResult> Callback)
+    {
         mMode      = Mode;
-        mExtension = Extension;
+        mSelected  = 0;
         mColumn    = Column::Name;
         mAscending = true;
         mEditing   = false;
         mCallback  = Move(Callback);
         mOpen      = true;
+
+        mFilters.Clear();
+        mFilters.Append(Filters);
 
         mAddress.Clear();
         mFilename.Clear();
@@ -56,6 +73,39 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    String<96> Explorer::Describe(UInt32 Index) const
+    {
+        String<96> Suffixes;
+
+        if (Index < mFilters.GetSize())
+        {
+            ForEachSuffix(mFilters[Index].Sources, [&](Text Suffix)
+            {
+                if (!Suffixes.IsEmpty())
+                {
+                    Suffixes.Append(' ');
+                }
+                Suffixes.Append('*');
+                Suffixes.Append(Suffix);
+
+                return true;
+            });
+        }
+
+        if (Suffixes.IsEmpty())
+        {
+            return String<96>("All Files (*.*)");
+        }
+
+        // An unnamed group has only its suffixes to go by, which is what a single-kind caller wants anyway.
+        ConstRef<Str> Label = mFilters[Index].Label;
+
+        return Label.IsEmpty() ? Suffixes : String<96>::Print<"{0} ({1})">(Label, Suffixes);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void Explorer::Refresh()
     {
         mEntries.Clear();
@@ -64,8 +114,10 @@ namespace Tileon::Editor
         {
             const Bool IsDirectory = (Record.Type == Filesystem::Type::Directory);
 
-            // Filter files by extension when one is specified; always show directories for navigation.
-            if (IsDirectory || StrEndsWith(Record.Name, mExtension))
+            // Filter files by extension when any are specified; always show directories for navigation.
+            const Text Filter = mSelected < mFilters.GetSize() ? Text(mFilters[mSelected].Sources) : Text::Empty();
+                
+            if (IsDirectory || HasSuffix(Filter, Record.Name))
             {
                 mEntries.Append(Record);
             }
@@ -144,7 +196,6 @@ namespace Tileon::Editor
 
     void Explorer::Navigate(Text Directory)
     {
-        // The caller often hands us a view into mDirectory itself, so take a copy before anything reassigns it.
         const Filesystem::Path Target(Directory);
 
         // Branching off mid-trail discards whatever the user had moved back from.
@@ -283,44 +334,44 @@ namespace Tileon::Editor
         const Bool CanGoBack    = (mCursor > 0);
         const Bool CanGoForward = (mCursor + 1 < static_cast<SInt32>(mHistory.GetSize()));
 
-        if (Toolkit::Composer::DisabledButton(ICON_FA_ARROW_LEFT, !CanGoBack))
+        if (Composer::DisabledButton(ICON_FA_ARROW_LEFT, !CanGoBack))
         {
             Travel(-1);
         }
-        Toolkit::Composer::Tooltip("Back");
+        Composer::Tooltip("Back");
 
-        Toolkit::Composer::SameLine();
+        Composer::SameLine();
 
-        if (Toolkit::Composer::DisabledButton(ICON_FA_ARROW_RIGHT, !CanGoForward))
+        if (Composer::DisabledButton(ICON_FA_ARROW_RIGHT, !CanGoForward))
         {
             Travel(1);
         }
-        Toolkit::Composer::Tooltip("Forward");
+        Composer::Tooltip("Forward");
 
-        Toolkit::Composer::SameLine();
+        Composer::SameLine();
 
-        if (Toolkit::Composer::Button(ICON_FA_ARROW_UP))
+        if (Composer::Button(ICON_FA_ARROW_UP))
         {
             Ascend();
         }
-        Toolkit::Composer::Tooltip("Up one level");
+        Composer::Tooltip("Up one level");
 
-        Toolkit::Composer::SameLine();
+        Composer::SameLine();
 
-        const Real32 Spacing = Toolkit::Composer::GetStyle().ItemSpacing.x;
-        const Real32 Width   = Toolkit::Composer::GetContentRegionAvail().x - kSearchWidth - Spacing;
+        const Real32 Spacing = Composer::GetStyle().ItemSpacing.x;
+        const Real32 Width   = Composer::GetContentRegionAvail().x - kSearchWidth - Spacing;
 
         // Typing a location outright, the way Ctrl+L turns the address bar into a field.
         if (mEditing)
         {
-            Toolkit::Composer::SetNextItemWidth(Width);
+            Composer::SetNextItemWidth(Width);
 
-            if (!Toolkit::Composer::IsAnyItemActive())
+            if (!Composer::IsAnyItemActive())
             {
-                Toolkit::Composer::SetKeyboardFocusHere();
+                Composer::SetKeyboardFocusHere();
             }
 
-            Toolkit::Composer::InputText("##explorer_address", mAddress, [this](Text Value)
+            Composer::InputText("##explorer_address", mAddress, [this](Text Value)
             {
                 mAddress = Value;
 
@@ -331,7 +382,7 @@ namespace Tileon::Editor
             }, ImGuiInputTextFlags_EnterReturnsTrue);
 
             // Clicking away or pressing Escape hands the trail back without moving anywhere.
-            if (Toolkit::Composer::IsItemDeactivated())
+            if (Composer::IsItemDeactivated())
             {
                 mEditing = false;
             }
@@ -339,24 +390,24 @@ namespace Tileon::Editor
         else
         {
             // The strip is one frame tall and never scrolls; a path too long for it sheds its leading crumbs.
-            Toolkit::Composer::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-            Toolkit::Composer::BeginChild("##explorer_trail", ImVec2(Width, Toolkit::Composer::GetFrameHeight()));
-            Toolkit::Composer::PopStyleVar();
+            Composer::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+            Composer::BeginChild("##explorer_trail", ImVec2(Width, Composer::GetFrameHeight()));
+            Composer::PopStyleVar();
             {
                 DrawTrail(Width);
             }
-            Toolkit::Composer::EndChild();
+            Composer::EndChild();
         }
 
-        Toolkit::Composer::SameLine();
+        Composer::SameLine();
 
-        Toolkit::Composer::AlignTextToFramePadding();
-        Toolkit::Composer::TextDisabled(ICON_FA_MAGNIFYING_GLASS);
+        Composer::AlignTextToFramePadding();
+        Composer::TextDisabled(ICON_FA_MAGNIFYING_GLASS);
 
-        Toolkit::Composer::SameLine();
+        Composer::SameLine();
 
-        Toolkit::Composer::SetNextItemWidth(-1.0f);
-        Toolkit::Composer::InputText("##explorer_search", mSearch, [this](Text Value)
+        Composer::SetNextItemWidth(-1.0f);
+        Composer::InputText("##explorer_search", mSearch, [this](Text Value)
         {
             mSearch = Value;
         });
@@ -369,11 +420,11 @@ namespace Tileon::Editor
     {
         constexpr UInt kMaxSegments = 64;
 
-        ConstRef<ImGuiStyle> Style = Toolkit::Composer::GetStyle();
+        ConstRef<ImGuiStyle> Style = Composer::GetStyle();
 
-        const Real32 Divider = Toolkit::Composer::CalcTextSize(ICON_FA_ANGLE_RIGHT).x + 4.0f;
+        const Real32 Divider = Composer::CalcTextSize(ICON_FA_ANGLE_RIGHT).x + 4.0f;
         const Real32 Padding = Style.FramePadding.x * 2.0f;
-        const Real32 Chevron = Toolkit::Composer::CalcTextSize(ICON_FA_ANGLE_LEFT).x + Padding;
+        const Real32 Chevron = Composer::CalcTextSize(ICON_FA_ANGLE_LEFT).x + Padding;
 
         // Every boundary is recorded, so a segment starts one past the end of the one before it.
         Sequence<UInt, kMaxSegments> Bounds;
@@ -406,7 +457,7 @@ namespace Tileon::Editor
             }
 
             const Text   Segment = Text(mDirectory).Slice(Start, Bounds[Index] - Start);
-            const Real32 Step    = Toolkit::Composer::CalcTextSize(Segment).x + Padding + (Index > 0 ? Divider : 0.0f);
+            const Real32 Step    = Composer::CalcTextSize(Segment).x + Padding + (Index > 0 ? Divider : 0.0f);
 
             if (Total + Step > Width - (Index > 0 ? Chevron : 0.0f))
             {
@@ -422,7 +473,7 @@ namespace Tileon::Editor
         // A leading chevron stands in for the crumbs that did not fit, and opens the field for typing.
         if (First > 0)
         {
-            if (Toolkit::Composer::Button(ICON_FA_ANGLE_LEFT "##crumb_overflow"))
+            if (Composer::Button(ICON_FA_ANGLE_LEFT "##crumb_overflow"))
             {
                 mAddress = mDirectory;
                 mEditing = true;
@@ -443,14 +494,14 @@ namespace Tileon::Editor
 
             if (!IsFirst)
             {
-                Toolkit::Composer::SameLine(0.0f, 2.0f);
-                Toolkit::Composer::AlignTextToFramePadding();
-                Toolkit::Composer::TextDisabled(ICON_FA_ANGLE_RIGHT);
-                Toolkit::Composer::SameLine(0.0f, 2.0f);
+                Composer::SameLine(0.0f, 2.0f);
+                Composer::AlignTextToFramePadding();
+                Composer::TextDisabled(ICON_FA_ANGLE_RIGHT);
+                Composer::SameLine(0.0f, 2.0f);
             }
 
             // The offset disambiguates the button, since a path may repeat a folder name.
-            if (Toolkit::Composer::Button(Filesystem::Path::Print<"{0}##crumb{1}">(Segment, Start)))
+            if (Composer::Button(Filesystem::Path::Print<"{0}##crumb{1}">(Segment, Start)))
             {
                 Pending = Text(mDirectory).Slice(0, Bounds[Index]);
             }
@@ -458,12 +509,12 @@ namespace Tileon::Editor
         }
 
         // Clicking the empty stretch past the trail opens the field, as the system dialog does.
-        Toolkit::Composer::SameLine(0.0f, 2.0f);
+        Composer::SameLine(0.0f, 2.0f);
 
-        if (const Real32 Rest = Toolkit::Composer::GetContentRegionAvail().x; Rest > 1.0f)
+        if (const Real32 Rest = Composer::GetContentRegionAvail().x; Rest > 1.0f)
         {
-            if (Toolkit::Composer::InvisibleButton("##explorer_address_hit",
-                ImVec2(Rest, Toolkit::Composer::GetFrameHeight())))
+            if (Composer::InvisibleButton("##explorer_address_hit",
+                ImVec2(Rest, Composer::GetFrameHeight())))
             {
                 mAddress = mDirectory;
                 mEditing = true;
@@ -563,20 +614,20 @@ namespace Tileon::Editor
 
         // A scrolling table needs an exact height: bottom-aligning one collapses it while the popup is still
         // settling its own size, which hid the first rows on the frame the explorer opened.
-        const Real32 Reserved  = Toolkit::Composer::GetFrameHeightWithSpacing() * 2.0f;
-        const Real32 Remaining = Toolkit::Composer::GetContentRegionAvail().y - Reserved;
+        const Real32 Reserved  = Composer::GetFrameHeightWithSpacing() * 2.0f;
+        const Real32 Remaining = Composer::GetContentRegionAvail().y - Reserved;
         const Real32 Height    = (Remaining > Reserved ? Remaining : Reserved);
 
-        if (Toolkit::Composer::BeginTable("##explorer_list", 3, kTableFlags, ImVec2(0.0f, Height)))
+        if (Composer::BeginTable("##explorer_list", 3, kTableFlags, ImVec2(0.0f, Height)))
         {
-            Toolkit::Composer::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort, 4.0f);
-            Toolkit::Composer::TableSetupColumn("Size", ImGuiTableColumnFlags_None, 1.0f);
-            Toolkit::Composer::TableSetupColumn("Type", ImGuiTableColumnFlags_None, 2.0f);
-            Toolkit::Composer::TableSetupScrollFreeze(0, 1);
-            Toolkit::Composer::TableHeadersRow();
+            Composer::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort, 4.0f);
+            Composer::TableSetupColumn("Size", ImGuiTableColumnFlags_None, 1.0f);
+            Composer::TableSetupColumn("Type", ImGuiTableColumnFlags_None, 2.0f);
+            Composer::TableSetupScrollFreeze(0, 1);
+            Composer::TableHeadersRow();
 
             // Adopt whatever ordering the header row asks for.
-            if (const Ptr<ImGuiTableSortSpecs> Specs = Toolkit::Composer::TableGetSortSpecs();
+            if (const Ptr<ImGuiTableSortSpecs> Specs = Composer::TableGetSortSpecs();
                 Specs && Specs->SpecsDirty && Specs->SpecsCount > 0)
             {
                 mColumn    = static_cast<Column>(Specs->Specs[0].ColumnIndex);
@@ -588,18 +639,17 @@ namespace Tileon::Editor
             }
 
             // The parent entry, so the trail stays reachable without going back to the toolbar.
-            Toolkit::Composer::TableNextRow();
-            Toolkit::Composer::TableNextColumn();
+            Composer::TableNextRow();
+            Composer::TableNextColumn();
 
-            if (Toolkit::Composer::Selectable(ICON_FA_TURN_UP "  ..", false, kRowFlags)
-                && Toolkit::Composer::IsMouseDoubleClicked())
+            if (Composer::Selectable(ICON_FA_TURN_UP "  ..", false, kRowFlags) && Composer::IsMouseDoubleClicked())
             {
                 WasAscended = true;
             }
 
-            Toolkit::Composer::TableNextColumn();
-            Toolkit::Composer::TableNextColumn();
-            Toolkit::Composer::TextDisabled("File folder");
+            Composer::TableNextColumn();
+            Composer::TableNextColumn();
+            Composer::TextDisabled("File folder");
 
             for (UInt Index = 0, Limit = mEntries.GetSize(); Index < Limit; ++Index)
             {
@@ -612,8 +662,8 @@ namespace Tileon::Editor
 
                 const Bool IsDirectory = (Item.Type == Filesystem::Type::Directory);
 
-                Toolkit::Composer::TableNextRow();
-                Toolkit::Composer::TableNextColumn();
+                Composer::TableNextRow();
+                Composer::TableNextColumn();
 
                 const Filesystem::Name Label = Filesystem::Name::Print<"{0}  {1}">(
                     IsDirectory ? ICON_FA_FOLDER : ICON_FA_FILE, Item.Name);
@@ -621,14 +671,14 @@ namespace Tileon::Editor
                 // Tint folders so they read apart from files at a glance.
                 if (IsDirectory)
                 {
-                    Toolkit::Composer::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.75f, 0.98f, 1.00f));
+                    Composer::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.75f, 0.98f, 1.00f));
                 }
 
-                const Bool Clicked = Toolkit::Composer::Selectable(Label, Text(Item.Name) == Text(mFilename), kRowFlags);
+                const Bool Clicked = Composer::Selectable(Label, Text(Item.Name) == Text(mFilename), kRowFlags);
 
                 if (IsDirectory)
                 {
-                    Toolkit::Composer::PopStyleColor();
+                    Composer::PopStyleColor();
                 }
 
                 if (Clicked)
@@ -636,7 +686,7 @@ namespace Tileon::Editor
                     mFilename = Item.Name;
 
                     // A double click opens what was hit: folders step in, files confirm the selection.
-                    if (Toolkit::Composer::IsMouseDoubleClicked())
+                    if (Composer::IsMouseDoubleClicked())
                     {
                         if (IsDirectory)
                         {
@@ -649,18 +699,18 @@ namespace Tileon::Editor
                     }
                 }
 
-                Toolkit::Composer::TableNextColumn();
+                Composer::TableNextColumn();
 
                 if (!IsDirectory)
                 {
-                    Toolkit::Composer::TextDisabled(Measure(Item.Size));
+                    Composer::TextDisabled(Measure(Item.Size));
                 }
 
-                Toolkit::Composer::TableNextColumn();
-                Toolkit::Composer::TextDisabled(IsDirectory ? String<32>("File folder") : Describe(Item.Name));
+                Composer::TableNextColumn();
+                Composer::TextDisabled(IsDirectory ? String<32>("File folder") : Describe(Item.Name));
             }
 
-            Toolkit::Composer::EndTable();
+            Composer::EndTable();
         }
 
         // Applied once the table is closed, since navigating replaces the very entries it was walking.
@@ -683,41 +733,48 @@ namespace Tileon::Editor
         constexpr Real32 kFilterWidth = 170.0f;
         constexpr Real32 kButtonWidth = 110.0f;
 
-        const Real32 Spacing = Toolkit::Composer::GetStyle().ItemSpacing.x;
+        const Real32 Spacing = Composer::GetStyle().ItemSpacing.x;
 
         // Filename row: the label, the editable name, then the type filter.
-        Toolkit::Composer::AlignTextToFramePadding();
-        Toolkit::Composer::Field("File name:");
+        Composer::AlignTextToFramePadding();
+        Composer::Field("File name:");
 
-        Toolkit::Composer::SameLine();
+        Composer::SameLine();
 
-        Toolkit::Composer::SetNextItemWidth(
-            Toolkit::Composer::GetContentRegionAvail().x - kFilterWidth - Spacing);
-        Toolkit::Composer::InputText("##explorer_name", mFilename, [this](Text Value)
+        Composer::SetNextItemWidth(
+            Composer::GetContentRegionAvail().x - kFilterWidth - Spacing);
+        Composer::InputText("##explorer_name", mFilename, [this](Text Value)
         {
             mFilename = Value;
         });
 
-        Toolkit::Composer::SameLine();
+        Composer::SameLine();
 
-        // Only one filter is ever supplied, so the box reports it rather than offering a choice.
-        const Text   Suffix = StrStartsWith(mExtension, ".") ? Text(mExtension).Slice(1) : Text(mExtension);
-        const String<64> Filter = Suffix.IsEmpty()
-            ? String<64>("All Files (*.*)")
-            : String<64>::Print<"*.{0}">(Suffix);
+        // The box offers whatever kinds the caller named, the way a system dialog does, and only goes
+        // dead when there is a single unnamed group and therefore nothing to choose between.
+        const Bool HasChoice = (mFilters.GetSize() > 1);
 
-        Toolkit::Composer::BeginDisabled();
-        Toolkit::Composer::SetNextItemWidth(kFilterWidth);
+        Composer::BeginDisabled(!HasChoice);
+        Composer::SetNextItemWidth(kFilterWidth);
 
-        if (Toolkit::Composer::BeginCombo("##explorer_filter", Filter))
+        if (Composer::BeginCombo("##explorer_filter", Describe(mSelected)))
         {
-            Toolkit::Composer::EndCombo();
+            for (UInt32 Index = 0; Index < mFilters.GetSize(); ++Index)
+            {
+                if (Composer::Selectable(Describe(Index), mSelected == Index))
+                {
+                    mSelected = Index;
+
+                    Refresh();
+                }
+            }
+            Composer::EndCombo();
         }
-        Toolkit::Composer::EndDisabled();
+        Composer::EndDisabled();
 
         // The buttons sit at the right edge of the row beneath, as they do in the system dialog.
-        Toolkit::Composer::SetCursorPosX(Toolkit::Composer::GetWindowWidth() - kButtonWidth * 2.0f - Spacing
-            - Toolkit::Composer::GetStyle().WindowPadding.x);
+        Composer::SetCursorPosX(Composer::GetWindowWidth() - kButtonWidth * 2.0f - Spacing
+            - Composer::GetStyle().WindowPadding.x);
 
         const Text ConfirmLabel = (mMode == Mode::Save)
             ? Text(ICON_FA_FLOPPY_DISK "  Save")
@@ -725,20 +782,20 @@ namespace Tileon::Editor
 
         Bool WasFinished = false;
 
-        Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        ImVec4(0.18f, 0.40f, 0.62f, 1.00f));
-        Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.24f, 0.50f, 0.74f, 1.00f));
-        Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.28f, 0.56f, 0.82f, 1.00f));
-        const Bool Confirmed = Toolkit::Composer::DisabledButton(ConfirmLabel, mFilename.IsEmpty(), kButtonWidth);
-        Toolkit::Composer::PopStyleColor(3);
+        Composer::PushStyleColor(ImGuiCol_Button,        ImVec4(0.18f, 0.40f, 0.62f, 1.00f));
+        Composer::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.24f, 0.50f, 0.74f, 1.00f));
+        Composer::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.28f, 0.56f, 0.82f, 1.00f));
+        const Bool Confirmed = Composer::DisabledButton(ConfirmLabel, mFilename.IsEmpty(), kButtonWidth);
+        Composer::PopStyleColor(3);
 
         if (Confirmed)
         {
             WasFinished = Confirm();
         }
 
-        Toolkit::Composer::SameLine();
+        Composer::SameLine();
 
-        if (Toolkit::Composer::Button(ICON_FA_XMARK "  Cancel", kButtonWidth))
+        if (Composer::Button(ICON_FA_XMARK "  Cancel", kButtonWidth))
         {
             mOpen       = false;
             WasFinished = true;
@@ -756,26 +813,26 @@ namespace Tileon::Editor
             return;
         }
 
-        Toolkit::Composer::SetNextWindowSize(780.0f, 500.0f, ImGuiCond_Appearing);
-        Toolkit::Composer::SetNextWindowSizeConstraints(560.0f, 420.0f);
+        Composer::SetNextWindowSize(780.0f, 500.0f, ImGuiCond_Appearing);
+        Composer::SetNextWindowSizeConstraints(560.0f, 420.0f);
 
-        if (!Toolkit::Composer::IsPopupOpen("##explorer"))
+        if (!Composer::IsPopupOpen("##explorer"))
         {
-            Toolkit::Composer::OpenPopup("##explorer");
+            Composer::OpenPopup("##explorer");
         }
 
         // The explorer lays itself out to the window, so it never scrolls as a whole; only the listing does.
         constexpr ImGuiWindowFlags kWindowFlags =
             ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
 
-        if (Toolkit::Composer::BeginPopupModal("##explorer", kWindowFlags))
+        if (Composer::BeginPopupModal("##explorer", kWindowFlags))
         {
             // Captured before the body draws, since a field that swallows a key deactivates itself mid-frame.
-            const Bool WasTyping  = Toolkit::Composer::IsAnyItemActive();
+            const Bool WasTyping  = Composer::IsAnyItemActive();
             const Bool WasLocating = mEditing;
 
             DrawToolbar();
-            Toolkit::Composer::Separator();
+            Composer::Separator();
 
             Bool WasFinished = DrawListing();
 
@@ -786,8 +843,8 @@ namespace Tileon::Editor
 
             // Shortcuts, as in the system dialog: Ctrl+L or F4 opens the address bar for typing, Enter
             // confirms, Backspace steps up and Escape cancels. None of them fire while a field has the keys.
-            if (Toolkit::Composer::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_L)
-                || Toolkit::Composer::IsKeyPressed(ImGuiKey_F4))
+            if (Composer::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_L)
+                || Composer::IsKeyPressed(ImGuiKey_F4))
             {
                 mAddress = mDirectory;
                 mEditing = true;
@@ -795,17 +852,17 @@ namespace Tileon::Editor
             else if (!WasFinished)
             {
                 // Enter commits from the filename field too, but never while the address bar owns it.
-                if (!WasLocating && (Toolkit::Composer::IsKeyPressed(ImGuiKey_Enter)
-                    || Toolkit::Composer::IsKeyPressed(ImGuiKey_KeypadEnter)))
+                if (!WasLocating && (Composer::IsKeyPressed(ImGuiKey_Enter)
+                    || Composer::IsKeyPressed(ImGuiKey_KeypadEnter)))
                 {
                     WasFinished = Confirm();
                 }
-                else if (!WasTyping && Toolkit::Composer::IsKeyPressed(ImGuiKey_Escape))
+                else if (!WasTyping && Composer::IsKeyPressed(ImGuiKey_Escape))
                 {
                     mOpen       = false;
                     WasFinished = true;
                 }
-                else if (!WasTyping && Toolkit::Composer::IsKeyPressed(ImGuiKey_Backspace))
+                else if (!WasTyping && Composer::IsKeyPressed(ImGuiKey_Backspace))
                 {
                     Ascend();
                 }
@@ -813,12 +870,12 @@ namespace Tileon::Editor
 
             if (WasFinished)
             {
-                Toolkit::Composer::CloseCurrentPopup();
+                Composer::CloseCurrentPopup();
             }
 
-            Toolkit::Composer::EndPopup();
+            Composer::EndPopup();
         }
-        else if (!Toolkit::Composer::IsPopupOpen("##explorer"))
+        else if (!Composer::IsPopupOpen("##explorer"))
         {
             // The popup was dismissed from outside, so drop the explorer instead of reopening it next frame.
             mOpen = false;

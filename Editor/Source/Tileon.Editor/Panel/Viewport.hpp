@@ -13,10 +13,9 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Tileon.Editor/Panel.hpp"
-#include "Tileon.Editor/Toolkit/Theme.hpp"
-#include "Gizmo.hpp"
-#include "Camera.hpp"
-#include "Tools.hpp"
+#include "Tileon.Editor/Panel/Viewport/Camera.hpp"
+#include "Tileon.Editor/Panel/Viewport/Gizmo.hpp"
+#include "Tileon.Editor/Panel/Viewport/Tools.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]

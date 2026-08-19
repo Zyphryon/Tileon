@@ -261,7 +261,7 @@ namespace Tileon::Editor
                 return & Entry;
             }
         }
-        return & mPending.Changes.Append(Change(Target, Key, false, false, Blob(), Blob()));
+        return & mPending.Changes.Append(Target, Key, false, false, Blob(), Blob());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

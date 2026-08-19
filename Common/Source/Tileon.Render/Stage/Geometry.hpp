@@ -99,9 +99,6 @@ namespace Tileon::Stage
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        /// The key that turns a technique's cutout variant on, resolved once the techniques have loaded.
-        Graphic::Technique::Key mCutout;
-
         Scene::Query       mQrDrawOpaqueSprites;
         Scene::Query       mQrDrawOpaqueDecals;
         Scene::Query       mQrDrawTransparentSprites;

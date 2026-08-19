@@ -106,6 +106,10 @@ namespace Tileon::Editor::Toolkit
         Colors[ImGuiCol_Button]                = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
         Colors[ImGuiCol_ButtonHovered]         = ImVec4(0.30f, 0.30f, 0.30f, 1.00f);
         Colors[ImGuiCol_ButtonActive]          = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
+        // Stated rather than inherited: the default alternate is loud enough over this ground that the
+        // banding reads as stripes drawn across the listing instead of a hint of where a row ends.
+        Colors[ImGuiCol_TableRowBg]            = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        Colors[ImGuiCol_TableRowBgAlt]         = ImVec4(1.00f, 1.00f, 1.00f, 0.02f);
         Colors[ImGuiCol_Header]                = ImVec4(0.25f, 0.25f, 0.25f, 0.55f);
         Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.35f, 0.35f, 0.35f, 0.80f);
         Colors[ImGuiCol_HeaderActive]          = ImVec4(0.40f, 0.40f, 0.40f, 1.00f);
@@ -175,6 +179,8 @@ namespace Tileon::Editor::Toolkit
         Colors[ImGuiCol_Button]                = ImVec4(0.82f, 0.82f, 0.82f, 1.00f);
         Colors[ImGuiCol_ButtonHovered]         = ImVec4(0.74f, 0.74f, 0.74f, 1.00f);
         Colors[ImGuiCol_ButtonActive]          = ImVec4(0.66f, 0.66f, 0.66f, 1.00f);
+        Colors[ImGuiCol_TableRowBg]            = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        Colors[ImGuiCol_TableRowBgAlt]         = ImVec4(0.00f, 0.00f, 0.00f, 0.03f);
         Colors[ImGuiCol_Header]                = ImVec4(0.78f, 0.78f, 0.78f, 0.55f);
         Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.70f, 0.70f, 0.70f, 0.80f);
         Colors[ImGuiCol_HeaderActive]          = ImVec4(0.62f, 0.62f, 0.62f, 1.00f);

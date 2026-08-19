@@ -110,9 +110,6 @@ namespace Tileon::Editor
             DrawStatusBar();
         }
         Toolkit::Composer::End();
-
-        // The browser is modal, so it is drawn outside the window that hosts the fields which opened it.
-        mComponents.DrawSelector();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -371,7 +368,7 @@ namespace Tileon::Editor
 
         if (Toolkit::Composer::BeginTabBar("##preview_tabs"))
         {
-            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(TextureUsage::Albedo)))
+            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(TextureID::Albedo)))
             {
                 if (Toolkit::Composer::BeginTabItem("Preview"))
                 {
@@ -386,7 +383,7 @@ namespace Tileon::Editor
                 }
             }
 
-            for (const TextureUsage Semantic : Enum::GetValues<TextureUsage>())
+            for (const TextureID Semantic : Enum::GetValues<TextureID>())
             {
                 if (ConstRetainer<Graphic::Image> Texture = Material->GetImage(GetTextureID(Semantic)))
                 {

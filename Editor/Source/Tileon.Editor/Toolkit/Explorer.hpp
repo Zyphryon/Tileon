@@ -9,16 +9,10 @@
 #pragma once
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-// [  HEADER  ]
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-#include "Tileon.Editor/Toolkit/Composer.hpp"
-
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Editor
+namespace Tileon::Editor::Toolkit
 {
     /// \brief A modal file explorer used in place of the native OS file dialog.
     class Explorer final
@@ -39,16 +33,55 @@ namespace Tileon::Editor
 
     public:
 
+        /// \brief One named group of suffixes the explorer offers, as a file dialog's filter box does.
+        struct Filter final
+        {
+            /// \brief Constructs a group naming nothing.
+            ZY_INLINE Filter() = default;
+
+            /// \brief Constructs a group with the specified label and suffixes.
+            ///
+            /// \param Label   What the group is called, such as "Image".
+            /// \param Sources The suffixes it accepts, separated by spaces.
+            ZY_INLINE Filter(Text Label, Text Sources)
+                : Label   { Label },
+                  Sources { Sources }
+            {
+            }
+
+            /// What the group is called, which may be empty when there is nothing to choose between.
+            Str Label;
+
+            /// The suffixes the group accepts, separated by spaces.
+            Str Sources;
+        };
+
+    public:
+
         /// \brief Constructs an explorer with default state.
         Explorer();
+
+        /// \brief Opens the explorer, offering a choice of the kinds of file it lists.
+        ///
+        /// \param Mode      Whether the explorer is used to open or save a file.
+        /// \param Directory The directory to start browsing from.
+        /// \param Filters   The groups the filter box offers, the first of which is selected.
+        /// \param Callback  The callback invoked with the selected path once the user confirms.
+        void Open(Mode Mode, Text Directory, ConstSpan<Filter> Filters, AnyRef<OnResult> Callback);
 
         /// \brief Opens the explorer, resetting it to browse the given starting directory.
         ///
         /// \param Mode      Whether the explorer is used to open or save a file.
         /// \param Directory The directory to start browsing from.
-        /// \param Extension The required file extension filter (e.g. ".tileon"), or empty for no filter.
+        /// \param Extension The suffixes to accept (e.g. ".tileon"), or empty for no filter.
         /// \param Callback  The callback invoked with the selected path once the user confirms.
         void Open(Mode Mode, Text Directory, Text Extension, AnyRef<OnResult> Callback);
+
+        /// \brief Gets the text the filter box shows for a group.
+        ///
+        /// \param Index The group to describe.
+        /// \return The label and its suffixes, or "All Files" when the group accepts everything.
+        String<96> Describe(UInt32 Index) const;
 
         /// \brief Draws the explorer if currently open. Must be called every frame while active.
         void Draw();
@@ -131,7 +164,8 @@ namespace Tileon::Editor
         Bool                         mEditing;
         Filesystem::Path             mAddress;
         Filesystem::Path             mDirectory;
-        Filesystem::Name             mExtension;
+        Sequence<Filter>             mFilters;
+        UInt32                       mSelected;
         Filesystem::Name             mFilename;
         Filesystem::Name             mSearch;
         Sequence<Filesystem::Record> mEntries;

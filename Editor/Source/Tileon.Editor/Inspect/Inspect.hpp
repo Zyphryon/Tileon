@@ -12,7 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Tileon.Editor/Widget/Browser.hpp"
+#include "Tileon.Editor/Toolkit/Browser.hpp"
 #include "Tileon.Render/Component.hpp"
 #include "Tileon.World/Component.hpp"
 
@@ -32,7 +32,7 @@ namespace Tileon::Editor
         Ref<Context>      Context;
 
         /// The asset browser belonging to the view currently drawing.
-        Ref<Browser> Browser;
+        Ref<Toolkit::Browser> Browser;
     };
 
     /// \brief Draws the editable fields of an anchor component.

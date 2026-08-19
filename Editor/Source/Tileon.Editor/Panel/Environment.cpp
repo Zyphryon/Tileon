@@ -25,7 +25,6 @@ namespace Tileon::Editor
     Environment::Environment(Ref<Context> Context)
         : Panel    { Context, "Environment", true },
           mCatalog { Context.GetCatalog() },
-          mBrowser { Context.GetContent() },
           mAction  { Action::None },
           mEditing { false }
     {
@@ -75,9 +74,6 @@ namespace Tileon::Editor
             Apply();
         }
         Toolkit::Composer::End();
-
-        // The browser is modal, so it is drawn outside the window that hosts the fields which opened it.
-        mBrowser.Draw();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -87,11 +83,11 @@ namespace Tileon::Editor
     {
         // A singleton's value lives on the component entity itself, so the world "holds" it only when that
         // entity carries its own component.
-        const ConstPtr<ComponentType> Info    = Component.TryGet<const ComponentType>();
+        const ConstPtr<ComponentType> Info = Component.TryGet<const ComponentType>();
 
         const String<128> Label = String<128>::Print<"{0}  {1}##{2}">(Info->GetIcon(), Info->GetLabel(), Component.GetID());
 
-        Workspace Workspace(GetContext(), mBrowser);
+        Workspace Workspace(GetContext(), GetContext().GetBrowser());
 
         const Bool Present = Component.Has(Component);
         const Bool Open    = Toolkit::Composer::TreeNode(Label, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth);
@@ -185,7 +181,6 @@ namespace Tileon::Editor
             Toolkit::Composer::EndCombo();
         }
     }
-
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

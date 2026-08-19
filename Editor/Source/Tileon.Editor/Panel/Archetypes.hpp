@@ -14,7 +14,7 @@
 
 #include "Tileon.Editor/Panel.hpp"
 #include "Tileon.Editor/Inspect/ComponentList.hpp"
-#include "Tileon.Editor/Widget/Previewer.hpp"
+#include "Tileon.Editor/Toolkit/Previewer.hpp"
 #include "Tileon.World/Repository.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -83,7 +83,7 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Previewer                                 mPreview;
+        Toolkit::Previewer                        mPreview;
         Scene::Archetype                          mSelection;
         Scene::Archetype                          mScroll;
         Scene::Archetype                          mPending;
