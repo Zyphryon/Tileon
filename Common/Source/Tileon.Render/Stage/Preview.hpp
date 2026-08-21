@@ -32,7 +32,7 @@ namespace Tileon::Stage
     public:
 
         /// \brief Enumerates the buffers the stage can resolve, each with a technique of its own.
-        enum class Kind : UInt8
+        enum class Source : UInt8
         {
             Albedo,     ///< Technique for showing the scene's base color as it is composed.
             Normal,     ///< Technique for showing the surface normals as the raw bytes the buffer stores.
@@ -41,11 +41,12 @@ namespace Tileon::Stage
         };
 
         /// \brief Enumerates the diagnostic overlays that can be drawn over the resolved buffer.
-        enum class Property : UInt8
+        enum class Overlay : UInt8
         {
             Boundaries = 0b00000001,    ///< Draws the world-space bounding box of every visible entity.
             Grid       = 0b00000010,    ///< Draws the infinite tile grid, accented on region borders.
         };
+        ZY_DEFINE_BITWISE_FRIEND_ENUM(Overlay)
 
     public:
 
@@ -74,7 +75,7 @@ namespace Tileon::Stage
         /// \brief Sets the buffer the stage resolves onto the view.
         ///
         /// \param Source The buffer to resolve.
-        ZY_INLINE void SetSource(Kind Source)
+        ZY_INLINE void SetSource(Source Source)
         {
             mSource = Source;
         }
@@ -83,18 +84,18 @@ namespace Tileon::Stage
         ///
         /// \param Mask   The overlay to set or clear.
         /// \param Enable `true` to set the overlay, `false` to clear it.
-        ZY_INLINE void SetProperty(Property Mask, Bool Enable)
+        ZY_INLINE void SetOverlay(Overlay Mask, Bool Enable)
         {
-            mProperties = SetOrClearBit(mProperties, Enum::Cast(Mask), Enable);
+            mOverlays = SetOrClearBit(mOverlays, Enum::Cast(Mask), Enable);
         }
 
         /// \brief Checks if the stage has a specific overlay enabled.
         ///
         /// \param Mask The overlay to check.
         /// \return `true` if the overlay is enabled, `false` otherwise.
-        ZY_INLINE Bool HasProperty(Property Mask) const
+        ZY_INLINE Bool HasOverlay(Overlay Mask) const
         {
-            return HasBit(mProperties, Enum::Cast(Mask));
+            return HasBit(mOverlays, Enum::Cast(Mask));
         }
 
         /// \brief Executes the stage's main logic.
@@ -105,17 +106,18 @@ namespace Tileon::Stage
     private:
 
         /// \brief Enumerates the overlay techniques the stage draws over the resolved buffer.
-        enum class Overlay : UInt8
+        enum class Kind : UInt8
         {
+            Preview,        ///< Technique for resolving the chosen buffer onto the view, one variant per source.
             Grid,           ///< Technique for rendering the infinite tile grid.
             Boundary,       ///< Technique for rendering the bounding box of an entity, flat when the view is aligned.
         };
 
-        /// \brief Defines a type alias for the techniques that annotate one, indexed by \ref Overlay.
-        using Overlays   = Array<Retainer<Graphic::Technique>, Enum::Count<Overlay>()>;
+        /// \brief Defines a type alias for the techniques the stage draws with, indexed by \ref Kind.
+        using Techniques = Array<Retainer<Graphic::Technique>, Enum::Count<Kind>()>;
 
-        /// \brief Defines a type alias for the buffers the stage can resolve, indexed by \ref Kind.
-        using Sources    = Array<ConstPtr<Render::Target>, Enum::Count<Kind>()>;
+        /// \brief Defines a type alias for the buffers the stage can resolve, indexed by \ref Source.
+        using Sources    = Array<ConstPtr<Render::Target>, Enum::Count<Source>()>;
 
         /// \brief Represents the per-pass data for the grid technique.
         struct GpuGridLayout final
@@ -144,6 +146,11 @@ namespace Tileon::Stage
         /// \param Content The content service used to load resources for the stage.
         void OnLoad(Ref<Content::Service> Content);
 
+        /// \brief Draws the buffer the stage was pointed at across the whole viewport.
+        ///
+        /// \param Encoder The render encoder used to submit draw calls.
+        void DrawPreview(Ref<Render::Encoder> Encoder);
+
         /// \brief Draws the infinite tile grid that covers the whole viewport.
         ///
         /// \param Encoder The render encoder used to submit draw calls.
@@ -159,13 +166,12 @@ namespace Tileon::Stage
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Retainer<Graphic::Technique> mTechnique;
-        Overlays                     mOverlays;
+        Techniques                   mTechniques;
         Sources                      mSources;
         Sequence<GpuBoundaryLayout>  mBoundaries;
         ConstPtr<Director>           mDirector;
-        Kind                         mSource;
-        UInt8                        mProperties;
+        Source                       mSource;
+        Overlay                      mOverlays;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

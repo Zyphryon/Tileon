@@ -36,11 +36,18 @@ namespace Tileon
         /// \param Source     The source rectangle for the sprite.
         /// \param Resolution The pixel dimensions of the material's albedo, which the source rect is a fraction of.
         /// \param Facing     The orientation of the sprite.
-        ZY_INLINE Appearance(ConstRetainer<Graphic::Material> Material, Rect Source, Vector2 Resolution, Sprite::Facing Facing)
+        /// \param Plane      The plane the art is laid against.
+        ZY_INLINE Appearance(
+            ConstRetainer<Graphic::Material> Material,
+            Rect                             Source,
+            Vector2                          Resolution,
+            Sprite::Facing                   Facing,
+            Sprite::Plane                    Plane)
             : mMaterial   { Material },
               mSource     { Source },
               mResolution { Resolution },
-              mFacing     { Facing }
+              mFacing     { Facing },
+              mPlane      { Plane }
         {
         }
 
@@ -108,6 +115,33 @@ namespace Tileon
             return mFacing;
         }
 
+        /// \brief Sets the plane the art is laid against.
+        ///
+        /// \param Plane The plane the art is laid against.
+        ZY_INLINE void SetPlane(Sprite::Plane Plane)
+        {
+            mPlane = Plane;
+        }
+
+        /// \brief Gets the plane the art is laid against.
+        ///
+        /// \return The plane the art is laid against.
+        ZY_INLINE Sprite::Plane GetPlane() const
+        {
+            return mPlane;
+        }
+
+        /// \brief Gets the bits a technique tests for how the art is laid down.
+        ///
+        /// \note The same bits are named to the shaders by the `FACING_` defines a geometry technique declares.
+        ///
+        /// \return The mirroring of the art, the plane it spans, and whether it shares that plane with the ground.
+        ZY_INLINE UInt32 GetFacingID() const
+        {
+            const UInt32 Coplanar = (mPlane == Sprite::Plane::Ground ? 1u << 4u : 0u);
+            return Enum::Cast(mFacing) | (Enum::Cast(mPlane) << 2u) | Coplanar;
+        }
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -117,5 +151,6 @@ namespace Tileon
         Rect                        mSource;
         Vector2                     mResolution;
         Sprite::Facing              mFacing;
+        Sprite::Plane               mPlane;
     };
 }

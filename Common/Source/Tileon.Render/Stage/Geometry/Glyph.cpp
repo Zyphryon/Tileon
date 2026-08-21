@@ -16,7 +16,7 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Batcher
+namespace Tileon::Batch
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -43,9 +43,10 @@ namespace Tileon::Batcher
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Glyph::Glyph(ConstRetainer<Graphic::Service> Service, Ref<Render::Collector> Collector)
+    Glyph::Glyph(ConstRetainer<Graphic::Service> Service, Ref<Render::Collector> Collector, UInt32 Kind)
         : mService   { Service },
-          mCollector { Collector }
+          mCollector { Collector },
+          mKind      { Kind }
     {
     }
 
@@ -60,21 +61,14 @@ namespace Tileon::Batcher
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Glyph::Draw(
-        ConstRef<Lettering>  Lettering,
-        ConstRef<Label>      Label,
-        ConstRef<Matrix4x3>  Transform,
-        ConstRef<Decoration> Decoration,
-        IntColor8            Tint)
+    void Glyph::Draw(ConstRef<Typeface> Face, ConstRef<Label> Label, ConstRef<Matrix4x3> Transform, ConstRef<Contour> Effect, IntColor8 Tint)
     {
         ZY_ASSERT(mTechnique, "A technique must be set before recording text");
 
-        ConstRetainer<Render::Font> Font = Lettering.GetFont();
-        const Real32                Size = Lettering.GetSize();
+        ConstRetainer<Render::Font> Font = Face.GetFont();
+        const Real32                Size = Face.GetSize();
 
-        // The whole run shares one transform and one effect, so they are interned once and every glyph
-        // carries only the slot that finds them.
-        const Slot RunData = Intern(Decoration.GetEffect(), Transform, Size);
+        const Slot Data = Intern(Effect.GetEffect(), Transform, Size);
 
         ConstRef<Graphic::Technique>      Technique = (* mTechnique);
         const Render::Collector::Priority Priority  = Render::Collector::GetPriority(Technique);
@@ -93,10 +87,10 @@ namespace Tileon::Batcher
             const ConstPtr<Graphic::Material> Material = &* Font->GetMaterial(Placement.Page);
 
             Ref<Command> Entry = mCommands.Append();
-            Entry.Generation    = RunData.Generation;
+            Entry.Generation    = Data.Generation;
             Entry.Material      = Material;
             Entry.Technique     = AddressOf(Technique);
-            Entry.Layout.Effect = static_cast<UInt32>(RunData.Slot);
+            Entry.Layout.Effect = static_cast<UInt32>(Data.Index);
             Entry.Layout.Frame  = Array(
                 EncodeUnitCoordinate(Placement.Atlas.GetMinimumX()),
                 EncodeUnitCoordinate(Placement.Atlas.GetMinimumY()),
@@ -110,8 +104,8 @@ namespace Tileon::Batcher
                 EncodeGlyphCoordinate<UInt16>(Placement.Local.GetHeight()));
             Entry.Layout.Color  = Tint;
 
-            const Render::Collector::Object Object(Enum::Cast(Batch::Glyph), mCommands.GetSize() - 1);
-            mCollector.Push(Object, Priority, Order, RunData.Generation, Pipeline, Material->GetHandle());
+            const Render::Collector::Object Object(mKind, mCommands.GetSize() - 1);
+            mCollector.Push(Object, Priority, Order, Data.Generation, Pipeline, Material->GetHandle());
         });
     }
 
@@ -137,35 +131,11 @@ namespace Tileon::Batcher
 
         for (Ref<Palette> Slot : mPalettes)
         {
-            Graphic::Transient<Run> Slice = mService->AllocateInFlightUniforms<Run>(kMaxTextPerBatch);
-            Slice.Copy<Run>(Slot.Runs);
+            Graphic::Transient<Uniform> Slice = mService->AllocateInFlightUniforms<Uniform>(kMaxTextPerBatch);
+            Slice.Copy<Uniform>(Slot.Uniforms);
 
             Slot.Stream = Slice.GetStream();
         }
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    Glyph::Slot Glyph::Intern(ConstRef<Render::FontEffect> Effect, ConstRef<Matrix4x3> Transform, Real32 Size)
-    {
-        if (mPalettes.IsEmpty() || mPalettes.GetBack().Runs.GetSize() >= kMaxTextPerBatch)
-        {
-            mPalettes.Append();
-        }
-
-        Ref<Palette> Bucket = mPalettes.GetBack();
-
-        const Slot Result {
-            .Slot       = static_cast<UInt16>(Bucket.Runs.GetSize()),
-            .Generation = static_cast<UInt16>(mPalettes.GetSize() - 1)
-        };
-
-        Ref<Run> Entry = Bucket.Runs.Append();
-        Entry.Transform = Matrix4x3::Pack(Matrix4x3::WithScale(Transform, Vector3(Size)));
-        Entry.Effect    = Effect;
-
-        return Result;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -176,13 +146,42 @@ namespace Tileon::Batcher
         // Every draw call in this batch shares the same font material and run palette.
         ConstRef<Command> First = mCommands[Commands.GetFront().Entry.Slot];
 
-        const Graphic::Stream            Runs      = mPalettes[First.Generation].Stream;
-        const Graphic::Transient<Layout> Instances = Gather<Layout, Command>(* mService, mCommands, Commands);
+        const Graphic::Stream      Uniforms  = mPalettes[First.Generation].Stream;
+        Graphic::Transient<Layout> Instances = mService->AllocateInFlightVertices<Layout>(Commands.GetSize());
+
+        for (UInt32 Element = 0; Element < Commands.GetSize(); ++Element)
+        {
+            Instances[Element] = mCommands[Commands[Element].Entry.Slot].Layout;
+        }
 
         const Graphic::Invocation Invocation {
             .Count     = 4,
             .Instances = static_cast<UInt32>(Commands.GetSize())
         };
-        Encoder.Draw(* First.Technique, First.Material, Instances.GetStream(), Runs, Invocation);
+        Encoder.Draw(* First.Technique, First.Material, Instances.GetStream(), Uniforms, Invocation);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    Glyph::Slot Glyph::Intern(ConstRef<Render::FontEffect> Effect, ConstRef<Matrix4x3> Transform, Real32 Size)
+    {
+        if (mPalettes.IsEmpty() || mPalettes.GetBack().Uniforms.GetSize() >= kMaxTextPerBatch)
+        {
+            mPalettes.Append();
+        }
+
+        Ref<Palette> Bucket = mPalettes.GetBack();
+
+        const Slot Result {
+            .Index      = static_cast<UInt16>(Bucket.Uniforms.GetSize()),
+            .Generation = static_cast<UInt16>(mPalettes.GetSize() - 1)
+        };
+
+        Ref<Uniform> Entry = Bucket.Uniforms.Append();
+        Entry.Transform = Matrix4x3::Pack(Matrix4x3::WithScale(Transform, Vector3(Size)));
+        Entry.Effect    = Effect;
+
+        return Result;
     }
 }

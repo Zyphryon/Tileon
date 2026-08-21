@@ -39,7 +39,14 @@
     "Program": {
         "Defines": [
             "FACING_MIRROR_X=1u",
-            "FACING_MIRROR_Y=2u"
+            "FACING_MIRROR_Y=2u",
+            "FACING_PLANE_SHIFT=2u",
+            "FACING_PLANE_MASK=3u",
+            "FACING_COPLANAR=16u",
+            "PLANE_UPRIGHT=0u",
+            "PLANE_GROUND=1u",
+            "PLANE_WALL=2u",
+            "COPLANAR_DEPTH_BIAS=0.00002"
         ],
         "Shaders": {
             "GLSL": [

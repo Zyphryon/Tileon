@@ -92,10 +92,10 @@ namespace Tileon::Stage
             /// The center position of the radial light in world space.
             Vector3 Center;
 
-            // The range of the radial light, representing the maximum distance the light can reach.
+            /// The range of the radial light, representing the maximum distance the light can reach.
             Real32  Radius;
 
-            // The color of the radial light, represented as RGB + falloff.
+            /// The color of the radial light, represented as RGB + falloff.
             Color   Color;
         };
 
@@ -105,19 +105,19 @@ namespace Tileon::Stage
             /// The center position of the cone light in world space.
             Vector3   Center;
 
-            // The range of the cone light, representing the maximum distance the light can reach.
+            /// The range of the cone light, representing the maximum distance the light can reach.
             Real32    Range;
 
-            // The direction the cone points, in world space, so it may be aimed up or down as freely as around.
+            /// The direction the cone points, in world space, so it may be aimed up or down as freely as around.
             Vector3   Direction;
 
-            // The cos of the inner angle, riding alongside the direction to fill out its slot.
+            /// The cos of the inner angle, riding alongside the direction to fill out its slot.
             Real32    Inner;
 
-            // The color of the cone light, represented as RGB + falloff.
+            /// The color of the cone light, represented as RGB + falloff.
             Color     Color;
 
-            // The cos of the outer angle.
+            /// The cos of the outer angle.
             Real32    Outer;
         };
 

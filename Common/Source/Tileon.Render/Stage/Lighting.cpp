@@ -11,7 +11,6 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Lighting.hpp"
-#include <Tileon.Render/Types.hpp>
 #include "Tileon.Render/Component.hpp"
 #include "Tileon.World/Component.hpp"
 
@@ -43,9 +42,7 @@ namespace Tileon::Stage
         Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
 
         // Calculate the origin of the light stage based on the director's position.
-        const IntVector3 Origin = IntVector3::FromXZ(IntVector2(
-            mDirector->GetPosition().GetBaseX(),
-            mDirector->GetPosition().GetBaseY()));
+        const IntVector3 Origin = mDirector->GetOrigin();
 
         // Reset the light data for the current frame.
         mGlowlightData.Clear();
@@ -69,62 +66,58 @@ namespace Tileon::Stage
 
             // The ambient term reads the surface it lights, so the normals are all the skylight binds.
             Encoder.Begin(* mTechniques[Enum::Cast(Kind::Skylight)])
-                   .SetImage(GetTextureID(TextureID::Normal), mNormal->GetTexture())
+                   .SetImage("Normal"_Hash, mNormal->GetTexture())
                    .DrawFullscreen();
         });
 
         // Accumulate the glowlights in the scene and render them in a single batch.
-        mQrDrawGlowlights.Run([&](
+        mQrDrawGlowlights.Run([this, Origin](
             ConstRef<Transform> Transform,
             ConstRef<Enclosure> Enclosure,
             ConstRef<Glowlight> Light,
             ConstPtr<IntColor8> Tint)
         {
-            if (!mDirector->IsVisible(Enclosure.GetVolume()))
+            if (mDirector->IsVisible(Enclosure.GetVolume()))
             {
-                return;
+                const Vector3 Center = Transform.GetWorldspace().GetTranslation() + Vector3(Transform.GetOrigin() - Origin);
+                const Color   Tinted = (Tint ? Math::Color::FromColor8(* Tint) : Color::White()) * Light.GetIntensity();
+                const Vector3 Scale  = Transform.GetWorldspace().GetScale();
+
+                const Real32 Radius = Light.GetRadius() * Max(Scale.GetX(), Max(Scale.GetY(), Scale.GetZ()));
+                const Color  Packed(Tinted.GetRed(), Tinted.GetGreen(), Tinted.GetBlue(), Light.GetFalloff());
+
+                mGlowlightData.Append(Center, Radius, Packed);
             }
-
-            const Vector3 Center = Transform.GetWorldspace().GetTranslation() + Vector3(Transform.GetOrigin() - Origin);
-            const Color   Tinted = (Tint ? Math::Color::FromColor8(* Tint) : Color::White()) * Light.GetIntensity();
-            const Vector3 Scale  = Transform.GetWorldspace().GetScale();
-
-            const Real32 Radius = Light.GetRadius() * Max(Scale.GetX(), Max(Scale.GetY(), Scale.GetZ()));
-            const Color  Packed(Tinted.GetRed(), Tinted.GetGreen(), Tinted.GetBlue(), Light.GetFalloff());
-
-            mGlowlightData.Append(Center, Radius, Packed);
         });
 
         // Accumulate the spotlights in the scene and render them in a single batch.
-        mQrDrawSpotlights.Run([&](
+        mQrDrawSpotlights.Run([this, Origin](
             ConstRef<Transform> Transform,
             ConstRef<Enclosure> Enclosure,
             ConstRef<Spotlight> Light,
             ConstPtr<IntColor8> Tint)
         {
-            if (!mDirector->IsVisible(Enclosure.GetVolume()))
+            if (mDirector->IsVisible(Enclosure.GetVolume()))
             {
-                return;
+                const Vector3 BasisX = Transform.GetWorldspace().GetBasisX();
+                const Real32  Length = BasisX.GetLength();
+
+                // A basis with no length has no direction to aim along.
+                if (Length < 0.0001f)
+                {
+                    return;
+                }
+
+                const Vector3 Center = Transform.GetWorldspace().GetTranslation() + Vector3(Transform.GetOrigin() - Origin);
+                const Color   Tinted = (Tint ? Math::Color::FromColor8(* Tint) : Color::White()) * Light.GetIntensity();
+
+                // The cone fades from the outer angle inwards, so the outer cosine has to stay the smaller of the two.
+                const Real32 Inner = Angle::Cosine(Light.GetInnerAngle());
+                const Real32 Outer = Min(Angle::Cosine(Light.GetOuterAngle()), Inner - 0.0001f);
+                const Color  Packed(Tinted.GetRed(), Tinted.GetGreen(), Tinted.GetBlue(), Light.GetFalloff());
+
+                mSpotlightData.Append(Center, Light.GetRange() * Length, BasisX / Length, Inner, Packed, Outer);
             }
-
-            const Vector3 Center = Transform.GetWorldspace().GetTranslation() + Vector3(Transform.GetOrigin() - Origin);
-            const Color   Tinted = (Tint ? Math::Color::FromColor8(* Tint) : Color::White()) * Light.GetIntensity();
-
-            const Vector3 BasisX = Transform.GetWorldspace().GetBasisX();
-            const Real32  Length = BasisX.GetLength();
-
-            // A basis with no length has no direction to aim along.
-            if (Length < 0.0001f)
-            {
-                return;
-            }
-
-            // The cone fades from the outer angle inwards, so the outer cosine has to stay the smaller of the two.
-            const Real32 Inner = Angle::Cosine(Light.GetInnerAngle());
-            const Real32 Outer = Min(Angle::Cosine(Light.GetOuterAngle()), Inner - 0.0001f);
-            const Color  Packed(Tinted.GetRed(), Tinted.GetGreen(), Tinted.GetBlue(), Light.GetFalloff());
-
-            mSpotlightData.Append(Center, Light.GetRange() * Length, BasisX / Length, Inner, Packed, Outer);
         });
 
         // Render the accumulated glowlights in batches to minimize draw calls and state changes.
@@ -137,7 +130,7 @@ namespace Tileon::Stage
                 .Instances = static_cast<UInt32>(Data.GetSize())
             };
             Encoder.Begin(* mTechniques[Enum::Cast(Kind::Glowlight)])
-                   .SetImage(GetTextureID(TextureID::Normal), mNormal->GetTexture())
+                   .SetImage("Normal"_Hash, mNormal->GetTexture())
                    .SetImage("Depth"_Hash,  mDepth->GetTexture())
                    .Draw(Graphics.AllocateInFlightVertices<GpuGlowlightLayout>(Data), Invocation);
         }
@@ -153,7 +146,7 @@ namespace Tileon::Stage
                 .Instances = static_cast<UInt32>(Data.GetSize())
             };
             Encoder.Begin(* mTechniques[Enum::Cast(Kind::Spotlight)])
-                   .SetImage(GetTextureID(TextureID::Normal), mNormal->GetTexture())
+                   .SetImage("Normal"_Hash, mNormal->GetTexture())
                    .SetImage("Depth"_Hash,  mDepth->GetTexture())
                    .Draw(Graphics.AllocateInFlightVertices<GpuSpotlightLayout>(Data), Invocation);
         }

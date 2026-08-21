@@ -12,15 +12,15 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-#include "Batch.hpp"
-#include "Tileon.Render/Component/Appearance.hpp"
+#include "Tileon.Render/Sprite/Appearance.hpp"
+#include "Zyphryon.Render/Collector.hpp"
 #include "Zyphryon.Render/Encoder.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Batcher
+namespace Tileon::Batch
 {
     /// \brief Records the sprites of a pass and writes back the batches the collector hands it.
     class Sprite final
@@ -31,15 +31,26 @@ namespace Tileon::Batcher
         ///
         /// \param Service   The service the transient instance streams are allocated from.
         /// \param Collector The collector the sprites are ordered and batched by.
-        Sprite(ConstRetainer<Graphic::Service> Service, Ref<Render::Collector> Collector);
+        /// \param Kind      The tag every draw is stamped with, so the drain routes its batches back here.
+        Sprite(ConstRetainer<Graphic::Service> Service, Ref<Render::Collector> Collector, UInt32 Kind);
 
         /// \brief Sets the technique subsequent sprites are recorded under.
         ///
         /// \param Technique The technique to set for subsequent sprites.
-        /// \param Variant  The features the caller turns on itself, beyond the ones a material implies.
+        /// \param Variant   The features the caller turns on itself, beyond the ones a material implies.
+        ZY_INLINE void SetTechnique(ConstRetainer<Graphic::Technique> Technique, Graphic::Technique::Key Variant)
+        {
+            mTechnique = Technique;
+            mVariant   = Variant;
+        }
+
+        /// \brief Sets the priority subsequent sprites are recorded under.
+        ///
         /// \param Priority The queue the draws are collected into, which the open pass decides.
-        void SetTechnique(ConstRetainer<Graphic::Technique> Technique,
-            Graphic::Technique::Key Variant, Render::Collector::Priority Priority);
+        ZY_INLINE void SetPriority(Render::Collector::Priority Priority)
+        {
+            mPriority  = Priority;
+        }
 
         /// \brief Records a sprite with the specified parameters.
         ///
@@ -60,7 +71,7 @@ namespace Tileon::Batcher
 
     private:
 
-        /// \brief Defines a structure representing the input data for drawing a sprite in the GPU.
+        /// \brief Represents the per-instance data for a sprite.
         struct Layout final
         {
             /// The transformation matrix to apply to the sprite for positioning, scaling, and rotation.
@@ -69,17 +80,17 @@ namespace Tileon::Batcher
             /// The source rectangle within the sprite's texture, defining the portion of the texture to use.
             Rect              Frame;
 
-            /// Additional data for the sprite, such as size stored as a 2D vector.
+            /// The size the sprite covers, in world units, before the transform is applied.
             Vector2           Size;
 
-            /// Color tint to apply to the sprite, represented as an 8-bit integer color (RGBA).
+            /// The tint applied to the sprite, as an 8-bit integer color (RGBA).
             IntColor8         Color;
 
-            /// How the art is laid down, as the bits the technique tests for mirroring and transposing.
+            /// The bits the technique tests to mirror and transpose the art as it is laid down.
             UInt32            Facing;
         };
 
-        /// \brief Defines a draw command for a sprite, containing its input data.
+        /// \brief Represents a draw recorded for a sprite, with everything its batch is keyed by.
         struct Command final
         {
             /// The graphics technique to use for rendering the sprite.
@@ -92,7 +103,7 @@ namespace Tileon::Batcher
             ConstPtr<Graphic::Material>  Material;
 
             /// The input data for the sprite.
-            Batcher::Sprite::Layout      Layout;
+            Layout                       Layout;
         };
 
     private:
@@ -102,6 +113,7 @@ namespace Tileon::Batcher
 
         Retainer<Graphic::Service>   mService;
         Ref<Render::Collector>       mCollector;
+        UInt32                       mKind;
         Retainer<Graphic::Technique> mTechnique;
         Graphic::Technique::Key      mVariant;
         Render::Collector::Priority  mPriority;

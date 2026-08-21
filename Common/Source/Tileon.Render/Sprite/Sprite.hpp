@@ -36,12 +36,21 @@ namespace Tileon
         };
         ZY_DEFINE_BITWISE_FRIEND_ENUM(Facing)
 
+        /// \brief Specifies the local plane the art spans, and therefore the face it turns towards.
+        enum class Plane : UInt8
+        {
+            Upright,   ///< Spans local x and y and faces the viewer, for art stood up in the world.
+            Ground,    ///< Spans local x and z and faces up, for art laid against the floor.
+            Wall,      ///< Spans local y and z and faces along x, for art laid against a wall.
+        };
+
     public:
 
         /// \brief Constructs a sprite with no art, laid down the way it was authored.
         ZY_INLINE Sprite()
             : mSource { Rect::One() },
-              mFacing { Facing::None }
+              mFacing { Facing::None },
+              mPlane  { Plane::Upright }
         {
         }
 
@@ -50,10 +59,12 @@ namespace Tileon
         /// \param Path   The path to the sprite's texture resource.
         /// \param Source The source rectangle for the sprite.
         /// \param Facing The orientation of the sprite.
-        ZY_INLINE Sprite(AnyRef<Content::Uri> Path, Rect Source = Rect::One(), Facing Facing = Facing::None)
+        /// \param Plane  The plane the art is laid against.
+        ZY_INLINE Sprite(AnyRef<Content::Uri> Path, Rect Source, Facing Facing, Plane Plane)
             : mPath   { Move(Path) },
               mSource { Source },
-              mFacing { Facing }
+              mFacing { Facing },
+              mPlane  { Plane }
         {
         }
 
@@ -105,6 +116,22 @@ namespace Tileon
             return mFacing;
         }
 
+        /// \brief Sets the plane the art is laid against.
+        ///
+        /// \param Plane The plane the art is laid against.
+        ZY_INLINE void SetPlane(Plane Plane)
+        {
+            mPlane = Plane;
+        }
+
+        /// \brief Gets the plane the art is laid against.
+        ///
+        /// \return The plane the art is laid against.
+        ZY_INLINE Plane GetPlane() const
+        {
+            return mPlane;
+        }
+
         /// \brief Serializes the state of the object to or from the specified archive.
         ///
         /// \param Archive The archive to serialize the object with.
@@ -114,6 +141,7 @@ namespace Tileon
             Archive.Serialize(mPath);
             Archive.Serialize(mSource);
             Archive.Serialize(mFacing);
+            Archive.Serialize(mPlane);
         }
 
     private:
@@ -124,5 +152,6 @@ namespace Tileon
         Content::Uri mPath;
         Rect         mSource;
         Facing       mFacing;
+        Plane        mPlane;
     };
 }

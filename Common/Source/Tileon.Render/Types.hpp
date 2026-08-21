@@ -21,7 +21,7 @@
 namespace Tileon
 {
     /// \brief Specifies the conventional names given to the textures a signature declares.
-    enum class TextureID : UInt8
+    enum class Texture : UInt8
     {
         Albedo,       ///< Base color map, sampled by every technique that puts art on the target.
         Normal,       ///< Tangent-space normal map, which gives a flat surface the relief it lacks.
@@ -29,15 +29,15 @@ namespace Tileon
 
     /// \brief Gets the hash a technique's reflection stores for a texture name.
     ///
-    /// \param Usage The texture to resolve.
+    /// \param Texture The texture to resolve.
     /// \return The hash of the texture's name.
-    ZY_INLINE constexpr UInt64 GetTextureID(TextureID Usage)
+    ZY_INLINE constexpr UInt64 GetTextureID(Texture Texture)
     {
-        switch (Usage)
+        switch (Texture)
         {
-        case TextureID::Albedo:
+        case Texture::Albedo:
             return "Albedo"_Hash;
-        case TextureID::Normal:
+        case Texture::Normal:
             return "Normal"_Hash;
         }
         return 0;

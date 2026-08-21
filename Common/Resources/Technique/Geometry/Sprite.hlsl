@@ -68,35 +68,38 @@ fs_Input main(vs_Input Input)
 
     float2 Corner = TessellateRect(Input.VertexID);
 
-#ifdef ENABLE_DECAL_PROJECTION
-    // A decal lies against the ground rather than standing upright, so its quad spans the local x and z axes.
-    float3 Local = float3(Corner.x * Input.Size.x, 0.0, Corner.y * Input.Size.y);
-#else
-    float3 Local = float3(Corner * Input.Size, 0.0);
-#endif
+    // The columns of the affine are the local axes the art is laid down along.
+    float3 ColumnX = float3(Input.Transform0.x, Input.Transform1.x, Input.Transform2.x);
+    float3 ColumnY = float3(Input.Transform0.y, Input.Transform1.y, Input.Transform2.y);
+    float3 ColumnZ = float3(Input.Transform0.z, Input.Transform1.z, Input.Transform2.z);
+    float3 Origin  = float3(Input.Transform0.w, Input.Transform1.w, Input.Transform2.w);
 
-    float3 Position = float3(
-        dot(Local, Input.Transform0.xyz) + Input.Transform0.w,
-        dot(Local, Input.Transform1.xyz) + Input.Transform1.w,
-        dot(Local, Input.Transform2.xyz) + Input.Transform2.w);
+    // Two of the three axes span the quad; the one left over is the face it turns towards. An upright
+    // sprite turns back down -z at the viewer, whereas art laid against a surface turns away from it.
+    uint   Plane  = (Input.Facing >> FACING_PLANE_SHIFT) & FACING_PLANE_MASK;
 
-    // A sprite stands upright, so the projection already resolves its depth from the world position the
-    // affine put it at; it carries no bias of its own.
+    float3 AxisU  = (Plane == PLANE_WALL)    ? ColumnY : ColumnX;
+    float3 AxisV  = (Plane == PLANE_UPRIGHT) ? ColumnY : ColumnZ;
+    float3 Facing = (Plane == PLANE_GROUND)  ? ColumnY : (Plane == PLANE_WALL) ? ColumnX : -ColumnZ;
+
+    float3 Position = Origin + Corner.x * Input.Size.x * AxisU + Corner.y * Input.Size.y * AxisV;
+
     Result.Position = mul(u_Camera, float4(Position, 1.0));
 
-#ifdef ENABLE_DECAL_PROJECTION
-    // A decal is coplanar with the ground it is painted on, so without this it would z-fight the terrain.
-    Result.Position.z -= DECAL_DEPTH_BIAS;
-#endif
+    // Art laid flat against a surface is coplanar with it, and would z-fight it without a nudge forward.
+    if ((Input.Facing & FACING_COPLANAR) != 0u)
+    {
+        Result.Position.z -= COPLANAR_DEPTH_BIAS;
+    }
 
     // The art is laid down mirrored or turned by exchanging the corner before it picks a point in the frame.
     float2 Sample = float2(Corner.x, 1.0 - Corner.y);
 
-    if ((Input.Facing & 1u) != 0u)
+    if ((Input.Facing & FACING_MIRROR_X) != 0u)
     {
         Sample.x = 1.0 - Sample.x;
     }
-    if ((Input.Facing & 2u) != 0u)
+    if ((Input.Facing & FACING_MIRROR_Y) != 0u)
     {
         Sample.y = 1.0 - Sample.y;
     }
@@ -104,23 +107,12 @@ fs_Input main(vs_Input Input)
     Result.Texture  = lerp(Input.Frame.xy, Input.Frame.zw, Sample);
     Result.Color    = Input.Color;
 
-#ifdef ENABLE_DECAL_PROJECTION
-
-    #ifdef ENABLE_NORMAL_MAPPING
-        Result.AxisX = normalize(float3(Input.Transform0.x, Input.Transform1.x, Input.Transform2.x));
-        Result.AxisY = normalize(float3(Input.Transform0.z, Input.Transform1.z, Input.Transform2.z));
-    #endif
-
-    Result.AxisZ = -normalize(float3(Input.Transform0.y, Input.Transform1.y, Input.Transform2.y));
-#else
-
-    #ifdef ENABLE_NORMAL_MAPPING
-        Result.AxisX = normalize(float3(Input.Transform0.x, Input.Transform1.x, Input.Transform2.x));
-        Result.AxisY = normalize(float3(Input.Transform0.y, Input.Transform1.y, Input.Transform2.y));
-    #endif
-
-    Result.AxisZ = normalize(float3(Input.Transform0.z, Input.Transform1.z, Input.Transform2.z));
+#ifdef ENABLE_NORMAL_MAPPING
+    Result.AxisX = normalize(AxisU);
+    Result.AxisY = normalize(AxisV);
 #endif
+
+    Result.AxisZ = -normalize(Facing);
 
     return Result;
 }

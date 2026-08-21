@@ -44,6 +44,14 @@ namespace Tileon
         {
         }
 
+        /// \brief Checks whether the ground and elevation project onto separate screen axes.
+        ///
+        /// \return `true` when world X drives only the screen's horizontal and world Y and Z only its vertical.
+        ZY_INLINE constexpr Bool IsAxisAligned() const
+        {
+            return IsAlmostZero(mAxisX.GetY()) && IsAlmostZero(mAxisY.GetX()) && IsAlmostZero(mAxisZ.GetX());
+        }
+
         /// \brief Gets the screen offset contributed by one unit of world X.
         ///
         /// \return The screen offset per unit of world X.
@@ -95,15 +103,9 @@ namespace Tileon
         /// \return The half-extent of the depth the screen covers.
         ZY_INLINE constexpr Real32 GetDepthExtent(Vector2 Ground, Real32 Elevation) const
         {
-            return Abs(mAxisX.GetY()) * Ground.GetX() + Abs(mAxisZ.GetY()) * Ground.GetY() + Abs(mAxisY.GetY()) * Elevation;
-        }
-
-        /// \brief Checks whether the ground and elevation project onto separate screen axes.
-        ///
-        /// \return `true` when world X drives only the screen's horizontal and world Y and Z only its vertical.
-        ZY_INLINE constexpr Bool IsAxisAligned() const
-        {
-            return IsAlmostZero(mAxisX.GetY()) && IsAlmostZero(mAxisY.GetX()) && IsAlmostZero(mAxisZ.GetX());
+            return Abs(mAxisX.GetY()) * Ground.GetX()
+                 + Abs(mAxisZ.GetY()) * Ground.GetY()
+                 + Abs(mAxisY.GetY()) * Elevation;
         }
 
         /// \brief Gets the world-space direction a pick ray travels under this projection.
@@ -176,8 +178,8 @@ namespace Tileon
         ZY_INLINE constexpr Real32 GetGroundDeterminant() const
         {
             const Real32 Determinant = mAxisX.GetX() * mAxisZ.GetY() - mAxisZ.GetX() * mAxisX.GetY();
-
             ZY_ASSERT(Determinant != 0.0f, "Ground axes must not be parallel");
+
             return Determinant;
         }
 

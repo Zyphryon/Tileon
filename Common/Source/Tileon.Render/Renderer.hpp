@@ -14,6 +14,7 @@
 
 #include "Director.hpp"
 #include "Stage/Preview.hpp"
+#include "Terrain/Splatset.hpp"
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Engine/Locator.hpp>
 #include <Zyphryon.Render/Graph.hpp>
@@ -49,14 +50,14 @@ namespace Tileon
         };
 
         /// \brief Represents the diagnostic overlays the pipeline can draw over the composed scene.
-        using Debug = Stage::Preview::Property;
+        using Debug = Stage::Preview::Overlay;
 
     public:
 
         /// \brief Constructs a renderer with the specified service host.
         ///
         /// \param Host      The service host to associate with the renderer.
-        /// \param Immediate `true` composes into the display otherwise composes into \ref Target::Final.
+        /// \param Immediate `true` to compose into the display, `false` to compose into \ref Target::Final.
         /// \param Density   The pixel density the stages measure and project against.
         Renderer(Ref<Engine::Subsystem::Host> Host, Bool Immediate, Real32 Density);
 
@@ -76,6 +77,14 @@ namespace Tileon
         ///
         /// \param Director The director that holds projection and view information for rendering.
         void Present(ConstRef<Director> Director);
+
+        /// \brief Gets the splatset holding the art every terrain draws from.
+        ///
+        /// \return The splatset the ground draws its terrains from.
+        ZY_INLINE Ref<Splatset> GetSplatset()
+        {
+            return mSplatset;
+        }
 
         /// \brief Gets the GPU texture for the specified frame slot.
         ///
@@ -103,11 +112,11 @@ namespace Tileon
         ///
         /// \param Mask   The overlay to set or clear.
         /// \param Enable `true` to set the overlay, `false` to clear it.
-        ZY_INLINE void SetProperty(Debug Mask, Bool Enable)
+        ZY_INLINE void SetOverlay(Debug Mask, Bool Enable)
         {
             if (mPreview)
             {
-                mPreview->SetProperty(Mask, Enable);
+                mPreview->SetOverlay(Mask, Enable);
             }
         }
 
@@ -115,14 +124,14 @@ namespace Tileon
         ///
         /// \param Mask The overlay to check.
         /// \return `true` if the overlay is enabled, `false` otherwise.
-        ZY_INLINE Bool HasProperty(Debug Mask) const
+        ZY_INLINE Bool HasOverlay(Debug Mask) const
         {
-            return mPreview && mPreview->HasProperty(Mask);
+            return mPreview && mPreview->HasOverlay(Mask);
         }
 
     private:
 
-        /// \brief The view matrices every stage is handed, bound at scope zero for the whole frame.
+        /// \brief Represents the view matrices every stage is handed, bound at scope zero for the whole frame.
         struct GpuFrameLayout final
         {
             /// Turns world space into clip space.
@@ -144,6 +153,7 @@ namespace Tileon
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+        Splatset            mSplatset;
         Render::Graph       mRenderer;
         Ptr<Stage::Preview> mPreview;
         Target              mOutput;

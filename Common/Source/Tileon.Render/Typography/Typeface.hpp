@@ -21,54 +21,54 @@
 
 namespace Tileon
 {
-    /// \brief Represents a lettering component that contains archetypal font data for rendering text.
-    class Lettering final
+    /// \brief Represents a typeface component that contains archetypal font data for rendering text.
+    class Typeface final
     {
     public:
 
-        /// \brief Constructs a default lettering with no associated font resource.
-        ZY_INLINE Lettering()
+        /// \brief Constructs a default typeface with no associated font resource.
+        ZY_INLINE Typeface()
             : mSize { 12.0f }
         {
         }
 
-        /// \brief Constructs a lettering with the specified font resource and size.
+        /// \brief Constructs a typeface with the specified font resource and size.
         ///
-        /// \param Path The path to the font resource to associate with the lettering.
-        /// \param Size The size to set for the lettering.
-        ZY_INLINE Lettering(AnyRef<Content::Uri> Path, Real32 Size)
+        /// \param Path The path to the font resource to associate with the typeface.
+        /// \param Size The size to set for the typeface.
+        ZY_INLINE Typeface(AnyRef<Content::Uri> Path, Real32 Size)
             : mFont { Move(Path) },
               mSize { Size }
         {
         }
 
-        /// \brief Sets the font resource associated with the lettering.
+        /// \brief Sets the font resource associated with the typeface.
         ///
-        /// \param Path The path to the font resource to associate with the lettering.
+        /// \param Path The path to the font resource to associate with the typeface.
         ZY_INLINE void SetFont(AnyRef<Content::Uri> Path)
         {
             mFont = Content::Proxy<Render::Font>(Move(Path));
         }
 
-        /// \brief Gets the font resource associated with the lettering.
+        /// \brief Gets the font resource associated with the typeface.
         ///
-        /// \return The font resource associated with the lettering.
+        /// \return The font resource associated with the typeface.
         ZY_INLINE ConstRetainer<Render::Font> GetFont() const
         {
             return mFont.GetResource();
         }
 
-        /// \brief Sets the size of the lettering.
+        /// \brief Sets the size of the typeface.
         ///
-        /// \param Size The size to set for the lettering.
+        /// \param Size The size to set for the typeface.
         ZY_INLINE void SetSize(Real32 Size)
         {
             mSize = Size;
         }
 
-        /// \brief Gets the size of the lettering.
+        /// \brief Gets the size of the typeface.
         ///
-        /// \return The size of the lettering.
+        /// \return The size of the typeface.
         ZY_INLINE Real32 GetSize() const
         {
             return mSize;

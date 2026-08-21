@@ -11,8 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Composite.hpp"
-#include <Tileon.Render/Types.hpp>
-#include "Tileon.Render/Component/Skylight.hpp"
+#include "Tileon.Render/Light/Skylight.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -54,19 +53,16 @@ namespace Tileon::Stage
             .Exposure = Vector4(Exposure, 0.0f, 0.0f, 0.0f)
         });
 
-        ConstRetainer<Graphic::Technique> Technique = mTechniques[Enum::Cast(Kind::Composite)];
-
-        // The base variant carries the Polyphon curve, so only another operator names a feature to compile in.
-        const Graphic::Technique::Key Variant = Tonemap == Skylight::Tonemap::GT7
-            ? 0
-            : Technique->ResolveByName(Enum::GetName(Tonemap));
-
         // Each buffer binds under the name the signature declares it by, rather than by the order it is passed in.
-        Encoder.Begin(* Technique)
-               .SetImage(GetTextureID(TextureID::Albedo), mAlbedo->GetTexture())
-               .SetImage("Radiance"_Hash, mRadiance->GetTexture())
-               .SetVariant(Variant)
-               .DrawFullscreen();
+        Render::Encoder::Binder Binder = Encoder.Begin(* mTechniques[Enum::Cast(Kind::Composite)]);
+        Binder.SetImage("Albedo"_Hash, mAlbedo->GetTexture());
+        Binder.SetImage("Radiance"_Hash, mRadiance->GetTexture());
+
+        if (Tonemap != Skylight::Tonemap::GT7)
+        {
+            Binder.SetVariant(Enum::GetName(Tonemap));
+        }
+        Binder.DrawFullscreen();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

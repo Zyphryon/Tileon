@@ -47,27 +47,29 @@ void main()
 {
     vec2 Corner = TessellateRect(gl_VertexID);
 
-#ifdef ENABLE_DECAL_PROJECTION
-    // A decal lies against the ground rather than standing upright, so its quad spans the local x and z
-    // axes; whatever the pose turns about y then spins it on the ground.
-    vec3 Local = vec3(Corner.x * a_Size.x, 0.0, Corner.y * a_Size.y);
-#else
-    vec3 Local = vec3(Corner * a_Size, 0.0);
-#endif
+    // The columns of the affine are the local axes the art is laid down along.
+    vec3 ColumnX = vec3(a_Transform0.x, a_Transform1.x, a_Transform2.x);
+    vec3 ColumnY = vec3(a_Transform0.y, a_Transform1.y, a_Transform2.y);
+    vec3 ColumnZ = vec3(a_Transform0.z, a_Transform1.z, a_Transform2.z);
+    vec3 Origin  = vec3(a_Transform0.w, a_Transform1.w, a_Transform2.w);
 
-    vec3 Position = vec3(
-        dot(Local, a_Transform0.xyz) + a_Transform0.w,
-        dot(Local, a_Transform1.xyz) + a_Transform1.w,
-        dot(Local, a_Transform2.xyz) + a_Transform2.w);
+    // Two of the three axes span the quad; the one left over is the face it turns towards. An upright
+    // sprite turns back down -z at the viewer, whereas art laid against a surface turns away from it.
+    uint Plane   = (a_Facing >> FACING_PLANE_SHIFT) & FACING_PLANE_MASK;
 
-    // A sprite stands upright, so the projection already resolves its depth from the world position the
-    // affine put it at; it carries no bias of its own.
+    vec3 AxisU   = (Plane == PLANE_WALL)    ? ColumnY : ColumnX;
+    vec3 AxisV   = (Plane == PLANE_UPRIGHT) ? ColumnY : ColumnZ;
+    vec3 Facing  = (Plane == PLANE_GROUND)  ? ColumnY : (Plane == PLANE_WALL) ? ColumnX : -ColumnZ;
+
+    vec3 Position = Origin + Corner.x * a_Size.x * AxisU + Corner.y * a_Size.y * AxisV;
+
     gl_Position = u_Camera * vec4(Position, 1.0);
 
-#ifdef ENABLE_DECAL_PROJECTION
-    // A decal is coplanar with the ground it is painted on, so without this it would z-fight the terrain.
-    gl_Position.z -= DECAL_DEPTH_BIAS;
-#endif
+    // Art laid flat against a surface is coplanar with it, and would z-fight it without a nudge forward.
+    if ((a_Facing & FACING_COPLANAR) != 0u)
+    {
+        gl_Position.z -= COPLANAR_DEPTH_BIAS;
+    }
 
     // The art is laid down mirrored or turned by exchanging the corner before it picks a point in the frame.
     vec2 Sample = vec2(Corner.x, 1.0 - Corner.y);
@@ -85,22 +87,12 @@ void main()
     v_Color   = a_Color;
 
 
-#ifdef ENABLE_DECAL_PROJECTION
-    // The quad spans local x and z, so its surface normal is local y and the tangent frame follows suit.
 #ifdef ENABLE_NORMAL_MAPPING
-    v_AxisX = normalize(vec3(a_Transform0.x, a_Transform1.x, a_Transform2.x));
-    v_AxisY = normalize(vec3(a_Transform0.z, a_Transform1.z, a_Transform2.z));
+    v_AxisX = normalize(AxisU);
+    v_AxisY = normalize(AxisV);
 #endif
 
-    v_AxisZ = -normalize(vec3(a_Transform0.y, a_Transform1.y, a_Transform2.y));
-#else
-#ifdef ENABLE_NORMAL_MAPPING
-    v_AxisX = normalize(vec3(a_Transform0.x, a_Transform1.x, a_Transform2.x));
-    v_AxisY = normalize(vec3(a_Transform0.y, a_Transform1.y, a_Transform2.y));
-#endif
-
-    v_AxisZ = normalize(vec3(a_Transform0.z, a_Transform1.z, a_Transform2.z));
-#endif
+    v_AxisZ = -normalize(Facing);
 }
 
 #endif // VERTEX_SHADER

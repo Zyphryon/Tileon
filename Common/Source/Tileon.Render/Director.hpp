@@ -240,6 +240,14 @@ namespace Tileon
             return mProjection.Project(Volume - Base).Test(mScreen);
         }
 
+        /// \brief Gets the whole-unit origin the frame's world coordinates are expressed against.
+        ///
+        /// \return The camera's position with its fraction dropped, on the ground plane.
+        ZY_INLINE IntVector3 GetOrigin() const
+        {
+            return IntVector3::FromXZ(IntVector2(mPosition.GetBaseX(), mPosition.GetBaseY()));
+        }
+
         /// \brief Gets the current frustum of the camera's view in logical units (e.g., world units).
         ///
         /// \return The current frustum of the camera's view.

@@ -29,11 +29,11 @@ namespace Tileon::Stage
         ConstRef<Render::Target>     Normal,
         ConstRef<Render::Target>     Depth,
         ConstRef<Render::Target>     Radiance)
-        : Locator     { Host },
-          mSources    { AddressOf(Albedo), AddressOf(Normal), AddressOf(Depth), AddressOf(Radiance) },
-          mDirector   { nullptr },
-          mSource     { Kind::Albedo },
-          mProperties { 0 }
+        : Locator   { Host },
+          mSources  { AddressOf(Albedo), AddressOf(Normal), AddressOf(Depth), AddressOf(Radiance) },
+          mDirector { nullptr },
+          mSource   { Source::Albedo },
+          mOverlays { 0 }
     {
         OnRegister(* Host.GetService<Scene::Service>());
         OnLoad(* Host.GetService<Content::Service>());
@@ -46,22 +46,32 @@ namespace Tileon::Stage
     {
         ZY_PROFILE_SCOPE("Stage::Preview::Run");
 
-        // Color is what the technique reads by default, so only a buffer that has to be decoded names a variant.
-        const Bool Decoded = (mSource == Kind::Normal || mSource == Kind::Depth);
-        Encoder.Begin(* mTechnique)
-               .SetImage("Source"_Hash, mSources[Enum::Cast(mSource)]->GetTexture())
-               .SetVariant(Decoded ? mTechnique->ResolveByName(Enum::GetName(mSource)) : 0)
-               .DrawFullscreen();
+        DrawPreview(Encoder);
 
-        if (mSource == Kind::Albedo && HasProperty(Property::Grid))
+        if (mSource == Source::Albedo && HasOverlay(Overlay::Grid))
         {
             DrawGrid(Encoder);
         }
 
-        if ((mSource == Kind::Albedo || mSource == Kind::Radiance) && HasProperty(Property::Boundaries))
+        if ((mSource == Source::Albedo || mSource == Source::Radiance) && HasOverlay(Overlay::Boundaries))
         {
             DrawBoundaries(Encoder);
         }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Preview::DrawPreview(Ref<Render::Encoder> Encoder)
+    {
+        Render::Encoder::Binder Binder = Encoder.Begin(* mTechniques[Enum::Cast(Kind::Preview)]);
+        Binder.SetImage("Source"_Hash, mSources[Enum::Cast(mSource)]->GetTexture());
+
+        if (mSource == Source::Normal || mSource == Source::Depth)
+        {
+            Binder.SetVariant(Enum::GetName(mSource));
+        }
+        Binder.DrawFullscreen();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -72,7 +82,7 @@ namespace Tileon::Stage
         Encoder.SetPass(GpuGridLayout {
             .Dimension = Vector2(Region::kUnitsPerX, Region::kUnitsPerY)
         });
-        Encoder.Begin(* mOverlays[Enum::Cast(Overlay::Grid)]).DrawFullscreen();
+        Encoder.Begin(* mTechniques[Enum::Cast(Kind::Grid)]).DrawFullscreen();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -83,15 +93,13 @@ namespace Tileon::Stage
         Ref<Graphic::Service> Graphics = GetService<Graphic::Service>();
 
         // A bound is absolute while the camera is rebased onto its region, so shift each one into the camera's space.
-        const IntVector3 Origin = IntVector3::FromXZ(IntVector2(
-            mDirector->GetPosition().GetBaseX(),
-            mDirector->GetPosition().GetBaseY()));
+        const IntVector3 Origin = mDirector->GetOrigin();
 
         // Reset the boundary data for the current frame.
         mBoundaries.Clear();
 
         // Accumulate the boundaries of the visible entities and render them in a single batch.
-        if (mSource == Kind::Albedo)
+        if (mSource == Source::Albedo)
         {
             mQrDrawGeometryBoundaries.Run([&](Scene::Entity Actor, ConstRef<Enclosure> Enclosure)
             {
@@ -130,10 +138,14 @@ namespace Tileon::Stage
                 .Offset    = 0,
                 .Instances = static_cast<UInt32>(Data.GetSize())
             };
-            ConstRetainer<Graphic::Technique> Technique = mOverlays[Enum::Cast(Overlay::Boundary)];
-            Encoder.Begin(* Technique)
-                   .SetVariant(Flat ? Technique->ResolveByName("Flat") : 0)
-                   .Draw(Graphics.AllocateInFlightVertices<GpuBoundaryLayout>(Data), Invocation);
+
+            Render::Encoder::Binder Binder = Encoder.Begin(* mTechniques[Enum::Cast(Kind::Boundary)]);
+
+            if (Flat)
+            {
+                Binder.SetVariant("Flat");
+            }
+            Binder.Draw(Graphics.AllocateInFlightVertices<GpuBoundaryLayout>(Data), Invocation);
         }
     }
 
@@ -144,7 +156,7 @@ namespace Tileon::Stage
     {
         mQrDrawGeometryBoundaries = Scene.CreateQuery<
             Scene::DSL::In<const Enclosure>,
-            Scene::DSL::Or<Sprite, Lettering>
+            Scene::DSL::Or<Sprite, Label>
         >("Render::Preview::DrawGeometryBoundaries", Scene::Cache::Auto);
 
         mQrDrawLightingBoundaries = Scene.CreateQuery<
@@ -158,13 +170,11 @@ namespace Tileon::Stage
 
     void Preview::OnLoad(Ref<Content::Service> Content)
     {
-        mTechnique = Content.Load<Graphic::Technique>("Resources://Technique/Preview/Preview.vfx");
-
-        for (const Overlay Type : Enum::GetValues<Overlay>())
+        for (const Kind Type : Enum::GetValues<Kind>())
         {
             Str Path = Str::Print<"Resources://Technique/Preview/{0}.vfx">(Enum::GetName(Type));
 
-            mOverlays[Enum::Cast(Type)] = Content.Load<Graphic::Technique>(Move(Path));
+            mTechniques[Enum::Cast(Type)] = Content.Load<Graphic::Technique>(Move(Path));
         }
     }
 }

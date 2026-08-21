@@ -183,8 +183,8 @@ namespace Tileon::Client
         mTitle = Window.GetTitle();
 
         // Compose straight into the display, as the client has no interface to hand an off-screen image to.
-        mPresenter = Unique<Presenter>::Create(* this, true);
-        mPresenter->Init(Window.GetWidth(), Window.GetHeight(), mDensity);
+        mPresenter = Unique<Presenter>::Create(* this, true, mDensity);
+        mPresenter->Resize(Window.GetWidth(), Window.GetHeight());
         mPresenter->Load();
 
         // A run has to land on content, so the view opens where the world was last authored from.

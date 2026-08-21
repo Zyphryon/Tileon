@@ -27,6 +27,7 @@ namespace Tileon
 
     Renderer::Renderer(Ref<Engine::Subsystem::Host> Host, Bool Immediate, Real32 Density)
         : Locator    { Host },
+          mSplatset  { Host },
           mRenderer  { Host },
           mPreview   { nullptr },
           mOutput    { Target::Final },
@@ -40,6 +41,7 @@ namespace Tileon
 
     void Renderer::Load()
     {
+        mSplatset.Load();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -47,6 +49,7 @@ namespace Tileon
 
     void Renderer::Save()
     {
+        mSplatset.Save();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -122,7 +125,7 @@ namespace Tileon
 
             if (Type != Target::Final)
             {
-                mPreview->SetSource(static_cast<Stage::Preview::Kind>(Enum::Cast(Type)));
+                mPreview->SetSource(static_cast<Stage::Preview::Source>(Enum::Cast(Type)));
             }
         }
 
@@ -141,7 +144,7 @@ namespace Tileon
         Ref<Render::Target> Radiance = mRenderer.AddTarget({ .Format = Graphic::TextureFormat::R11G11B10Float     });
 
         // Geometry: rasterize the scene into the albedo and normal buffers, depth-tested.
-        Ref<Stage::Geometry> Geometry = mRenderer.AddPass<Stage::Geometry>(Host, Density);
+        Ref<Stage::Geometry> Geometry = mRenderer.AddPass<Stage::Geometry>(Host, mSplatset, Density);
         Geometry.AddColor({ .Target = AddressOf(Albedo), .Tint = Color::Black() });
         Geometry.AddColor({ .Target = AddressOf(Normal), .Tint = Color(0.5f, 1.0f, 0.5f, 1.0f) });
         Geometry.SetDepth({ .Target = AddressOf(Depth) });

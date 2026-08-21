@@ -21,17 +21,17 @@
 namespace Tileon
 {
     /// \brief Represents the decorative treatment applied to a text entity's glyphs.
-    class Decoration final
+    class Contour final
     {
     public:
 
-        /// \brief Constructs a default decoration whose effect is neutral (no outset or inset).
-        ZY_INLINE Decoration() = default;
+        /// \brief Constructs a default contour whose effect is neutral (no outset or inset).
+        ZY_INLINE Contour() = default;
 
-        /// \brief Constructs a decoration around the specified text effect.
+        /// \brief Constructs a contour around the specified text effect.
         ///
         /// \param Effect The text effect to wrap.
-        ZY_INLINE explicit Decoration(ConstRef<Render::FontEffect> Effect)
+        ZY_INLINE explicit Contour(ConstRef<Render::FontEffect> Effect)
             : mEffect { Effect }
         {
         }

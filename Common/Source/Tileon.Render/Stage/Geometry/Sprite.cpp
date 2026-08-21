@@ -16,30 +16,18 @@
 // [   CODE   ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-namespace Tileon::Batcher
+namespace Tileon::Batch
 {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Sprite::Sprite(ConstRetainer<Graphic::Service> Service, Ref<Render::Collector> Collector)
+    Sprite::Sprite(ConstRetainer<Graphic::Service> Service, Ref<Render::Collector> Collector, UInt32 Kind)
         : mService   { Service },
           mCollector { Collector },
+          mKind      { Kind },
+          mVariant   { 0 },
           mPriority  { Render::Collector::Priority::Opaque }
     {
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Sprite::SetTechnique(ConstRetainer<Graphic::Technique> Technique,
-        Graphic::Technique::Key Variant, Render::Collector::Priority Priority)
-    {
-        mTechnique = Technique;
-        mVariant   = Variant;
-
-        // One technique now serves both queues, so the open pass is the authority on which one this is; deriving
-        // it from the base blend state would report the same queue for every variant.
-        mPriority  = Priority;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -56,15 +44,14 @@ namespace Tileon::Batcher
         Entry.Layout.Frame     = Appearance.GetSource();
         Entry.Layout.Size      = Size;
         Entry.Layout.Color     = Tint;
-        Entry.Layout.Facing    = Enum::Cast(Appearance.GetFacing());
+        Entry.Layout.Facing    = Appearance.GetFacingID();
         Entry.Material         = AddressOf(* Appearance.GetMaterial());
         Entry.Technique        = AddressOf(Technique);
         Entry.Variant          = mVariant;
 
         const Real32                    Order = Transform.GetColumn(2).GetW();
-        const Render::Collector::Object Object(Enum::Cast(Batch::Sprite), mCommands.GetSize() - 1);
-        mCollector.Push(Object, mPriority, Order,
-            static_cast<UInt16>(mVariant), mTechnique->GetHandle(), Entry.Material->GetHandle());
+        const Render::Collector::Object Object(mKind, mCommands.GetSize() - 1);
+        mCollector.Push(Object, mPriority, Order, mVariant, mTechnique->GetHandle(), Entry.Material->GetHandle());
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -84,7 +71,12 @@ namespace Tileon::Batcher
         // Every draw call in this batch shares the same technique and material.
         ConstRef<Command> First = mCommands[Commands.GetFront().Entry.Slot];
 
-        const Graphic::Transient<Layout> Instances = Gather<Layout, Command>(* mService, mCommands, Commands);
+        Graphic::Transient<Layout> Instances = mService->AllocateInFlightVertices<Layout>(Commands.GetSize());
+
+        for (UInt32 Element = 0; Element < Commands.GetSize(); ++Element)
+        {
+            Instances[Element] = mCommands[Commands[Element].Entry.Slot].Layout;
+        }
 
         const Graphic::Invocation Invocation {
             .Count     = 4,

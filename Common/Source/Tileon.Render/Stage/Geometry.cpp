@@ -24,28 +24,48 @@ namespace Tileon::Stage
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    static Vector3 Measure(Ref<Appearance> Appearance, Real32 Density, Bool Grounded)
+    static Vector3 Measure(ConstRef<Appearance> Appearance, Real32 Density)
     {
-        const Rect    Source     = Appearance.GetSource();
-        const Vector2 Resolution = Appearance.GetResolution();
+        const Vector2 Size = Appearance.GetSource().GetSize() * Appearance.GetResolution() / Density;
 
-        const Real32  Width      = Source.GetWidth()  * Resolution.GetX() / Density;
-        const Real32  Height     = Source.GetHeight() * Resolution.GetY() / Density;
-
-        // A decal's quad spans the local x and z axes, so its box has to lie the same way or the enclosure
-        // it drives would stand upright and pick nothing that the eye sees.
-        return Grounded ? Vector3(Width, 0.0f, Height) : Vector3(Width, Height, 0.0f);
+        switch (Appearance.GetPlane())
+        {
+        case Sprite::Plane::Ground:
+            return Vector3(Size.GetX(), 0.0f, Size.GetY());
+        case Sprite::Plane::Wall:
+            return Vector3(0.0f, Size.GetX(), Size.GetY());
+        default:
+            return Vector3(Size.GetX(), Size.GetY(), 0.0f);
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Geometry::Geometry(Ref<Engine::Subsystem::Host> Host, Real32 Density)
-        : Locator   { Host },
-          mDirector { nullptr },
-          mDensity  { Density },
-          mSprites  { Host.GetService<Graphic::Service>(), mCollector },
-          mGlyphs   { Host.GetService<Graphic::Service>(), mCollector }
+    static Vector2 Span(Vector3 Size, Sprite::Plane Plane)
+    {
+        switch (Plane)
+        {
+        case Sprite::Plane::Ground:
+            return Size.GetXZ();
+        case Sprite::Plane::Wall:
+            return Vector2(Size.GetY(), Size.GetZ());
+        default:
+            return Size.GetXY();
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    Geometry::Geometry(Ref<Engine::Subsystem::Host> Host, Ref<Splatset> Splatset, Real32 Density)
+        : Locator    { Host },
+          mSplatset  { Splatset },
+          mDensity   { Density },
+          mDirector  { nullptr },
+          mSprites   { Host.GetService<Graphic::Service>(), mCollector, Enum::Cast(Order::Sprite) },
+          mGlyphs    { Host.GetService<Graphic::Service>(), mCollector, Enum::Cast(Order::Glyph) },
+          mSplatter  { Host.GetService<Graphic::Service>(), Splatset, Density }
     {
         OnRegister(* Host.GetService<Scene::Service>());
         OnLoad(* Host.GetService<Content::Service>());
@@ -58,24 +78,20 @@ namespace Tileon::Stage
     {
         ZY_PROFILE_SCOPE("Stage::Geometry::Run");
 
-        const IntVector3 Origin  = IntVector3::FromXZ(
-            IntVector2(mDirector->GetPosition().GetBaseX(),
-                       mDirector->GetPosition().GetBaseY()));
+        const IntVector3 Origin = mDirector->GetOrigin();
 
-        // Opaque entities go down next, so the ground behind them is rejected by depth rather than shaded twice.
         mCollector.Begin(Render::Collector::Priority::Opaque);
-
         {
             ZY_PROFILE_SCOPE("Stage::Geometry::Opaque");
 
+            // -- Opaque Sprites --
             mSprites.Reset();
+            mSprites.SetPriority(Render::Collector::Priority::Opaque);
 
-            // Draw opaque sprite entities.
             mSprites.SetTechnique(
                 mTechniques[Enum::Cast(Kind::Sprite)],
-                mTechniques[Enum::Cast(Kind::Sprite)]->ResolveByName("Cutout"),
-                Render::Collector::Priority::Opaque);
-            mQrDrawOpaqueSprites.Run<>([&](
+                mTechniques[Enum::Cast(Kind::Sprite)]->ResolveByName("Cutout"));
+            mQrDrawOpaque.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
                 ConstRef<Enclosure>  Enclosure,
@@ -86,59 +102,46 @@ namespace Tileon::Stage
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
-                    mSprites.Draw(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
-                }
-            });
-
-            // Draw opaque decal entities.
-            mSprites.SetTechnique(
-                mTechniques[Enum::Cast(Kind::Decal)],
-                mTechniques[Enum::Cast(Kind::Decal)]->ResolveByName("Cutout"),
-                Render::Collector::Priority::Opaque);
-            mQrDrawOpaqueDecals.Run<>([&](
-                ConstRef<Transform>  Transform,
-                ConstRef<Extent>     Extent,
-                ConstRef<Enclosure>  Enclosure,
-                ConstRef<Appearance> Appearance,
-                ConstPtr<IntColor8>  Tint)
-            {
-                if (mDirector->IsVisible(Enclosure.GetVolume()))
-                {
-                    const Matrix4x3 Matrix = Transform.Rebase(Origin);
-
-                    mSprites.Draw(Appearance, Extent.GetSize().GetXZ(), Matrix, Tint ? (* Tint) : IntColor8::White());
-                }
-            });
-
-            // A decal marked Transparent feathers into what it is painted on instead of cutting out.
-            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Decal)], 0, Render::Collector::Priority::Opaque);
-            mQrDrawTransparentDecals.Run<>([&](
-                ConstRef<Transform>  Transform,
-                ConstRef<Extent>     Extent,
-                ConstRef<Enclosure>  Enclosure,
-                ConstRef<Appearance> Appearance,
-                ConstPtr<IntColor8>  Tint)
-            {
-                if (mDirector->IsVisible(Enclosure.GetVolume()))
-                {
-                    const Matrix4x3 Matrix = Transform.Rebase(Origin);
-
-                    mSprites.Draw(Appearance, Extent.GetSize().GetXZ(), Matrix, Tint ? (* Tint) : IntColor8::White());
+                    mSprites.Draw(
+                        Appearance,
+                        Span(Extent.GetSize(), Appearance.GetPlane()),
+                        Matrix,
+                        Tint ? (* Tint) : IntColor8::White());
                 }
             });
         }
         Drain(Encoder);
 
-        // Everything that blends comes last, drained back to front by the collector.
+        // -- Splatmap --
+        {
+            ZY_PROFILE_SCOPE("Stage::Geometry::Ground");
+
+            ConstRetainer<Graphic::Technique> Technique = mTechniques[Enum::Cast(Kind::Splat)];
+
+            const IntRect Frustum = mDirector->GetFrustum();
+
+            mQrDrawRegions.Run<>([&](ConstRef<Region> Region, Ref<Splatmap> Splat)
+            {
+                const SInt32 RegionX = Region.GetX() * Region::kUnitsPerX;
+                const SInt32 RegionY = Region.GetY() * Region::kUnitsPerY;
+
+                const IntRect Boundaries(RegionX, RegionY, RegionX + Region::kUnitsPerX, RegionY + Region::kUnitsPerY);
+                mSplatter.Record(Region, Splat, !IntRect::Intersection(Boundaries, Frustum).IsAlmostZero());
+            });
+            mSplatter.Draw(Encoder, Technique, Technique->ResolveByName("Dither"), Origin);
+        }
+
+        // -- Transparent --
         mCollector.Begin(Render::Collector::Priority::Transparent);
         {
             ZY_PROFILE_SCOPE("Stage::Geometry::Transparent");
 
+            // -- Sprites --
             mSprites.Reset();
+            mSprites.SetPriority(Render::Collector::Priority::Transparent);
+            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite)], 0);
 
-            // Draw transparent sprite entities, each lit by the normal map its own material carries.
-            mSprites.SetTechnique(mTechniques[Enum::Cast(Kind::Sprite)], 0, Render::Collector::Priority::Transparent);
-            mQrDrawTransparentSprites.Run<>([&](
+            mQrDrawTransparent.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Extent>     Extent,
                 ConstRef<Enclosure>  Enclosure,
@@ -149,31 +152,35 @@ namespace Tileon::Stage
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
-                    mSprites.Draw(Appearance, Extent.GetSize().GetXY(), Matrix, Tint ? (* Tint) : IntColor8::White());
+                    mSprites.Draw(
+                        Appearance,
+                        Span(Extent.GetSize(), Appearance.GetPlane()),
+                        Matrix,
+                        Tint ? (* Tint) : IntColor8::White());
                 }
             });
 
+            // -- Glyphs --
             mGlyphs.Reset();
-
-            // Draw text entities.
             mGlyphs.SetTechnique(mTechniques[Enum::Cast(Kind::Text)]);
+
             mQrDrawTexts.Run<>([&](
                 ConstRef<Transform>  Transform,
                 ConstRef<Enclosure>  Enclosure,
-                ConstRef<Lettering>  Lettering,
+                ConstRef<Typeface>   Face,
                 ConstRef<Label>      Label,
                 ConstPtr<IntColor8>  Tint,
-                ConstPtr<Decoration> Decoration)
+                ConstPtr<Contour>    Effect)
             {
                 if (mDirector->IsVisible(Enclosure.GetVolume()))
                 {
                     const Matrix4x3 Matrix = Transform.Rebase(Origin);
 
                     mGlyphs.Draw(
-                        Lettering,
+                        Face,
                         Label,
                         Matrix,
-                        Decoration ? * Decoration : Tileon::Decoration(),
+                        Effect ? * Effect : Contour(),
                         Tint ? (* Tint) : IntColor8::White());
                 }
             });
@@ -194,12 +201,12 @@ namespace Tileon::Stage
         // Sprites and text share the queue, so one sorted drain hands each batch back to whichever recorded it.
         mCollector.Poll([&](UInt32 Kind, ConstSpan<Render::Collector::Command> Commands)
         {
-            switch (static_cast<Batcher::Batch>(Kind))
+            switch (static_cast<Order>(Kind))
             {
-            case Batcher::Batch::Sprite:
+            case Order::Sprite:
                 mSprites.Write(Encoder, Commands);
                 break;
-            case Batcher::Batch::Glyph:
+            case Order::Glyph:
                 mGlyphs.Write(Encoder, Commands);
                 break;
             }
@@ -213,43 +220,36 @@ namespace Tileon::Stage
     {
         Scene.Register(
             Scene::DSL::Declare<Animator, Appearance>(),
+            Scene::DSL::Declare<Splatmap>(Scene::DSL::Serializable),
             Scene::DSL::Declare<IntColor8>("Tint", Scene::DSL::Authored),
             Scene::DSL::Declare<Transparent>(Scene::DSL::Authored),
-            Scene::DSL::Declare<Decal>(Scene::DSL::Authored),
-            Scene::DSL::Declare<Animation, Decoration, Label, Lettering, Sprite>(Scene::DSL::Authored));
+            Scene::DSL::Declare<Animation, Contour, Label, Typeface, Sprite>(Scene::DSL::Authored));
 
         // Observe when a lettering component is attached, and automatically provide the label it sets the text of.
-        Scene.CreateObserver<Scene::DSL::With<Lettering>>(
-            "Render::Geometry::ObsAttachLabelWithLettering",
+        Scene.CreateObserver<Scene::DSL::With<Typeface>>(
+            "Render::Geometry::ObsAttachLabelWithTypeface",
             EcsOnAdd,
             [](Scene::Entity Actor)
             {
                 Actor.Emplace<Label>();
             });
 
-        // A decal's quad spans a different pair of axes than a sprite's, so the box has to be measured again
-        // when the tag arrives on art that was already resolved.
-        Scene.CreateObserver<Scene::DSL::With<Decal>>(
-            "Render::Geometry::ObsRemeasureOnDecalAttach",
-            EcsOnAdd,
-            [this](Scene::Entity Actor)
+        // A region that streams out takes its splat with it, so the slice it held is given back.
+        Scene.CreateObserver<>(
+            "Render::Geometry::ObsReleaseSplatmap",
+            EcsOnRemove,
+            [this](Scene::Entity Actor, Ref<Splatmap> Splat)
             {
-                if (Ptr<Appearance> Visual = Actor.TryGet<Appearance>())
-                {
-                    Actor.Set(Extent(Vector3::Zero(), Measure(* Visual, mDensity, true)));
-                }
+                mSplatter.Release(Splat);
             });
 
-        // The same holds in reverse, so art that stops being a decal stands its box back up.
-        Scene.CreateObserver<Scene::DSL::With<Decal>>(
-            "Render::Geometry::ObsRemeasureOnDecalDetach",
-            EcsOnRemove,
-            [this](Scene::Entity Actor)
+        // Observe changes to the region component to invalidate its ground.
+        Scene.CreateObserver<>(
+            "Render::Geometry::ObsInvalidateSplatmap",
+            EcsOnSet,
+            [](Scene::Entity Actor, Ref<Splatmap> Splat)
             {
-                if (Ptr<Appearance> Visual = Actor.TryGet<Appearance>())
-                {
-                    Actor.Set(Extent(Vector3::Zero(), Measure(* Visual, mDensity, false)));
-                }
+                Splat.Invalidate();
             });
 
         // Observe changes to the sprite component to resolve material resources and trigger updates when necessary.
@@ -281,21 +281,27 @@ namespace Tileon::Stage
 
                         if (Material->HasCompleted())
                         {
-                            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(TextureID::Albedo)))
+                            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(Texture::Albedo)))
                             {
                                 Resolution = Vector2(Albedo->GetWidth(), Albedo->GetHeight());
                             }
                         }
 
-                        Appearance Appearance(Material, Component.GetSource(), Resolution, Component.GetFacing());
+                        Appearance Appearance(
+                            Material,
+                            Component.GetSource(),
+                            Resolution,
+                            Component.GetFacing(),
+                            Component.GetPlane());
 
-                        Actor.Set(Extent(Vector3::Zero(), Measure(Appearance, mDensity, Actor.Has<Decal>())));
+                        Actor.Set(Extent(Vector3::Zero(), Measure(Appearance, mDensity)));
                         Actor.Set(Move(Appearance));
                     }
                 }
             }, Scene::DSL::Opt(EcsPrefab));
 
         // Observe when an animation component is attached, and automatically initialize the animator for playback.
+        // TODO: See if this should be like this
         Scene.CreateObserver<>(
             "Render::Geometry::ObsUpdateAnimatorOnAnimationUpdate",
             EcsOnSet,
@@ -305,10 +311,10 @@ namespace Tileon::Stage
             });
 
         // Observe changes to the lettering component to resolve font resources and trigger updates when necessary.
-        Scene.CreateObserver<Scene::DSL::InOut<Lettering>>(
-            "Render::Geometry::ObsUpdateLetteringAsync",
+        Scene.CreateObserver<Scene::DSL::InOut<Typeface>>(
+            "Render::Geometry::ObsUpdateTypefaceAsync",
             EcsOnSet,
-            [this](Scene::Entity Actor, Ref<Lettering> Component)
+            [this](Scene::Entity Actor, Ref<Typeface> Component)
             {
                 Ref<Content::Service> Content = GetService<Content::Service>();
                 Component.OnResolve(Content);
@@ -319,7 +325,7 @@ namespace Tileon::Stage
                     {
                         Content.Unsubscribe(Resource.GetKey());
 
-                        Actor.Notify<Lettering>();
+                        Actor.Notify<Typeface>();
                     };
                     Content.Subscribe(Font->GetKey(), Move(Callback));
                 }
@@ -329,12 +335,12 @@ namespace Tileon::Stage
         Scene.CreateObserver<>(
             "Render::Geometry::ObsUpdateTextBoundaries",
             EcsOnSet,
-            [](Scene::Entity Actor, ConstRef<Lettering> Lettering, ConstRef<Label> Label)
+            [](Scene::Entity Actor, ConstRef<Typeface> Face, ConstRef<Label> Label)
             {
-                if (ConstRetainer<::Render::Font> Font = Lettering.GetFont(); Font && Font->HasFinished())
+                if (ConstRetainer<::Render::Font> Font = Face.GetFont(); Font && Font->HasFinished())
                 {
                     const Pivot2D Pivot   = Label.GetPivot();
-                    const Rect    AABB    = Font->Enclose(Label.GetContent(), Lettering.GetSize(), Label.GetSpacing());
+                    const Rect    AABB    = Font->Enclose(Label.GetContent(), Face.GetSize(), Label.GetSpacing());
                     const Vector2 Measure = AABB.GetSize();
 
                     Actor.Set(Extent(Vector3::FromXY(AABB.GetPosition()), Vector3::FromXY(Measure)));
@@ -347,7 +353,7 @@ namespace Tileon::Stage
             "Render::Geometry::ComputeAnimation",
             EcsOnUpdate,
             Scene::Execution::Default,
-            [this](Scene::Entity           Actor,
+            [this](Scene::Entity          Actor,
                    ConstRef<Scene::Clock> Clock,
                    ConstRef<Animation>    Animation,
                    Ref<Animator>          Animator,
@@ -365,33 +371,27 @@ namespace Tileon::Stage
                 {
                     Appearance.SetSource(Source);
 
-                    Extent.SetSize(Measure(Appearance, mDensity, Actor.Has<Decal>()));
+                    Extent.SetSize(Measure(Appearance, mDensity));
                 }
             });
 
-        mQrDrawOpaqueSprites = Scene.CreateQuery<
+        mQrDrawOpaque = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
-            Scene::DSL::Not<Transparent>, Scene::DSL::Not<Decal>
-        >("Render::Geometry::DrawOpaqueSprites", Scene::Cache::Auto);
+            Scene::DSL::Not<Transparent>
+        >("Render::Geometry::DrawOpaque", Scene::Cache::Auto);
 
-        mQrDrawTransparentSprites = Scene.CreateQuery<
+        mQrDrawTransparent = Scene.CreateQuery<
             Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
-            Scene::DSL::With<Transparent>, Scene::DSL::Not<Decal>
-        >("Render::Geometry::DrawTransparentSprites", Scene::Cache::Auto);
-
-        mQrDrawOpaqueDecals = Scene.CreateQuery<
-            Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
-            Scene::DSL::With<Decal>, Scene::DSL::Not<Transparent>
-        >("Render::Geometry::DrawOpaqueDecals", Scene::Cache::Auto);
-
-        mQrDrawTransparentDecals = Scene.CreateQuery<
-            Scene::DSL::In<const Transform, const Extent, const Enclosure, const Appearance, ConstPtr<IntColor8>>,
-            Scene::DSL::With<Decal>, Scene::DSL::With<Transparent>
-        >("Render::Geometry::DrawTransparentDecals", Scene::Cache::Auto);
+            Scene::DSL::With<Transparent>
+        >("Render::Geometry::DrawTransparent", Scene::Cache::Auto);
 
         mQrDrawTexts = Scene.CreateQuery<
-            Scene::DSL::In<const Transform, const Enclosure, const Lettering, const Label, ConstPtr<IntColor8>, ConstPtr<Decoration>>
+            Scene::DSL::In<const Transform, const Enclosure, const Typeface, const Label, ConstPtr<IntColor8>, ConstPtr<Contour>>
         >("Render::Geometry::DrawTexts", Scene::Cache::Auto);
+
+        mQrDrawRegions = Scene.CreateQuery<
+            Scene::DSL::In<Region>, Scene::DSL::InOut<Splatmap>
+        >("Render::Geometry::DrawRegions", Scene::Cache::Auto);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
