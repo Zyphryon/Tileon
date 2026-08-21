@@ -11,7 +11,6 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Splatter.hpp"
-
 #include "Tileon.Render/Types.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -91,19 +90,19 @@ namespace Tileon
             ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(Texture::Albedo));
             const Real32 Scale = (Albedo && Albedo->GetWidth() > 0) ? mDensity / Albedo->GetWidth() : 1.0f;
 
-            UInt32 Drawn = 0;
-
             // One draw binds one array, so the ground goes down a page store at a time.
             for (UInt32 Bank = 0; Bank < mTextures.GetSize(); ++Bank)
             {
                 Graphic::Transient<Layout> Instances = mService->AllocateInFlightVertices<Layout>(mRegions.GetSize());
+
+                UInt32 Drawn = 0;
 
                 for (ConstRef<Entry> Item : mRegions)
                 {
                     ConstRef<Splatmap> Splat = * Item.Splat;
                     const UInt16       Page  = Splat.GetPage();
 
-                    if (!Item.Drawable || Page == Splatmap::kUnassigned || Page / kPagesPerArray != Bank)
+                    if (!Item.Drawable || Page == Splatmap::kUnassigned || Page / kPage != Bank)
                     {
                         continue;
                     }
@@ -113,7 +112,7 @@ namespace Tileon
 
                     Ref<Layout> Instance = Instances[Drawn++];
                     Instance.Origin  = IntVector2(RegionX - Origin.GetX(), RegionY - Origin.GetZ());
-                    Instance.Weights = Page % kPagesPerArray;
+                    Instance.Weights = Page % kPage;
 
                     for (UInt8 Slot = 0; Slot < Splatmap::kSlots; ++Slot)
                     {
@@ -159,9 +158,22 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    void Splatter::Release(Ref<Splatmap> Splat)
+    {
+        if (Splat.GetPage() != Splatmap::kUnassigned)
+        {
+            mAvailable.Append(Splat.GetPage());
+
+            Splat.Release();
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void Splatter::Allocate()
     {
-        const UInt16 Base = static_cast<UInt16>(mTextures.GetSize() * kPagesPerArray);
+        const UInt16 Base = static_cast<UInt16>(mTextures.GetSize() * kPage);
 
         mTextures.Append(mService->CreateTexture(
             Graphic::TextureLayout::Texture2DArray,
@@ -170,12 +182,12 @@ namespace Tileon
             Graphic::Usage::Sample,
             kMapSize,
             kMapSize,
-            kPagesPerArray,
+            kPage,
             1,
             Graphic::Multisample::X1,
             Blob()));
 
-        for (UInt16 Page = kPagesPerArray; Page > 0; --Page)
+        for (UInt16 Page = kPage; Page > 0; --Page)
         {
             mAvailable.Append(Base + Page - 1);
         }
@@ -235,14 +247,14 @@ namespace Tileon
 
         for (UInt16 Row = 0; Row < kMapSize; ++Row)
         {
-            const SInt32     EdgeY = Clamp(Row - kBorder, 0, Region::kUnitsPerY - 1);
+            const SInt32     EdgeY = Clamp(Row - kMapBorder, 0, Region::kUnitsPerY - 1);
             const Ptr<UInt8> Line  = Texels + Row * kLinePitch;
-            const Ptr<UInt8> First = Line + kBorder * Splatmap::kSlots;
-            const Ptr<UInt8> Last  = Line + (kMapSize - kBorder - 1) * Splatmap::kSlots;
+            const Ptr<UInt8> First = Line + kMapBorder * Splatmap::kSlots;
+            const Ptr<UInt8> Last  = Line + (kMapSize - kMapBorder - 1) * Splatmap::kSlots;
 
             Blit(First, kUnitPitch, Weights + EdgeY * kUnitPitch);
 
-            for (UInt16 Column = 0; Column < kBorder; ++Column)
+            for (UInt16 Column = 0; Column < kMapBorder; ++Column)
             {
                 Blit(First - (Column + 1) * Splatmap::kSlots, Splatmap::kSlots, First);
                 Blit(Last  + (Column + 1) * Splatmap::kSlots, Splatmap::kSlots, Last);
@@ -292,13 +304,13 @@ namespace Tileon
 
         for (SInt32 Row = 0; Row < kMapSize; ++Row)
         {
-            const SInt32 UnitY = Row - kBorder;
+            const SInt32 UnitY = Row - kMapBorder;
             const SInt32 EdgeY = Clamp(UnitY, 0, Region::kUnitsPerY - 1);
             const SInt32 StepY = (UnitY < 0 ? -1 : (UnitY < Region::kUnitsPerY ? 0 : 1));
 
             for (SInt32 Column = 0; Column < kMapSize; ++Column)
             {
-                const SInt32 UnitX = Column - kBorder;
+                const SInt32 UnitX = Column - kMapBorder;
                 const SInt32 StepX = (UnitX < 0 ? -1 : (UnitX < Region::kUnitsPerX ? 0 : 1));
 
                 // The interior is this region's own ground, already copied over, and borrows nothing.
@@ -350,9 +362,9 @@ namespace Tileon
         const UInt16 Page = Splat.GetPage();
 
         mService->UpdateTexture(
-            mTextures[Page / kPagesPerArray],
+            mTextures[Page / kPage],
             0,
-            Page % kPagesPerArray,
+            Page % kPage,
             0,
             0,
             kMapSize,

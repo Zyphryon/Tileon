@@ -34,7 +34,7 @@ struct fs_Input
     float3 AxisX      : TEXCOORD1;
     float3 AxisY      : TEXCOORD2;
 #endif
-    float3 AxisZ      : TEXCOORD3;
+    float3 AxisZ      : TEXCOORD3;   // the face the art turns towards, pointing out of it
 };
 
 struct fs_Output
@@ -112,7 +112,7 @@ fs_Input main(vs_Input Input)
     Result.AxisY = normalize(AxisV);
 #endif
 
-    Result.AxisZ = -normalize(Facing);
+    Result.AxisZ = normalize(Facing);
 
     return Result;
 }
@@ -145,10 +145,14 @@ fs_Output main(fs_Input Input)
 
     Result.Albedo = Input.Color * Texel;
 
+#ifdef ENABLE_ALPHA_TEST
+    Result.Albedo.a = 1.0;
+#endif
+
 #ifdef ENABLE_NORMAL_MAPPING
     float4 Sampled = t_Normal.Sample(s_Normal, Input.Texture);
     float3 Tangent = normalize(Sampled.rgb * 2.0 - 1.0);
-    float3 Normal  = normalize(Tangent.x * Input.AxisX + Tangent.y * Input.AxisY - Tangent.z * Input.AxisZ);
+    float3 Normal  = normalize(Tangent.x * Input.AxisX + Tangent.y * Input.AxisY + Tangent.z * Input.AxisZ);
 
     #if   defined(ENABLE_TRANSLUCENCY)
         const float Opacity = Sampled.a;
@@ -167,7 +171,7 @@ fs_Output main(fs_Input Input)
         const float Opacity = Result.Albedo.a;
     #endif
 
-    Result.Normal = float4(-Input.AxisZ * 0.5 + 0.5, Opacity);
+    Result.Normal = float4(Input.AxisZ * 0.5 + 0.5, Opacity);
 #endif
 
     return Result;

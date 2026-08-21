@@ -92,7 +92,7 @@ void main()
     v_AxisY = normalize(AxisV);
 #endif
 
-    v_AxisZ = -normalize(Facing);
+    v_AxisZ = normalize(Facing);
 }
 
 #endif // VERTEX_SHADER
@@ -134,26 +134,33 @@ void main()
 
     out_Albedo = v_Color * Texel;
 
+#ifdef ENABLE_ALPHA_TEST
+    out_Albedo.a = 1.0;
+#endif
+
 #ifdef ENABLE_NORMAL_MAPPING
     vec4 Sampled = texture(t_Normal, v_Texture);
     vec3 Tangent = normalize(Sampled.rgb * 2.0 - 1.0);
-    vec3 Normal  = normalize(Tangent.x * v_AxisX + Tangent.y * v_AxisY - Tangent.z * v_AxisZ);
-#if defined(ENABLE_TRANSLUCENCY)
-    float Opacity = Sampled.a;
-#elif defined(ENABLE_ALPHA_TEST)
-    float Opacity = 1.0;
-#else
-    float Opacity = out_Albedo.a;
-#endif
+    vec3 Normal  = normalize(Tangent.x * v_AxisX + Tangent.y * v_AxisY + Tangent.z * v_AxisZ);
+
+    #if defined(ENABLE_TRANSLUCENCY)
+        float Opacity = Sampled.a;
+    #elif defined(ENABLE_ALPHA_TEST)
+        float Opacity = 1.0;
+    #else
+        float Opacity = out_Albedo.a;
+    #endif
 
     out_Normal = vec4(Normal * 0.5 + 0.5, Opacity);
 #else
-#if defined(ENABLE_ALPHA_TEST)
-    float Opacity = 1.0;
-#else
-    float Opacity = out_Albedo.a;
-#endif
-    out_Normal = vec4(-v_AxisZ * 0.5 + 0.5, Opacity);
+
+    #if defined(ENABLE_ALPHA_TEST)
+        float Opacity = 1.0;
+    #else
+        float Opacity = out_Albedo.a;
+    #endif
+
+    out_Normal = vec4(v_AxisZ * 0.5 + 0.5, Opacity);
 #endif
 }
 

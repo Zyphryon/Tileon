@@ -70,16 +70,16 @@ fs_Input main(vs_Input Input)
     const float2 Corner = TessellateRect(Input.VertexID);
     const float2 Unit   = float2(Input.Origin) + Corner * SPLAT_UNITS_PER_REGION;
 
-    Result.Position   = mul(u_Camera, float4(Unit.x, 0.0, Unit.y, 1.0));
-    Result.Ground     = Corner;
-    Result.Weights    = Input.Weights;
-    Result.Palette    = Input.Palette;
-    Result.Mapping    = Input.Mapping;
-    Result.Phase[0]   = Input.Phase0;
-    Result.Phase[1]   = Input.Phase1;
-    Result.Phase[2]   = Input.Phase2;
-    Result.Phase[3]   = Input.Phase3;
-    Result.Tint       = Input.Tint;
+    Result.Position = mul(u_Camera, float4(Unit.x, 0.0, Unit.y, 1.0));
+    Result.Ground   = Corner;
+    Result.Weights  = Input.Weights;
+    Result.Palette  = Input.Palette;
+    Result.Mapping  = Input.Mapping;
+    Result.Phase[0] = Input.Phase0;
+    Result.Phase[1] = Input.Phase1;
+    Result.Phase[2] = Input.Phase2;
+    Result.Phase[3] = Input.Phase3;
+    Result.Tint     = Input.Tint;
 
     return Result;
 }
@@ -129,10 +129,7 @@ fs_Output main(fs_Input Input)
     for (uint Slot = 0; Slot < 4; ++Slot)
     {
         Texture[Slot] = Input.Phase[Slot] + Input.Ground * SPLAT_UNITS_PER_REGION * Input.Mapping[Slot];
-
-        Source[Slot] = (Weight[Slot] > SPLAT_WEIGHT_FLOOR)
-            ? t_Albedo.Sample(s_Albedo, float3(Texture[Slot], Input.Palette[Slot]))
-            : float4(0.0, 0.0, 0.0, 0.0);
+        Source[Slot]  = t_Albedo.Sample(s_Albedo, float3(Texture[Slot], Input.Palette[Slot]));
     }
 
     float4 Albedo = float4(0.0, 0.0, 0.0, 0.0);
@@ -141,21 +138,17 @@ fs_Output main(fs_Input Input)
     [unroll]
     for (uint Layer = 0; Layer < 4; ++Layer)
     {
-        if (Weight[Layer] > SPLAT_WEIGHT_FLOOR)
-        {
-            Albedo += Source[Layer] * UnpackTint(Input.Tint[Layer]) * Weight[Layer];
+        Albedo += Source[Layer] * UnpackTint(Input.Tint[Layer]) * Weight[Layer];
 
 #ifdef ENABLE_NORMAL_MAPPING
-            // Every slice carries relief, flat where nobody authored any, so the sample needs no guard.
-            const float3 Tangent
-                = t_Normal.Sample(s_Normal, float3(Texture[Layer], Input.Palette[Layer])).xyz * 2.0 - 1.0;
+        const float3 Tangent
+            = t_Normal.Sample(s_Normal, float3(Texture[Layer], Input.Palette[Layer])).xyz * 2.0 - 1.0;
 
-            Normal += Tangent * Weight[Layer];
+        Normal += Tangent * Weight[Layer];
 #endif
-        }
     }
 
-    Result.Albedo = Albedo;
+    Result.Albedo = float4(Albedo.rgb, 1.0);
 
 #ifdef ENABLE_NORMAL_MAPPING
     // The ground faces up, so tangent Z is world up and the other two lie along the plane.

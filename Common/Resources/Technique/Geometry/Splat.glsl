@@ -49,15 +49,15 @@ void main()
 
     gl_Position = u_Camera * vec4(Tile.x, 0.0, Tile.y, 1.0);
 
-    v_Ground  = Corner;
-    v_Weights = a_Weights;
-    v_Palette = a_Palette;
-    v_Mapping    = a_Mapping;
-    v_Phase[0]   = a_Phase0;
-    v_Phase[1]   = a_Phase1;
-    v_Phase[2]   = a_Phase2;
-    v_Phase[3]   = a_Phase3;
-    v_Tint       = a_Tint;
+    v_Ground   = Corner;
+    v_Weights  = a_Weights;
+    v_Palette  = a_Palette;
+    v_Mapping  = a_Mapping;
+    v_Phase[0] = a_Phase0;
+    v_Phase[1] = a_Phase1;
+    v_Phase[2] = a_Phase2;
+    v_Phase[3] = a_Phase3;
+    v_Tint     = a_Tint;
 }
 
 #endif // VERTEX_SHADER
@@ -113,10 +113,7 @@ void main()
     for (int Slot = 0; Slot < 4; ++Slot)
     {
         Texture[Slot] = v_Phase[Slot] + v_Ground * SPLAT_UNITS_PER_REGION * v_Mapping[Slot];
-
-        Source[Slot] = (Weight[Slot] > SPLAT_WEIGHT_FLOOR)
-            ? texture(t_Albedo, vec3(Texture[Slot], float(v_Palette[Slot])))
-            : vec4(0.0);
+        Source[Slot]  = texture(t_Albedo, vec3(Texture[Slot], float(v_Palette[Slot])));
     }
 
     vec4 Albedo = vec4(0.0);
@@ -124,20 +121,16 @@ void main()
 
     for (int Slot = 0; Slot < 4; ++Slot)
     {
-        if (Weight[Slot] > SPLAT_WEIGHT_FLOOR)
-        {
-            Albedo += Source[Slot] * UnpackTint(v_Tint[Slot]) * Weight[Slot];
+        Albedo += Source[Slot] * UnpackTint(v_Tint[Slot]) * Weight[Slot];
 
 #ifdef ENABLE_NORMAL_MAPPING
-            // Every slice carries relief, flat where nobody authored any, so the sample needs no guard.
-            vec3 Tangent = texture(t_Normal, vec3(Texture[Slot], float(v_Palette[Slot]))).xyz * 2.0 - 1.0;
+        vec3 Tangent = texture(t_Normal, vec3(Texture[Slot], float(v_Palette[Slot]))).xyz * 2.0 - 1.0;
 
-            Normal += Tangent * Weight[Slot];
+        Normal += Tangent * Weight[Slot];
 #endif
-        }
     }
 
-    out_Albedo = Albedo;
+    out_Albedo = vec4(Albedo.rgb, 1.0);
 
 #ifdef ENABLE_NORMAL_MAPPING
     // The ground faces up, so tangent Z is world up and the other two lie along the plane.

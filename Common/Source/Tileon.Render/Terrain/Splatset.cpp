@@ -11,6 +11,7 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 #include "Splatset.hpp"
+#include "Tileon.Render/Types.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -22,11 +23,10 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Splatset::Splatset(Ref<Engine::Subsystem::Host> Host)
-        : Locator { Host },
-          mLoaded { false },
-          mSeeded { false }
+        : Locator   { Host },
+          mLoaded   { false },
+          mSeeded   { false }
     {
-
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -40,7 +40,17 @@ namespace Tileon
         {
             GetService<Job::Service>().Dispatch(Job::Lane::Main, [this, Result, Data = Move(Data)] mutable
             {
-                LoadDatabase(Result, Move(Data));
+                if (Result == Filesystem::Result::Success)
+                {
+                    Reader Input(Data.GetData(), Data.GetSize());
+                    Serialize(Archive(Input));
+                }
+                else
+                {
+                    LOG_W("Failed to load splatset from '{0}'", kFilename);
+                }
+
+                mLoaded = true;
             });
         });
 
@@ -54,9 +64,8 @@ namespace Tileon
     {
         Reconcile();
 
-        Writer  Output;
-        Archive Archive(Output);
-        Archive.Serialize(mRegistry);
+        Writer Output;
+        Serialize(Archive(Output));
 
         GetService<Content::Service>().Write(kFilename, Output.Detach(), { });
     }
@@ -68,12 +77,15 @@ namespace Tileon
     {
         Reconcile();
 
-        const UInt16 Slot = mRegistry.GetTop() + 1;
+        if (mRegistry.IsFull())
+        {
+            LOG_W("Splatset: '{0}' already holds the {1} terrains a project may author", kFilename, kLimit);
 
-        mRegistry.Acquire(Slot);
-        mRegistry[mRegistry.GetKey(Slot)].Name = Name;
+            return kInvalid;
+        }
 
-        return static_cast<UInt16>(Slot - 1);
+        mRegistry.Append().Name = Name;
+        return static_cast<UInt16>(mRegistry.GetSize() - 1);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -83,9 +95,9 @@ namespace Tileon
     {
         Reconcile();
 
-        if (const UInt16 Slot = Slice + 1; mRegistry.IsOccupied(Slot))
+        if (Slice < mRegistry.GetSize())
         {
-            mRegistry.Release(Slot);
+            mRegistry[Slice].Retired = true;
         }
     }
 
@@ -96,7 +108,7 @@ namespace Tileon
     {
         Reconcile();
 
-        return mRegistry[mRegistry.GetKey(Slice + 1)];
+        return mRegistry[Slice];
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -109,58 +121,16 @@ namespace Tileon
             return;
         }
 
-        const Retainer<Graphic::Image> Albedo = mMaterial->GetImage("Albedo"_Hash);
+        const Retainer<Graphic::Image> Albedo = mMaterial->GetImage(GetTextureID(Texture::Albedo));
 
         if (Albedo && Albedo->HasCompleted())
         {
             mSeeded = true;
 
-            for (UInt16 Slot = 1; Slot <= Min(Albedo->GetLayers(), kLimit); ++Slot)
+            for (UInt Slice = mRegistry.GetSize(); Slice < Min(Albedo->GetLayers(), kLimit); ++Slice)
             {
-                if (!mRegistry.IsOccupied(Slot))
-                {
-                    mRegistry.Acquire(Slot);
-                }
+                mRegistry.Append();
             }
         }
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Splatset::LoadDatabase(Filesystem::Result Result, AnyRef<Blob> Data)
-    {
-        if (Result == Filesystem::Result::Success)
-        {
-            Reader  Input(Data.GetData(), Data.GetSize());
-            Archive Archive(Input);
-            Archive.Serialize(mRegistry);
-
-            // A splatset written before terrains dressed themselves reads its new fields back as zeroes,
-            // and a terrain that repeats zero times would stretch one texel over the world.
-            for (UInt16 Slot = 1; Slot <= mRegistry.GetTop(); ++Slot)
-            {
-                if (mRegistry.IsOccupied(Slot))
-                {
-                    Ref<Terrain> Terrain = mRegistry[mRegistry.GetKey(Slot)];
-
-                    if (Terrain.Tiling <= 0.0f)
-                    {
-                        Terrain.Tiling = 1.0f;
-                    }
-
-                    if (Terrain.Tint.GetAlpha() == 0)
-                    {
-                        Terrain.Tint = IntColor8::White();
-                    }
-                }
-            }
-        }
-        else
-        {
-            LOG_W("Failed to load splatset from '{0}'", kFilename);
-        }
-
-        mLoaded = true;
     }
 }

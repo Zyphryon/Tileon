@@ -27,11 +27,6 @@ namespace Tileon
     {
     public:
 
-        /// \brief The number of region weight maps one array holds, and therefore what one draw reaches.
-        static constexpr UInt16 kPagesPerArray = 256;
-
-    public:
-
         /// \brief Constructs a splatter drawing the specified terrains.
         ///
         /// \param Service  The graphic service the weight array and instance stream are allocated from.
@@ -57,23 +52,18 @@ namespace Tileon
         /// \brief Takes back the page a region was lent, leaving it free for another to take.
         ///
         /// \param Splat The ground giving its page back.
-        ZY_INLINE void Release(Ref<Splatmap> Splat)
-        {
-            if (Splat.GetPage() != Splatmap::kUnassigned)
-            {
-                mAvailable.Append(Splat.GetPage());
-
-                Splat.Release();
-            }
-        }
+        void Release(Ref<Splatmap> Splat);
 
     private:
 
+        /// \brief The number of region weight maps one array holds, and therefore what one draw reaches.
+        static constexpr UInt16 kPage      = 256;
+
         /// \brief The ring of neighbouring weights every page carries, so a blend crosses a region boundary.
-        static constexpr UInt16 kBorder  = 1;
+        static constexpr UInt16 kMapBorder = 1;
 
         /// \brief The side of one region's page, in texels, gutter included.
-        static constexpr UInt16 kMapSize = Region::kUnitsPerX + 2 * kBorder;
+        static constexpr UInt16 kMapSize   = Region::kUnitsPerX + 2 * kMapBorder;
 
         /// \brief Represents the per-instance data for one region's ground.
         struct Layout final

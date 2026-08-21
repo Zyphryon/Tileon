@@ -59,14 +59,13 @@ namespace Tileon
 
     void World::OnRegister(Ref<Scene::Service> Scene)
     {
-        Scene.Register(
-            Scene::DSL::Declare<Persist, Dispose, Stale, Dynamic, Unpickable>(),
-            Scene::DSL::Declare<Enclosure, Transform>(),
-            Scene::DSL::Declare<Region>(Scene::DSL::Serializable),
-            Scene::DSL::Declare<Anchor>(Scene::DSL::Authored),
-            Scene::DSL::Declare<Extent>(Scene::DSL::Implies<Enclosure>),
-            Scene::DSL::Declare<Pose>(Scene::DSL::Authored, Scene::DSL::Implies<Transform, Extent>),
-            Scene::DSL::Declare<Velocity>(Scene::DSL::Authored, Scene::DSL::Implies<Dynamic>));
+        Scene.Register(Scene::DSL::Declare<Persist, Dispose, Stale, Dynamic, Unpickable>());
+        Scene.Register(Scene::DSL::Declare<Enclosure, Transform>());
+        Scene.Register(Scene::DSL::Declare<Region>(Scene::DSL::Serializable));
+        Scene.Register(Scene::DSL::Declare<Anchor>(Scene::DSL::Authored));
+        Scene.Register(Scene::DSL::Declare<Extent>(Scene::DSL::Implies<Enclosure>));
+        Scene.Register(Scene::DSL::Declare<Pose>(Scene::DSL::Authored, Scene::DSL::Implies<Transform, Extent>));
+        Scene.Register(Scene::DSL::Declare<Velocity>(Scene::DSL::Authored, Scene::DSL::Implies<Dynamic>));
 
         // Observe changes to the local transform and mark entities as stale if they are not kinetic.
         Scene.CreateObserver<Scene::DSL::With<Pose>, Scene::DSL::Not<Dynamic>>(

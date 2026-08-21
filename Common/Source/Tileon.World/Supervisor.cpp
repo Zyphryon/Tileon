@@ -193,7 +193,7 @@ namespace Tileon
             {
                 OnAsyncLoad(Result, Move(File), Handle, RegionX, RegionY, CreateIfMissing);
             };
-            GetService<Content::Service>().Read(Str::Print<kRegionFilename>(RegionX, RegionY), OnResult);
+            GetService<Content::Service>().Read(Str::Print<kFilename>(RegionX, RegionY), OnResult);
 
             return Actor;
         }
@@ -211,7 +211,7 @@ namespace Tileon
         Writer Output;
         GetService<Scene::Service>().SaveHierarchy(Output, Actor);
 
-        Str Filename = Str::Print<kRegionFilename>(Region.GetX(), Region.GetY());
+        Str Filename = Str::Print<kFilename>(Region.GetX(), Region.GetY());
         GetService<Content::Service>().Write(Move(Filename), Output.Detach(), { });
     }
 

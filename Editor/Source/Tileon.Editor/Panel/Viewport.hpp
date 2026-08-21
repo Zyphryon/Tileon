@@ -15,7 +15,7 @@
 #include "Tileon.Editor/Panel.hpp"
 #include "Tileon.Editor/Panel/Viewport/Camera.hpp"
 #include "Tileon.Editor/Panel/Viewport/Gizmo.hpp"
-#include "Tileon.Editor/Panel/Viewport/Tools.hpp"
+#include "Tileon.Editor/Edit/Tools.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]

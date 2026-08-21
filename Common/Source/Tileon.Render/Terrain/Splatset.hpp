@@ -28,7 +28,10 @@ namespace Tileon
     public:
 
         /// \brief The maximum number of terrains a project can author.
-        static constexpr UInt16 kLimit    = 512;
+        static constexpr UInt16 kLimit    = 1'024;
+
+        /// \brief The slice handed back when a terrain could not be added.
+        static constexpr UInt16 kInvalid  = 0xFFFF;
 
         /// \brief The file the name of every terrain a project authored is kept in.
         static constexpr Text   kFilename = "Resources://Data/Splatset.bin";
@@ -49,13 +52,16 @@ namespace Tileon
             Str       Name;
 
             /// How often the art repeats over the ground its own size would otherwise cover.
-            Real32    Tiling = 1.0f;
+            Real32    Tiling  = 1.0f;
 
             /// The color the art is multiplied by, so one slice can dress more than one terrain.
-            IntColor8 Tint   = IntColor8::White();
+            IntColor8 Tint    = IntColor8::White();
 
             /// Whether the slice of the normal array this terrain draws was ever authored.
-            Bool      Relief = false;
+            Bool      Relief  = false;
+
+            /// Whether the slice has been retired.
+            Bool      Retired = false;
 
             /// \brief Serializes the state of the object to or from the specified archive.
             ///
@@ -67,6 +73,7 @@ namespace Tileon
                 Archive.Serialize(Tiling);
                 Archive.Serialize(Tint);
                 Archive.Serialize(Relief);
+                Archive.Serialize(Retired);
             }
         };
 
@@ -88,7 +95,7 @@ namespace Tileon
         /// \brief Adds a terrain naming the slice a bake has just appended to the arrays.
         ///
         /// \param Name The name to author the terrain under, which may be empty.
-        /// \return The slice the new terrain draws.
+        /// \return The slice the new terrain draws, or #kInvalid when the arrays are full.
         UInt16 AddTerrain(Text Name);
 
         /// \brief Forgets the terrain a slice draws, leaving its art in the arrays where it is.
@@ -102,21 +109,14 @@ namespace Tileon
         /// \return The terrain the slice draws.
         Ref<Terrain> GetTerrain(UInt16 Slice);
 
-        /// \brief Iterates over every terrain a project authored.
+        /// \brief Gets every slice the arrays hold, retired or not, indexed by the slice it draws.
         ///
-        /// \param Callback The callback function to apply to each slice and the terrain that draws it.
-        template<typename Function>
-        ZY_INLINE void ForEachTerrain(AnyRef<Function> Callback)
+        /// \return The terrains of the project.
+        ZY_INLINE ConstSpan<Terrain> GetTerrains()
         {
             Reconcile();
 
-            for (UInt16 Slot = 1; Slot <= mRegistry.GetTop(); ++Slot)
-            {
-                if (mRegistry.IsOccupied(Slot))
-                {
-                    Callback(Slot - 1, mRegistry[mRegistry.GetKey(Slot)]);
-                }
-            }
+            return mRegistry;
         }
 
         /// \brief Gets the material every terrain is a slice of.
@@ -127,6 +127,30 @@ namespace Tileon
             return mMaterial;
         }
 
+        /// \brief Serializes every terrain a project authored to or from the specified archive.
+        ///
+        /// \param Archive The archive to serialize the splatset with.
+        template<typename Serializer>
+        ZY_INLINE void Serialize(Serializer Archive)
+        {
+            UInt32 Magic   = 0x4C505354;
+            UInt32 Version = 0x01;
+
+            Archive.Serialize(Magic);
+            Archive.Serialize(Version);
+
+            if constexpr (Serializer::IsReader)
+            {
+                if (Magic != 0x4C505354 || Version != 0x01)
+                {
+                    LOG_W("Splatset: '{0}' is not written in a layout this build reads", kFilename);
+                    return;
+                }
+            }
+
+            Archive.Serialize(mRegistry);
+        }
+
     private:
 
         /// \brief Names every slice the arrays hold that the splatset file did not account for.
@@ -134,18 +158,12 @@ namespace Tileon
         /// \note Does nothing until the file and the material have loaded, and runs only once thereafter.
         void Reconcile();
 
-        /// \brief Loads the name of every terrain from the bytes of the splatset file.
-        ///
-        /// \param Result The result of reading the file.
-        /// \param Data   The bytes the file held.
-        void LoadDatabase(Filesystem::Result Result, AnyRef<Blob> Data);
-
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Pool<Terrain, kLimit, 0>    mRegistry;
+        Sequence<Terrain, kLimit>   mRegistry;
         Retainer<Graphic::Material> mMaterial;
         Bool                        mLoaded;
         Bool                        mSeeded;

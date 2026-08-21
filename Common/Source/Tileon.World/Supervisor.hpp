@@ -32,7 +32,7 @@ namespace Tileon
     public:
 
         /// \brief Default filename format for storing region data.
-        static constexpr Symbol kRegionFilename       = "Resources://World/{0}_{1}.region";
+        static constexpr Symbol kFilename             = "Resources://World/{0}_{1}.region";
 
         /// \brief Extent of the cell hierarchy for loose spatial partitioning (in world units).
         static constexpr UInt32 kHierarchyLooseExtent = 8;

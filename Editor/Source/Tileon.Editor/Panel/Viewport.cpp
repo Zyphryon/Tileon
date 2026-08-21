@@ -82,7 +82,7 @@ namespace Tileon::Editor
     void Viewport::OnDraw()
     {
         // A stroke that landed on a region the world was still bringing in is laid down once it arrives.
-        mTools.FlushGround();
+        mTools.GetGround().Flush();
 
         // A stroke ends wherever the button is let go, which may well be outside the viewport it started in.
         if (mStroke
@@ -113,7 +113,7 @@ namespace Tileon::Editor
         }
         else
         {
-            mTools.ClearPreview();
+            mTools.GetEntities().ClearPreview();
         }
         Toolkit::Composer::End();
     }
@@ -281,7 +281,7 @@ namespace Tileon::Editor
 
     void Viewport::DrawShapeButton(Tools::Shape Shape, Text Icon, Text Tooltip)
     {
-        const Bool Active = (mTools.GetShape() == Shape);
+        const Bool Active = (mTools.GetGround().GetShape() == Shape);
 
         if (Active)
         {
@@ -291,7 +291,7 @@ namespace Tileon::Editor
 
         if (Toolkit::Composer::Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Shape)), 32.0f))
         {
-            mTools.SetShape(Shape);
+            mTools.GetGround().SetShape(Shape);
         }
 
         Toolkit::Composer::Tooltip(Tooltip);
@@ -461,31 +461,31 @@ namespace Tileon::Editor
         Toolkit::Composer::SeparatorEx(ImGuiSeparatorFlags_Vertical);
         Toolkit::Composer::SameLine();
 
-        SInt32 Size = mTools.GetSize();
+        SInt32 Size = mTools.GetGround().GetSize();
 
         Toolkit::Composer::SetNextItemWidth(96.0f);
 
-        if (Toolkit::Composer::DragInt("##brush_size", Size, 0.2f, 1, Tools::kMaxGroundSize))
+        if (Toolkit::Composer::DragInt("##brush_size", Size, 0.2f, 1, Ground::kMaxSize))
         {
-            mTools.SetSize(static_cast<UInt8>(Size));
+            mTools.GetGround().SetSize(static_cast<UInt8>(Size));
         }
 
         Toolkit::Composer::Tooltip("How far the brush reaches, in world units");
         Toolkit::Composer::SameLine();
 
-        SInt32 Flow = (mTools.GetFlow() * 100 + 127) / 255;
+        SInt32 Flow = (mTools.GetGround().GetFlow() * 100 + 127) / 255;
 
         Toolkit::Composer::SetNextItemWidth(96.0f);
 
         if (Toolkit::Composer::DragInt("##brush_flow", Flow, 1.0f, 1, 100, "%d%%"))
         {
-            mTools.SetFlow(static_cast<UInt8>(Flow * 255 / 100));
+            mTools.GetGround().SetFlow(static_cast<UInt8>(Flow * 255 / 100));
         }
 
         Toolkit::Composer::Tooltip("How much the brush lays down on each pass — work it in by going over it");
         Toolkit::Composer::SameLine();
 
-        const Bool Soft = mTools.IsSoft();
+        const Bool Soft = mTools.GetGround().IsSoft();
 
         if (Soft)
         {
@@ -495,7 +495,7 @@ namespace Tileon::Editor
 
         if (Toolkit::Composer::Button(ICON_FA_FEATHER "##softness", 32.0f))
         {
-            mTools.SetSoft(!Soft);
+            mTools.GetGround().SetSoft(!Soft);
         }
 
         Toolkit::Composer::Tooltip(Soft
@@ -763,7 +763,7 @@ namespace Tileon::Editor
         const ImVec2 ViewportSize   = Toolkit::Composer::GetItemRectSize();
 
         // Keep the multi-selection set consistent with single-selection changes made in Hierarchy or Inspector.
-        mTools.ReconcileSelection();
+        mTools.GetEntities().ReconcileSelection();
 
         const Camera Camera(Director, ViewportOrigin, ViewportSize);
 
@@ -839,7 +839,7 @@ namespace Tileon::Editor
             }
         };
 
-        if (ConstRef<Bag<UInt64> > Selection = mTools.GetSelection(); !Selection.IsEmpty())
+        if (ConstRef<Bag<UInt64> > Selection = mTools.GetEntities().GetSelection(); !Selection.IsEmpty())
         {
             for (const UInt64 ID: Selection)
             {
@@ -858,16 +858,16 @@ namespace Tileon::Editor
 
             if (Control && Toolkit::Composer::IsKeyPressed(ImGuiKey_C))
             {
-                mTools.CopySelection();
+                mTools.GetEntities().CopySelection();
             }
             else if (Control && Toolkit::Composer::IsKeyPressed(ImGuiKey_X))
             {
-                mTools.CutSelection();
+                mTools.GetEntities().CutSelection();
             }
 
             if (Toolkit::Composer::IsKeyPressed(ImGuiKey_Delete))
             {
-                mTools.DeleteSelection();
+                mTools.GetEntities().DeleteSelection();
             }
         }
 
@@ -897,7 +897,7 @@ namespace Tileon::Editor
             // A marquee drag must own the cursor outright, so the handles stand down while one is in progress.
             if (!mMarquee)
             {
-                Manipulating = mGizmo.Draw(mTools.GetSelection(), Actor, ViewportOrigin, ViewportSize);
+                Manipulating = mGizmo.Draw(mTools.GetEntities().GetSelection(), Actor, ViewportOrigin, ViewportSize);
             }
         }
 
@@ -913,9 +913,9 @@ namespace Tileon::Editor
             // Ctrl + wheel resizes the pending entity.
             if (const Real32 Wheel = Toolkit::Composer::GetMouseWheel(); Wheel != 0.0f)
             {
-                if (mTools.HasPreview() && Toolkit::Composer::IsKeyDown(ImGuiMod_Ctrl))
+                if (mTools.GetEntities().HasPreview() && Toolkit::Composer::IsKeyDown(ImGuiMod_Ctrl))
                 {
-                    mTools.AdjustPreviewScale(Wheel);
+                    mTools.GetEntities().AdjustPreviewScale(Wheel);
                 }
                 else
                 {
@@ -931,7 +931,7 @@ namespace Tileon::Editor
             }
 
             // Hold Q / E to rotate the pending entity smoothly; hold Shift for fine control.
-            if (mTools.HasPreview())
+            if (mTools.GetEntities().HasPreview())
             {
                 const Real32 Direction =
                     (Toolkit::Composer::IsKeyDown(ImGuiKey_E) ? 1.0f : 0.0f) -
@@ -940,7 +940,7 @@ namespace Tileon::Editor
                 if (Direction != 0.0f)
                 {
                     const Real32 Speed = Toolkit::Composer::IsKeyDown(ImGuiMod_Shift) ? 30.0f : 120.0f;
-                    mTools.AdjustPreviewRotation(Angle::FromDegrees(Direction * Speed * Toolkit::Composer::GetDeltaTime()));
+                    mTools.GetEntities().AdjustPreviewRotation(Angle::FromDegrees(Direction * Speed * Toolkit::Composer::GetDeltaTime()));
                 }
             }
 
@@ -989,7 +989,7 @@ namespace Tileon::Editor
 
                 Director.SetProjection(Tileon::Projection::Axonometric(Angle::FromDegrees(mYaw), mTilt));
 
-                mTools.ClearPreview();
+                mTools.GetEntities().ClearPreview();
                 mMarquee      = false;
                 mMarqueeMoved = false;
             }
@@ -999,7 +999,7 @@ namespace Tileon::Editor
             }
             else if (mTools.GetBrush() == Tools::Brush::Hand)
             {
-                mTools.ClearPreview();
+                mTools.GetEntities().ClearPreview();
 
                 if (Toolkit::Composer::IsMouseDragging(ImGuiMouseButton_Left))
                 {
@@ -1008,7 +1008,7 @@ namespace Tileon::Editor
             }
             else if (mTools.GetBrush() == Tools::Brush::Select)
             {
-                mTools.ClearPreview();
+                mTools.GetEntities().ClearPreview();
 
                 const Placement Cursor = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
                 const Bool      Shift  = Toolkit::Composer::IsKeyDown(ImGuiMod_Shift);
@@ -1016,13 +1016,13 @@ namespace Tileon::Editor
                 // Paste the clipboard's group so its anchor lands on the cursor.
                 if (Toolkit::Composer::IsKeyDown(ImGuiMod_Ctrl) && Toolkit::Composer::IsKeyPressed(ImGuiKey_V))
                 {
-                    mTools.Paste(Cursor);
+                    mTools.GetEntities().Paste(Cursor);
                 }
 
                 // Outline what a click would take. A marquee decides by area instead, so it takes over.
                 if (!mMarquee)
                 {
-                    DrawSelectionHint(Camera, mTools.ResolveSelection(Cursor));
+                    DrawSelectionHint(Camera, mTools.GetEntities().ResolveSelection(Cursor));
                 }
 
                 // A press starts either a marquee or a plain click; the drag distance decides which on release.
@@ -1063,21 +1063,21 @@ namespace Tileon::Editor
                         const ImVec2 Lower(Min(mMarqueeScreen.x, Release.x), Min(mMarqueeScreen.y, Release.y));
                         const ImVec2 Upper(Max(mMarqueeScreen.x, Release.x), Max(mMarqueeScreen.y, Release.y));
 
-                        mTools.SelectWithin(Camera, Lower, Upper, Shift);
+                        mTools.GetEntities().SelectWithin(Camera, Lower, Upper, Shift);
                     }
                     else if (Shift)
                     {
-                        mTools.SelectToggle(Cursor);
+                        mTools.GetEntities().SelectToggle(Cursor);
                     }
                     else
                     {
-                        mTools.SelectSingle(Cursor);
+                        mTools.GetEntities().SelectSingle(Cursor);
                     }
                 }
             }
             else if (mTools.GetMode() == Tools::Mode::Ground)
             {
-                mTools.ClearPreview();
+                mTools.GetEntities().ClearPreview();
 
                 // the selection is taken as it stands rather than reserving a value to mean nothing.
                 const UInt32    Selection = GetContext().GetInteger("Selection.Terrain", 0);
@@ -1092,7 +1092,7 @@ namespace Tileon::Editor
                 // terrain comes on the longer it is leant on.
                 const Real64 Now     = Toolkit::Composer::GetTime();
                 const Bool   Moved   = (UnitX != mPaintUnitX) || (UnitY != mPaintUnitY);
-                const Bool   NewUnit = Moved || (Now - mPaintTime) >= Tools::kGroundCadence;
+                const Bool   NewUnit = Moved || (Now - mPaintTime) >= Ground::kCadence;
 
                 const Bool LeftClick  = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Left);
                 const Bool RightClick = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Right);
@@ -1148,7 +1148,7 @@ namespace Tileon::Editor
                 }
 
                 // Show the pending entity under the cursor before it is committed by a click.
-                mTools.UpdatePreview(Cursor, Selection);
+                mTools.GetEntities().UpdatePreview(mTools.GetBrush(), Cursor, Selection);
 
                 // Handle left-click for adding and right-click for removing entities.
                 if (IsRightButton || (IsLeftButton && Selection != 0))
@@ -1162,7 +1162,7 @@ namespace Tileon::Editor
         }
         else
         {
-            mTools.ClearPreview();
+            mTools.GetEntities().ClearPreview();
         }
     }
 }
