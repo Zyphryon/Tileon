@@ -128,7 +128,7 @@ namespace Tileon::Stage
                 const IntRect Boundaries(RegionX, RegionY, RegionX + Region::kUnitsPerX, RegionY + Region::kUnitsPerY);
                 mSplatter.Record(Region, Splat, !IntRect::Intersection(Boundaries, Frustum).IsAlmostZero());
             });
-            mSplatter.Draw(Encoder, Technique, Technique->ResolveByName("Dither"), Origin);
+            mSplatter.Draw(Encoder, Technique, 0, Origin);
         }
 
         // -- Transparent --

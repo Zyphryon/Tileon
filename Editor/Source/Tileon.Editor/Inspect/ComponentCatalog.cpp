@@ -42,10 +42,9 @@ namespace Tileon::Editor
         Add<Animation>  ("Animation",   ICON_FA_FILM,                   "Render");
         Add<IntColor8>  ("Tint",        ICON_FA_PALETTE,                "Render");
         Add<Transparent>("Transparent", ICON_FA_CIRCLE_HALF_STROKE,     "Render");
-        Add<Decal>      ("Decal",       ICON_FA_STAMP,                  "Render");
-        Add<Lettering>  ("Lettering",   ICON_FA_FONT,                   "Typography");
+        Add<Typeface>   ("Typeface",    ICON_FA_FONT,                   "Typography");
         Add<Label>      ("Label",       ICON_FA_COMMENT,                "Typography");
-        Add<Decoration> ("Decoration",  ICON_FA_WAND_MAGIC_SPARKLES,    "Typography");
+        Add<Contour>    ("Contour",     ICON_FA_WAND_MAGIC_SPARKLES,    "Typography");
         Add<Glowlight>  ("Glowlight",   ICON_FA_LIGHTBULB,              "Light");
         Add<Spotlight>  ("Spotlight",   ICON_FA_LIGHTBULB,              "Light");
         Add<Skylight>   ("Skylight",    ICON_FA_SUN,                    "Light");

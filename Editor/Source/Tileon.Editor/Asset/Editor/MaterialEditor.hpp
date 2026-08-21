@@ -66,6 +66,9 @@ namespace Tileon::Editor
             /// The texture the material binds, relative to the mount.
             Str                     Path;
 
+            /// Whether the technique's own sampler stands, which leaves everything below unwritten.
+            Bool                    Inherit  = false;
+
             /// How the sampler reads between texels.
             Graphic::TextureFilter  Filter   = Graphic::TextureFilter::Point;
 

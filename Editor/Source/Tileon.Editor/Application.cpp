@@ -117,6 +117,12 @@ namespace Tileon::Editor
         }
         case State::Saving:
         {
+            // Anything a panel deferred while authoring is written back before the project is saved.
+            for (ConstRetainer<Panel> Panel : mPanels)
+            {
+                Panel->OnCommit();
+            }
+
             mContext->Commit();
 
             mState = State::Running;
@@ -225,6 +231,9 @@ namespace Tileon::Editor
     void Application::DrawEditor(Real64 Delta)
     {
         Ref<History> History = mContext->GetHistory();
+
+        // Retry whatever a restore had to leave waiting on a region that was still streaming in.
+        History.Tick();
 
         // Undo reaches every panel, so it is answered here rather than inside the one that happens to hold focus.
         if (!Toolkit::Composer::IsTextInputActive())

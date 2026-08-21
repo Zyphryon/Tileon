@@ -190,7 +190,7 @@ namespace Tileon::Editor
                 {
                     Bool Known = false;
 
-                    for (const TextureID Usage : Enum::GetValues<TextureID>())
+                    for (const Texture Usage : Enum::GetValues<Texture>())
                     {
                         const Text Name     = Enum::GetName(Usage);
                         const Bool Selected = (Entry.Name == Name);
@@ -268,7 +268,7 @@ namespace Tileon::Editor
             {
                 Ref<Binding> Entry = mBindings.Append();
 
-                for (const TextureID Usage : Enum::GetValues<TextureID>())
+                for (const Texture Usage : Enum::GetValues<Texture>())
                 {
                     const Text Name  = Enum::GetName(Usage);
                     const Bool Taken = mBindings.Contains([&Name](ConstRef<Binding> Other)
@@ -425,7 +425,8 @@ namespace Tileon::Editor
 
         JsonObject Root     = JsonObject(Document);
         JsonObject Images   = Root.SetObject("Images");
-        JsonObject Samplers = Root.SetObject("Samplers");
+
+        JsonObject Samplers;
 
         for (ConstRef<Binding> Entry : Bindings)
         {
@@ -436,6 +437,18 @@ namespace Tileon::Editor
             }
 
             Images.SetObject(Entry.Name).SetString("Path", Entry.Path);
+
+            // A material overrides a sampler only where it sets one, so a binding that inherits writes
+            // none and leaves the technique's own declaration standing.
+            if (Entry.Inherit)
+            {
+                continue;
+            }
+
+            if (!Samplers.IsValid())
+            {
+                Samplers = Root.SetObject("Samplers");
+            }
 
             // Every texture leaves with the sampler that reads it, named the same, as the loader expects.
             JsonObject Sampler = Samplers.SetObject(Entry.Name);

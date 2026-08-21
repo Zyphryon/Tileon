@@ -47,8 +47,7 @@
         "Defines": [
             "SPLAT_UNITS_PER_REGION=32.0",
             "SPLAT_MAP_BORDER=1.0",
-            "SPLAT_WEIGHT_FLOOR=0.004",
-            "SPLAT_DITHER=0.35"
+            "SPLAT_WEIGHT_FLOOR=0.004"
         ],
         "Shaders": {
             "GLSL": [
@@ -66,13 +65,9 @@
             "Name": "Lit",
             "Enable": { "Texture": "Normal" },
             "Program": { "Defines": ["ENABLE_NORMAL_MAPPING"] }
-        },
-        {
-            "Name": "Dither",
-            "Program": { "Defines": ["ENABLE_SPLAT_DITHER"] }
         }
     ],
     "Preload": [
-        ["Lit"], ["Dither"], ["Lit", "Dither"]
+        ["Lit"]
     ]
 }

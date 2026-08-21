@@ -346,7 +346,7 @@ namespace Tileon::Editor
 
         if (!Visual)
         {
-            DrawEmptyPanel(Actor.Has<Lettering>()
+            DrawEmptyPanel(Actor.Has<Typeface>()
                 ? "Text preview unavailable"_Text
                 : "This archetype has nothing to preview"_Text, "?");
             return;
@@ -368,7 +368,7 @@ namespace Tileon::Editor
 
         if (Toolkit::Composer::BeginTabBar("##preview_tabs"))
         {
-            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(TextureID::Albedo)))
+            if (ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(Texture::Albedo)))
             {
                 if (Toolkit::Composer::BeginTabItem("Preview"))
                 {
@@ -383,7 +383,7 @@ namespace Tileon::Editor
                 }
             }
 
-            for (const TextureID Semantic : Enum::GetValues<TextureID>())
+            for (const Texture Semantic : Enum::GetValues<Texture>())
             {
                 if (ConstRetainer<Graphic::Image> Texture = Material->GetImage(GetTextureID(Semantic)))
                 {

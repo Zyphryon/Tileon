@@ -122,7 +122,7 @@ namespace Tileon::Editor
         Sequence<MaterialEditor::Binding> Bindings;
 
         Ref<MaterialEditor::Binding> Albedo = Bindings.Append();
-        Albedo.Name = Enum::GetName(TextureID::Albedo);
+        Albedo.Name = Enum::GetName(Texture::Albedo);
         Albedo.Path = Str::Print<"{0}.tex">(Stem);
 
         MaterialEditor::Write(Str::Print<"{0}/{1}.mtl">(Folder, Stem), Bindings);

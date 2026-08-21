@@ -67,6 +67,13 @@ namespace Tileon::Editor
         /// \param Tooltip The hint shown when the button is hovered.
         void DrawBrushButton(Tools::Brush Brush, Text Icon, Text Tooltip);
 
+        /// \brief Draws a toolbar button that selects the given brush shape, highlighted while that shape is active.
+        ///
+        /// \param Shape   The footprint the button selects.
+        /// \param Icon    The icon displayed on the button.
+        /// \param Tooltip The hint shown when the button is hovered.
+        void DrawShapeButton(Tools::Shape Shape, Text Icon, Text Tooltip);
+
         /// \brief Draws a toolbar button that toggles the given overlay, highlighted while that overlay is enabled.
         ///
         /// \param Overlay The diagnostic overlay the button toggles.
@@ -82,6 +89,9 @@ namespace Tileon::Editor
         /// \param Camera  The viewport the outline is drawn into.
         /// \param Actor The entity a click would take, if any.
         void DrawSelectionHint(ConstRef<Camera> Camera, Scene::Entity Actor);
+
+        /// \brief Draws the ground painting toolbar for the scene activity.
+        void DrawGroundToolbar();
 
         /// \brief Draws the entity editing toolbar for the scene activity.
         void DrawEntityToolbar();
@@ -149,6 +159,9 @@ namespace Tileon::Editor
         Bool             mMarquee;
         Bool             mMarqueeMoved;
         Bool             mStroke;
+        SInt32           mPaintUnitX;
+        SInt32           mPaintUnitY;
+        Real64           mPaintTime;
         ImVec2           mMarqueeScreen;
     };
 }

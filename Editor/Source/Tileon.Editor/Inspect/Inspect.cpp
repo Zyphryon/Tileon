@@ -683,7 +683,7 @@ namespace Tileon::Editor
 
         if (Material && Material->HasCompleted())
         {
-            ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(TextureID::Albedo));
+            ConstRetainer<Graphic::Image> Albedo = Material->GetImage(GetTextureID(Texture::Albedo));
 
             if (Albedo && Albedo->GetWidth() > 0 && Albedo->GetHeight() > 0)
             {
@@ -701,6 +701,12 @@ namespace Tileon::Editor
         if (Sprite::Facing Facing = Component.GetFacing(); InspectEnum("Facing", Facing))
         {
             Component.SetFacing(Facing);
+            Dirty = true;
+        }
+
+        if (Sprite::Plane Plane = Component.GetPlane(); InspectEnum("Plane", Plane))
+        {
+            Component.SetPlane(Plane);
             Dirty = true;
         }
 
@@ -822,7 +828,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Lettering> Component)
+    Bool Inspect(Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Typeface> Component)
     {
         const Real32 Density = Workspace.Context.GetDirector().GetDensity();
 
@@ -895,7 +901,7 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Inspect(Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Decoration> Component)
+    Bool Inspect(Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Contour> Component)
     {
         ConstRef<Render::FontEffect> Effect = Component.GetEffect();
 

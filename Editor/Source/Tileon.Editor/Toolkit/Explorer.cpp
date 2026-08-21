@@ -67,7 +67,17 @@ namespace Tileon::Editor::Toolkit
         mHistory.Clear();
         mCursor = -1;
 
-        Navigate(Directory);
+        if (mDirectory.IsEmpty())
+        {
+            Navigate(Directory);
+        }
+        else
+        {
+            mHistory.Append(mDirectory);
+            mCursor = 0;
+
+            Refresh();
+        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

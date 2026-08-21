@@ -56,7 +56,10 @@ namespace Tileon::Editor
           mTilt         { kMaxTilt },
           mMarquee      { false },
           mMarqueeMoved { false },
-          mStroke       { false }
+          mStroke       { false },
+          mPaintUnitX   { 0 },
+          mPaintUnitY   { 0 },
+          mPaintTime    { 0.0 }
     {
         // The preview phase resolves one target, so it starts on the one the viewport opens with.
         Context.GetRenderer().SetOutput(mTarget);
@@ -78,6 +81,8 @@ namespace Tileon::Editor
 
     void Viewport::OnDraw()
     {
+        // A stroke that landed on a region the world was still bringing in is laid down once it arrives.
+        mTools.FlushGround();
 
         // A stroke ends wherever the button is let go, which may well be outside the viewport it started in.
         if (mStroke
@@ -176,7 +181,17 @@ namespace Tileon::Editor
 
         Toolkit::Composer::SeparatorEx(ImGuiSeparatorFlags_Vertical);
         Toolkit::Composer::SameLine();
-        DrawEntityToolbar();
+
+        // The ground and the entities over it are painted with different tools, so the bar follows the mode.
+        switch (mTools.GetMode())
+        {
+        case Tools::Mode::Ground:
+            DrawGroundToolbar();
+            break;
+        case Tools::Mode::Entity:
+            DrawEntityToolbar();
+            break;
+        }
         Toolkit::Composer::SameLine();
 
         Toolkit::Composer::SeparatorEx(ImGuiSeparatorFlags_Vertical);
@@ -251,6 +266,32 @@ namespace Tileon::Editor
         if (Toolkit::Composer::Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Brush)), 32.0f))
         {
             mTools.SetBrush(Brush);
+        }
+
+        Toolkit::Composer::Tooltip(Tooltip);
+
+        if (Active)
+        {
+            Toolkit::Composer::PopStyleColor(2);
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Viewport::DrawShapeButton(Tools::Shape Shape, Text Icon, Text Tooltip)
+    {
+        const Bool Active = (mTools.GetShape() == Shape);
+
+        if (Active)
+        {
+            Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        }
+
+        if (Toolkit::Composer::Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Shape)), 32.0f))
+        {
+            mTools.SetShape(Shape);
         }
 
         Toolkit::Composer::Tooltip(Tooltip);
@@ -367,7 +408,7 @@ namespace Tileon::Editor
 
     void Viewport::DrawDebugButton(Renderer::Debug Overlay, Text Icon, Text Tooltip)
     {
-        const Bool Active = GetContext().GetRenderer().HasProperty(Overlay);
+        const Bool Active = GetContext().GetRenderer().HasOverlay(Overlay);
 
         if (Active)
         {
@@ -377,7 +418,7 @@ namespace Tileon::Editor
 
         if (Toolkit::Composer::Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Overlay)), 32.0f))
         {
-            GetContext().GetRenderer().SetProperty(Overlay, !Active);
+            GetContext().GetRenderer().SetOverlay(Overlay, !Active);
         }
 
         Toolkit::Composer::Tooltip(Tooltip);
@@ -391,8 +432,92 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    void Viewport::DrawGroundToolbar()
+    {
+        DrawBrushButton(Tools::Brush::Hand,   ICON_FA_HAND,          "Pan the view");
+        Toolkit::Composer::SameLine();
+
+        DrawBrushButton(Tools::Brush::Select, ICON_FA_ARROW_POINTER, "Select");
+        Toolkit::Composer::SameLine();
+
+        DrawBrushButton(Tools::Brush::Pencil, ICON_FA_BRUSH,         "Paint the ground");
+        Toolkit::Composer::SameLine();
+
+        DrawBrushButton(Tools::Brush::Bucket, ICON_FA_FILL_DRIP,     "Fill the region");
+        Toolkit::Composer::SameLine();
+
+        Toolkit::Composer::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        Toolkit::Composer::SameLine();
+
+        DrawShapeButton(Tools::Shape::Square,  ICON_FA_SQUARE,  "Square brush");
+        Toolkit::Composer::SameLine();
+
+        DrawShapeButton(Tools::Shape::Circle,  ICON_FA_CIRCLE,  "Round brush");
+        Toolkit::Composer::SameLine();
+
+        DrawShapeButton(Tools::Shape::Diamond, ICON_FA_DIAMOND, "Diamond brush");
+        Toolkit::Composer::SameLine();
+
+        Toolkit::Composer::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        Toolkit::Composer::SameLine();
+
+        SInt32 Size = mTools.GetSize();
+
+        Toolkit::Composer::SetNextItemWidth(96.0f);
+
+        if (Toolkit::Composer::DragInt("##brush_size", Size, 0.2f, 1, Tools::kMaxGroundSize))
+        {
+            mTools.SetSize(static_cast<UInt8>(Size));
+        }
+
+        Toolkit::Composer::Tooltip("How far the brush reaches, in world units");
+        Toolkit::Composer::SameLine();
+
+        SInt32 Flow = (mTools.GetFlow() * 100 + 127) / 255;
+
+        Toolkit::Composer::SetNextItemWidth(96.0f);
+
+        if (Toolkit::Composer::DragInt("##brush_flow", Flow, 1.0f, 1, 100, "%d%%"))
+        {
+            mTools.SetFlow(static_cast<UInt8>(Flow * 255 / 100));
+        }
+
+        Toolkit::Composer::Tooltip("How much the brush lays down on each pass — work it in by going over it");
+        Toolkit::Composer::SameLine();
+
+        const Bool Soft = mTools.IsSoft();
+
+        if (Soft)
+        {
+            Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        }
+
+        if (Toolkit::Composer::Button(ICON_FA_FEATHER "##softness", 32.0f))
+        {
+            mTools.SetSoft(!Soft);
+        }
+
+        Toolkit::Composer::Tooltip(Soft
+            ? "Fade the terrain out towards the rim"_Text
+            : "Lay the terrain down evenly, edge and all"_Text);
+
+        if (Soft)
+        {
+            Toolkit::Composer::PopStyleColor(2);
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void Viewport::DrawEntityToolbar()
     {
+        if (mTools.GetBrush() == Tools::Brush::Bucket)
+        {
+            mTools.SetBrush(Tools::Brush::Pencil);
+        }
+
         // Entities are placed one at a time, so the area-filling bucket has no meaning here.
         DrawBrushButton(Tools::Brush::Hand,   ICON_FA_HAND,          "Pan the view");
         Toolkit::Composer::SameLine();
@@ -947,6 +1072,61 @@ namespace Tileon::Editor
                     else
                     {
                         mTools.SelectSingle(Cursor);
+                    }
+                }
+            }
+            else if (mTools.GetMode() == Tools::Mode::Ground)
+            {
+                mTools.ClearPreview();
+
+                // the selection is taken as it stands rather than reserving a value to mean nothing.
+                const UInt32    Selection = GetContext().GetInteger("Selection.Terrain", 0);
+                const Placement Cursor    = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
+
+                // Pencil paints a continuous stroke while held; Bucket fills once per click.
+                const Bool   Continuous = (mTools.GetBrush() == Tools::Brush::Pencil);
+                const SInt32 UnitX      = static_cast<SInt32>(Floor(Cursor.GetAbsoluteX()));
+                const SInt32 UnitY      = static_cast<SInt32>(Floor(Cursor.GetAbsoluteY()));
+
+                // Ground is worked in rather than stamped, so holding the brush still keeps depositing and the
+                // terrain comes on the longer it is leant on.
+                const Real64 Now     = Toolkit::Composer::GetTime();
+                const Bool   Moved   = (UnitX != mPaintUnitX) || (UnitY != mPaintUnitY);
+                const Bool   NewUnit = Moved || (Now - mPaintTime) >= Tools::kGroundCadence;
+
+                const Bool LeftClick  = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Left);
+                const Bool RightClick = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Right);
+                const Bool LeftHeld   = Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left);
+                const Bool RightHeld  = Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Right);
+
+                const Bool Erase = RightClick || (Continuous && RightHeld && NewUnit);
+                const Bool Paint = LeftClick  || (Continuous && LeftHeld  && NewUnit);
+
+                // A stroke held across many units is one edit, so it keeps a single step open until it is let go.
+                if ((LeftHeld || RightHeld) && !mStroke)
+                {
+                    mStroke = true;
+
+                    GetContext().GetHistory().Open("Paint Ground"_Text);
+                }
+
+                if (Erase)
+                {
+                    mTools.Execute(Tools::Command::Remove, Cursor, Selection);
+                }
+                else if (Paint)
+                {
+                    mTools.Execute(Tools::Command::Add, Cursor, Selection);
+                }
+
+                if (LeftHeld || RightHeld)
+                {
+                    mPaintUnitX = UnitX;
+                    mPaintUnitY = UnitY;
+
+                    if (NewUnit)
+                    {
+                        mPaintTime = Now;
                     }
                 }
             }

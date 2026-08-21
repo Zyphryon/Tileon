@@ -81,6 +81,11 @@ namespace Tileon::Editor
             return mVisible;
         }
 
+        /// \brief Writes back whatever the panel has been holding until the project is saved.
+        virtual void OnCommit()
+        {
+        }
+
         /// \brief Called when the panel is active and should perform its drawing operations.
         virtual void OnDraw()
         {

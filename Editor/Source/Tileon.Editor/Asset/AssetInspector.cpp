@@ -114,7 +114,7 @@ namespace Tileon::Editor
         // to answer what the panel is really being asked: what art does this material carry.
         Retainer<Graphic::Image> Albedo;
 
-        for (const TextureID Usage : Enum::GetValues<TextureID>())
+        for (const Texture Usage : Enum::GetValues<Texture>())
         {
             const Retainer<Graphic::Image> Bound = Asset->GetImage(GetTextureID(Usage));
 
@@ -166,10 +166,10 @@ namespace Tileon::Editor
             return 0;
         }
 
-        const UInt32 Layers = Asset->GetLayers();
-        const UInt32 Index  = Min(Slice, Layers - 1);
-        const Real32 Width  = Asset->GetWidth();
-        const Real32 Height = Asset->GetHeight();
+        const UInt16 Layers = Asset->GetLayers();
+        const UInt16 Index  = Min(Slice, Layers - 1);
+        const UInt16 Width  = Asset->GetWidth();
+        const UInt16 Height = Asset->GetHeight();
 
         // What it is beats what it is called, which the row under the cursor is already saying.
         Toolkit::Composer::TextDisabled(Layers > 1
@@ -204,11 +204,11 @@ namespace Tileon::Editor
 
         // A material has no face of its own, so it wears one it binds; only the ones it actually carries
         // are gathered, or stepping through them would stop on names that show nothing.
-        Array<TextureID, Enum::Count<TextureID>()> Bound;
+        Array<Texture, Enum::Count<Texture>()> Bound;
 
         UInt32 Count = 0;
 
-        for (const TextureID Usage : Enum::GetValues<TextureID>())
+        for (const Texture Usage : Enum::GetValues<Texture>())
         {
             if (Asset->GetImage(GetTextureID(Usage)))
             {
@@ -222,7 +222,7 @@ namespace Tileon::Editor
         }
 
         const UInt32       Index = Min(Binding, Count - 1);
-        const TextureID Usage = Bound[Index];
+        const Texture Usage = Bound[Index];
 
         Toolkit::Composer::Label(Count > 1
             ? String<64>::Print<"{0} ({1} of {2})">(Enum::GetName(Usage), Index + 1, Count)

@@ -118,15 +118,6 @@ fs_Output main(fs_Input Input)
 
     clip(dot(Weight, float4(1.0, 1.0, 1.0, 1.0)) - SPLAT_WEIGHT_FLOOR);
 
-#ifdef ENABLE_SPLAT_DITHER
-    // Biasing each weight by a value that repeats every few pixels turns the gradient into a broken edge.
-    const float Noise = frac(dot(floor(Input.Position.xy), float2(0.7548776, 0.5698402)));
-
-    const float4 Carried = step(SPLAT_WEIGHT_FLOOR, Weight);
-
-    Weight = saturate(Weight + (Noise - 0.5) * SPLAT_DITHER * Carried);
-#endif
-
     Weight /= max(dot(Weight, float4(1.0, 1.0, 1.0, 1.0)), 0.0001);
 
     // Every terrain sweeps over the world at its own rate, picked up from where the sweep already stood at

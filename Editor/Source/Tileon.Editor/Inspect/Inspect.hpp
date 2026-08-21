@@ -113,7 +113,7 @@ namespace Tileon::Editor
     /// \param Actor     The entity that owns the component being inspected.
     /// \param Component The component to inspect.
     /// \return `true` if the user modified the component, `false` otherwise.
-    Bool Inspect(Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Lettering> Component);
+    Bool Inspect(Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Typeface> Component);
 
     /// \brief Draws the editable fields of a label component.
     ///
@@ -137,5 +137,5 @@ namespace Tileon::Editor
     /// \param Actor     The entity that owns the component being inspected.
     /// \param Component The component to inspect.
     /// \return `true` if the user modified the component, `false` otherwise.
-    Bool Inspect(Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Decoration> Component);
+    Bool Inspect(Ref<Workspace> Workspace, Scene::Entity Actor, Ref<Contour> Component);
 }

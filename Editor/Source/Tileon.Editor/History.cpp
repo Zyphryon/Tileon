@@ -35,6 +35,30 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    void History::Tick()
+    {
+        mDeferred.RemoveFastSomeIf([this](ConstRef<Deferred> Entry) -> Bool
+        {
+            const Scene::Entity Actor = mContext.GetSupervisor().GetRegion(Entry.Key >> 16, Entry.Key);
+
+            if (!Actor.IsValid())
+            {
+                return true;
+            }
+
+            if (!Actor.Has<Region>())
+            {
+                return false;
+            }
+
+            WriteRegion(Actor, Entry.State);
+            return true;
+        });
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void History::Open(Text Label)
     {
         if (mDepth++ == 0)
@@ -70,6 +94,16 @@ namespace Tileon::Editor
             case Target::Singleton:
                 Entry.After = SaveSingleton(mContext.GetScene().GetEntity(Entry.Key));
                 break;
+            case Target::Region:
+            {
+                const Scene::Entity Actor = mContext.GetSupervisor().GetRegion(Entry.Key >> 16, Entry.Key);
+
+                if (const ConstPtr<Splatmap> Ground = Actor.IsValid() ? Actor.TryGet<const Splatmap>() : nullptr)
+                {
+                    Entry.After = SaveRegion(* Ground);
+                }
+                break;
+            }
             }
             Entry.Resolved = true;
         }
@@ -175,6 +209,35 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    void History::CaptureRegion(Scene::Entity Actor)
+    {
+        const ConstPtr<Region> Component = Actor.IsValid() ? Actor.TryGet<const Region>() : nullptr;
+
+        if (!Component)
+        {
+            return;
+        }
+
+        const UInt64 Key = GetKey(Component->GetX(), Component->GetY());
+
+        // The region came back from disk since the stack was built, so what it holds is no longer a step behind.
+        if (!Bind(Key, Actor))
+        {
+            Forget();
+        }
+
+        if (const Ptr<Change> Entry = Reach(Target::Region, Key); Entry && !Entry->Captured)
+        {
+            const ConstPtr<Splatmap> Ground = Actor.TryGet<const Splatmap>();
+
+            Entry->Before   = SaveRegion(Ground ? (* Ground) : Splatmap());
+            Entry->Captured = true;
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void History::Undo()
     {
         if (CanUndo())
@@ -211,6 +274,7 @@ namespace Tileon::Editor
     void History::Forget()
     {
         mSteps.Clear();
+        mDeferred.Clear();
         mTokens.Clear();
         mEntities.Clear();
         mRegions.Clear();
@@ -440,6 +504,105 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    Blob History::SaveRegion(ConstRef<Splatmap> Ground) const
+    {
+        Writer Output;
+
+        for (UInt8 Slot = 0; Slot < Splatmap::kSlots; ++Slot)
+        {
+            Output.Write<UInt16>(Ground.GetSplat(Slot));
+        }
+
+        for (UInt8 Y = 0; Y < Region::kUnitsPerY; ++Y)
+        {
+            for (UInt8 X = 0; X < Region::kUnitsPerX; ++X)
+            {
+                for (UInt8 Slot = 0; Slot < Splatmap::kSlots; ++Slot)
+                {
+                    Output.Write<UInt8>(Ground.GetWeight(X, Y, Slot));
+                }
+            }
+        }
+
+        return Output.Detach();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void History::ApplyRegion(UInt64 Key, ConstRef<Blob> State)
+    {
+        if (State == nullptr)
+        {
+            return;
+        }
+
+        const SInt16 RegionX = static_cast<SInt16>(Key >> 16);
+        const SInt16 RegionY = static_cast<SInt16>(Key);
+
+        const Scene::Entity Actor = mContext.GetSupervisor().GetOrLoadRegion(RegionX, RegionY, true);
+
+        if (!Actor.IsValid())
+        {
+            return;
+        }
+
+        if (!Bind(Key, Actor))
+        {
+            mStale = true;
+            return;
+        }
+
+        if (Actor.Has<Region>())
+        {
+            WriteRegion(Actor, State);
+        }
+        else
+        {
+            Blob Copy = Blob::Allocate<Byte>(State.GetSize());
+            Copy.Copy(State.GetData(), State.GetSize());
+
+            mDeferred.Append(Deferred(Key, Move(Copy)));
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void History::WriteRegion(Scene::Entity Actor, ConstRef<Blob> State)
+    {
+        Ref<Splatmap> Ground = * static_cast<Ptr<Splatmap>>(Actor.Ensure<Splatmap>());
+
+        Reader Input(State.GetData(), State.GetSize());
+
+        for (UInt8 Slot = 0; Slot < Splatmap::kSlots; ++Slot)
+        {
+            Ground.SetSplat(Slot, Input.Read<UInt16>());
+        }
+
+        for (UInt8 Y = 0; Y < Region::kUnitsPerY; ++Y)
+        {
+            for (UInt8 X = 0; X < Region::kUnitsPerX; ++X)
+            {
+                Array<UInt8, Splatmap::kSlots> Weights;
+
+                for (UInt8 Slot = 0; Slot < Splatmap::kSlots; ++Slot)
+                {
+                    Weights[Slot] = Input.Read<UInt8>();
+                }
+                Ground.SetWeights(X, Y, Weights);
+            }
+        }
+
+        Actor.Add<Persist>();
+
+        // The ground was written in place, so signal the change for the render-side cache.
+        Actor.Notify<Splatmap>();
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
     void History::Apply(Ref<Step> Step, Bool Backward)
     {
         mRemap.Clear();
@@ -459,6 +622,9 @@ namespace Tileon::Editor
                 break;
             case Target::Singleton:
                 ApplySingleton(Entry.Key, State);
+                break;
+            case Target::Region:
+                ApplyRegion(Entry.Key, State);
                 break;
             }
         }

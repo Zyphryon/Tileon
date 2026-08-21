@@ -12,6 +12,7 @@
 // [  HEADER  ]
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+#include <Tileon.Render/Terrain/Splatmap.hpp>
 #include <Zyphryon.Scene/Entity.hpp>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -39,6 +40,9 @@ namespace Tileon::Editor
         ///
         /// \param Context The context whose world the recorded steps are applied to.
         explicit History(Ref<Context> Context);
+
+        /// \brief Retries the restores that were waiting on a region to finish streaming in.
+        void Tick();
 
         /// \brief Opens a step, so everything recorded until it closes is undone and redone as one.
         ///
@@ -69,6 +73,13 @@ namespace Tileon::Editor
         ///
         /// \param Component The component entity of the singleton that is about to be changed.
         void CaptureSingleton(Scene::Entity Component);
+
+        /// \brief Records a region's ground as it is now, which is what undoing the step restores.
+        ///
+        /// The whole region is taken, so a stroke that paints it over and over only ever costs one pair of states.
+        ///
+        /// \param Actor The region entity that is about to be painted.
+        void CaptureRegion(Scene::Entity Actor);
 
         /// \brief Takes back the most recent step.
         void Undo();
@@ -131,6 +142,7 @@ namespace Tileon::Editor
         enum class Target : UInt8
         {
             Entity,    ///< An entity, addressed by the token bound to it.
+            Region,    ///< A region's ground, addressed by its packed coordinates.
             Singleton, ///< A singleton the world holds, addressed by its component entity.
         };
 
@@ -164,6 +176,16 @@ namespace Tileon::Editor
 
             /// The changes the edit made, in the order they were recorded.
             Sequence<Change> Changes;
+        };
+
+        /// \brief A restore that is waiting on its region to finish streaming in.
+        struct Deferred final
+        {
+            /// The packed coordinates of the region to restore.
+            UInt64 Key;
+
+            /// The ground to write once the region is resident.
+            Blob   State;
         };
 
         /// \brief Packs a region's coordinates into the key a change addresses it by.
@@ -238,6 +260,24 @@ namespace Tileon::Editor
         /// \param State The state to restore.
         void ApplySingleton(UInt64 Key, ConstRef<Blob> State);
 
+        /// \brief Serializes the whole ground of a region.
+        ///
+        /// \param Component The region to serialize.
+        /// \return The region's palette and weights.
+        Blob SaveRegion(ConstRef<Splatmap> Ground) const;
+
+        /// \brief Restores the ground of a region, queueing the write when the region is not resident yet.
+        ///
+        /// \param Key   The packed coordinates of the region.
+        /// \param State The ground to write.
+        void ApplyRegion(UInt64 Key, ConstRef<Blob> State);
+
+        /// \brief Writes a serialized ground into a resident region.
+        ///
+        /// \param Actor The region entity that owns the ground.
+        /// \param State The ground to write.
+        static void WriteRegion(Scene::Entity Actor, ConstRef<Blob> State);
+
         /// \brief Applies one side of every change a step holds.
         ///
         /// \param Step     The step to apply.
@@ -267,6 +307,7 @@ namespace Tileon::Editor
         UInt32                mCursor;
         UInt32                mDepth;
         Step                  mPending;
+        Sequence<Deferred>    mDeferred;
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

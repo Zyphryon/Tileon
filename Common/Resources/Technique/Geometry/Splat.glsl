@@ -103,15 +103,6 @@ void main()
         discard;
     }
 
-#ifdef ENABLE_SPLAT_DITHER
-    // Biasing each weight by a value that repeats every few pixels turns the gradient into a broken edge.
-    float Noise = fract(dot(floor(gl_FragCoord.xy), vec2(0.7548776, 0.5698402)));
-
-    vec4 Carried = step(vec4(SPLAT_WEIGHT_FLOOR), Weight);
-
-    Weight = clamp(Weight + (Noise - 0.5) * SPLAT_DITHER * Carried, 0.0, 1.0);
-#endif
-
     Weight /= max(dot(Weight, vec4(1.0)), 0.0001);
 
     // Every terrain sweeps over the world at its own rate, picked up from where the sweep already stood at

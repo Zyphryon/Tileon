@@ -32,6 +32,12 @@ namespace Tileon::Editor
         /// \brief The share of its own reach a light is lifted by when it is placed without an elevation.
         static constexpr Real32 kLightElevation = 0.5f;
 
+        /// \brief The widest the ground brush reaches from the unit under the cursor.
+        static constexpr UInt8  kMaxGroundSize  = 16;
+
+        /// \brief How long the ground brush waits before it lays another pass down on the same spot.
+        static constexpr Real64 kGroundCadence  = 1.0 / 20.0;
+
         /// \brief Defines the different commands that can be executed.
         enum class Command : UInt8
         {
@@ -48,12 +54,114 @@ namespace Tileon::Editor
             Bucket,     ///< A brush used for filling an area with a specific tile type.
         };
 
+        /// \brief Defines the different modes that can be used for editing the scene.
+        enum class Mode : UInt8
+        {
+            Ground,     ///< A mode used for painting the terrain the ground blends between.
+            Entity,     ///< A mode used for placing entities, decals among them, on top of it.
+        };
+
+        /// \brief Defines the footprint the ground brush covers.
+        enum class Shape : UInt8
+        {
+            Square,     ///< The brush covers a square, which suits laying broad even ground down.
+            Circle,     ///< The brush covers a disc, which leaves no corners for the eye to catch on.
+            Diamond,    ///< The brush covers a diamond, which follows the way the units themselves sit.
+        };
+
     public:
 
         /// \brief Constructs a toolbox with the specified context reference.
         ///
         /// \param Context The reference to the context that the toolbox will interact with.
         Tools(Ref<Context> Context);
+
+        /// \brief Sets the current editing mode.
+        ///
+        /// \param Mode The mode to set.
+        ZY_INLINE void SetMode(Mode Mode)
+        {
+            mContext.SetEnum("Tools.Mode", Mode);
+        }
+
+        /// \brief Gets the current editing mode.
+        ///
+        /// \return The current editing mode.
+        ZY_INLINE Mode GetMode() const
+        {
+            return mContext.GetEnum("Tools.Mode", Mode::Ground);
+        }
+
+        /// \brief Sets the footprint the ground brush covers.
+        ///
+        /// \param Shape The shape to set.
+        ZY_INLINE void SetShape(Shape Shape)
+        {
+            mShape = Shape;
+        }
+
+        /// \brief Gets the footprint the ground brush covers.
+        ///
+        /// \return The current shape.
+        ZY_INLINE Shape GetShape() const
+        {
+            return mShape;
+        }
+
+        /// \brief Sets how far the ground brush reaches from the unit under the cursor.
+        ///
+        /// \param Size The reach to set, in world units, from one to \ref kMaxGroundSize.
+        ZY_INLINE void SetSize(UInt8 Size)
+        {
+            mSize = Clamp(Size, UInt8(1), kMaxGroundSize);
+        }
+
+        /// \brief Gets how far the ground brush reaches from the unit under the cursor.
+        ///
+        /// \return The current reach, in world units.
+        ZY_INLINE UInt8 GetSize() const
+        {
+            return mSize;
+        }
+
+        /// \brief Sets how much of the ground brush lands on each pass.
+        ///
+        /// \param Flow The share of the brush each pass lays down, from barely anything to all of it.
+        ZY_INLINE void SetFlow(UInt8 Flow)
+        {
+            mFlow = Max(Flow, UInt8(1));
+        }
+
+        /// \brief Gets how much of the ground brush lands on each pass.
+        ///
+        /// \return The share of the brush each pass lays down.
+        ZY_INLINE UInt8 GetFlow() const
+        {
+            return mFlow;
+        }
+
+        /// \brief Sets whether the ground brush fades out towards its rim.
+        ///
+        /// \param Soft `true` to fade the brush out, `false` to lay the terrain down at full strength.
+        ZY_INLINE void SetSoft(Bool Soft)
+        {
+            mSoft = Soft;
+        }
+
+        /// \brief Gets whether the ground brush fades out towards its rim.
+        ///
+        /// \return `true` when the brush fades out, `false` when it covers evenly.
+        ZY_INLINE Bool IsSoft() const
+        {
+            return mSoft;
+        }
+
+        /// \brief Gets how much of a point the ground brush covers, given where it falls within it.
+        ///
+        /// \param OffsetX The point's x-distance from the unit under the cursor, in world units.
+        /// \param OffsetY The point's y-distance from the unit under the cursor, in world units.
+        /// \return How much the brush lays down there, or nothing when the point lies outside its shape.
+        UInt8 Cover(SInt32 OffsetX, SInt32 OffsetY) const;
 
         /// \brief Sets the current brush type.
         ///
@@ -150,6 +258,9 @@ namespace Tileon::Editor
             return mClipboardCount > 0;
         }
 
+        /// \brief Lays down any stroke that fell on a region the world had not finished bringing in.
+        void FlushGround();
+
         /// \brief Mirrors external single-selection changes (Hierarchy, Inspector) into the multi-selection set.
         void ReconcileSelection();
 
@@ -195,6 +306,47 @@ namespace Tileon::Editor
         void Paste(Placement Placement);
 
     private:
+
+        /// \brief Holds a stroke that fell on a region the world was still bringing in.
+        struct Deferred final
+        {
+            /// The x-coordinate of the region the stroke was waiting on.
+            SInt16     RegionX;
+
+            /// The y-coordinate of the region the stroke was waiting on.
+            SInt16     RegionY;
+
+            /// Whether the stroke lays a terrain down or takes it away.
+            Command    Command;
+
+            /// The area the stroke covers, in world units.
+            IntRect    Area;
+
+            /// The point the brush is shaped around, in world units.
+            IntVector2 Centre;
+
+            /// The slice the stroke paints.
+            UInt16     Slice;
+        };
+
+    private:
+
+        /// \brief Paints the ground with a slice at the specified placement in the world.
+        ///
+        /// \param Command   The command to execute, where removing paints the region's first slot back.
+        /// \param Placement The placement in the world the paint lands on.
+        /// \paramObject    The slice of the shared array to paint.
+        void ExecuteOnGround(Command Command, Placement Placement, UInt32 Object);
+
+        /// \brief Paints one region's share of an area of ground.
+        ///
+        /// \param Actor   The region's actor, captured so the stroke can be taken back.
+        /// \param Ground  The surface to paint.
+        /// \param Command The command to execute, where removing paints the region's founding slice back.
+        /// \param Area    The area to paint, in world unit coordinates.
+        /// \param Centre  The unit the brush is shaped around, in world unit coordinates.
+        /// \param Slice   The slice of the shared array to paint.
+        void ApplyGround(Scene::Entity Actor, Ptr<Splatmap> Ground, Command Command, IntRect Area, IntVector2 Centre, UInt16 Slice);
 
         /// \brief Executes an entity editing command at the specified placement in the world.
         ///
@@ -304,14 +456,19 @@ namespace Tileon::Editor
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-        Ref<Context>      mContext;
-        Brush             mBrush;
-        Bool              mAligned;
-        Scene::Entity     mPreview;
-        Bag<UInt64>       mSelection;
-        UInt64            mSelectionPrimary;
-        UInt32            mRevision;
-        Blob              mClipboard;
-        UInt32            mClipboardCount;
+        Ref<Context>       mContext;
+        Brush              mBrush;
+        Shape              mShape;
+        UInt8              mSize;
+        UInt8              mFlow;
+        Bool               mSoft;
+        Bool               mAligned;
+        Scene::Entity      mPreview;
+        Bag<UInt64>        mSelection;
+        UInt64             mSelectionPrimary;
+        UInt32             mRevision;
+        Blob               mClipboard;
+        UInt32             mClipboardCount;
+        Sequence<Deferred> mDeferred;
     };
 }
