@@ -24,6 +24,7 @@ struct vs_Input
     float2 Phase2    : SLOT6;    // the same, for slot 2
     float2 Phase3    : SLOT7;    // the same, for slot 3
     uint4  Tint      : SLOT8;    // the color each slot's art is multiplied by, packed as RGBA8
+    float4 Feather   : SLOT9;    // how wide a band each slot's relief feathers over
 };
 
 struct fs_Input
@@ -35,6 +36,7 @@ struct fs_Input
     nointerpolation float4 Mapping    : TEXCOORD3;
     nointerpolation float2 Phase[4]   : TEXCOORD4;
     nointerpolation uint4  Tint       : TEXCOORD8;
+    nointerpolation float4 Feather    : TEXCOORD9;
 };
 
 float4 UnpackTint(uint Packed)
@@ -80,6 +82,7 @@ fs_Input main(vs_Input Input)
     Result.Phase[2] = Input.Phase2;
     Result.Phase[3] = Input.Phase3;
     Result.Tint     = Input.Tint;
+    Result.Feather  = Input.Feather;
 
     return Result;
 }
@@ -132,8 +135,18 @@ fs_Output main(fs_Input Input)
         Source[Slot]  = t_Albedo.Sample(s_Albedo, float3(Texture[Slot], Input.Palette[Slot]));
     }
 
+#ifdef ENABLE_HEIGHT_BLEND
+    // Each terrain feathers over a band of its own, mixed by how much of the pixel it already covers.
+    const float Band = max(dot(Input.Feather, Weight), 0.001);
+
+    float4 Raised = float4(Source[0].a, Source[1].a, Source[2].a, Source[3].a) + Weight;
+    Raised *= step(SPLAT_WEIGHT_FLOOR, Weight);
+    Weight  = max(Raised - (max(max(Raised.x, Raised.y), max(Raised.z, Raised.w)) - Band), 0.0);
+    Weight /= max(dot(Weight, float4(1.0, 1.0, 1.0, 1.0)), 0.0001);
+#endif
+
     float4 Albedo = float4(0.0, 0.0, 0.0, 0.0);
-    float3 Normal = float3(0.0, 0.0, 0.0);
+    float2 Slope  = float2(0.0, 0.0);
 
     [unroll]
     for (uint Layer = 0; Layer < 4; ++Layer)
@@ -144,15 +157,16 @@ fs_Output main(fs_Input Input)
         const float3 Tangent
             = t_Normal.Sample(s_Normal, float3(Texture[Layer], Input.Palette[Layer])).xyz * 2.0 - 1.0;
 
-        Normal += Tangent * Weight[Layer];
+        // Averaging unit normals pulls a meeting toward flat, so the slopes each one stands at are mixed.
+        Slope += (Tangent.xy / max(Tangent.z, 0.0001)) * Weight[Layer];
 #endif
     }
 
     Result.Albedo = float4(Albedo.rgb, 1.0);
 
 #ifdef ENABLE_NORMAL_MAPPING
-    // The ground faces up, so tangent Z is world up and the other two lie along the plane.
-    const float3 Surface = normalize(float3(Normal.x, max(Normal.z, 0.0001), Normal.y));
+    // The ground faces up, so the slope runs along the plane and world up stands at one.
+    const float3 Surface = normalize(float3(Slope.x, 1.0, Slope.y));
     Result.Normal = float4(Surface * 0.5 + 0.5, 1.0);
 #else
     Result.Normal = float4(0.5, 1.0, 0.5, 1.0);

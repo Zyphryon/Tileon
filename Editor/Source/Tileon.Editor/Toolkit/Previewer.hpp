@@ -65,22 +65,6 @@ namespace Tileon::Editor::Toolkit
             mZoom = Clamp(Zoom, kZoomMin, kZoomMax);
         }
 
-        /// \brief Gets the pan offset for the previewer.
-        ///
-        /// \return The current pan offset.
-        ZY_INLINE Vector2 GetPan() const
-        {
-            return mPan;
-        }
-
-        /// \brief Sets the pan offset for the previewer.
-        ///
-        /// \param Pan The pan offset to set, where (0, 0) centres the texture.
-        ZY_INLINE void SetPan(Vector2 Pan)
-        {
-            mPan = Pan;
-        }
-
         /// \brief Sets the slice of an array texture the previewer is showing.
         ///
         /// \param Slice The zero-based slice within the array.

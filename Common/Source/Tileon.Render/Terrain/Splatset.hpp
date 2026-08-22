@@ -15,6 +15,7 @@
 #include <Zyphryon.Content/Service.hpp>
 #include <Zyphryon.Engine/Locator.hpp>
 #include <Zyphryon.Graphic/Material.hpp>
+#include "Tileon.Render/Types.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // [   CODE   ]
@@ -49,16 +50,25 @@ namespace Tileon
         struct Terrain final
         {
             /// The name the terrain is authored under, which nothing but the palette reads.
-            Str       Name;
+            Str       Name    = "Unnamed";
 
             /// How often the art repeats over the ground its own size would otherwise cover.
             Real32    Tiling  = 1.0f;
 
+            /// How wide a band the relief feathers over where the terrain meets another.
+            Real32    Feather = 0.2f;
+
             /// The color the art is multiplied by, so one slice can dress more than one terrain.
             IntColor8 Tint    = IntColor8::White();
 
-            /// Whether the slice of the normal array this terrain draws was ever authored.
-            Bool      Relief  = false;
+            /// The art the colour of the slice was baked from.
+            Str       Albedo;
+
+            /// The art the relief of the slice was baked from, empty when the terrain brought none.
+            Str       Normal;
+
+            /// The art the elevation folded into the colour was baked from, empty when it brought none.
+            Str       Height;
 
             /// Whether the slice has been retired.
             Bool      Retired = false;
@@ -71,8 +81,11 @@ namespace Tileon
             {
                 Archive.Serialize(Name);
                 Archive.Serialize(Tiling);
+                Archive.Serialize(Feather);
                 Archive.Serialize(Tint);
-                Archive.Serialize(Relief);
+                Archive.Serialize(Albedo);
+                Archive.Serialize(Normal);
+                Archive.Serialize(Height);
                 Archive.Serialize(Retired);
             }
         };
@@ -119,6 +132,22 @@ namespace Tileon
             return mRegistry;
         }
 
+        /// \brief Sets the extent every slice of the arrays is baked at.
+        ///
+        /// \param Resolution The extent, in texels.
+        ZY_INLINE void SetResolution(UInt16 Resolution)
+        {
+            mResolution = Resolution;
+        }
+
+        /// \brief Gets the extent every slice of the arrays is baked at.
+        ///
+        /// \return The extent, in texels.
+        ZY_INLINE UInt16 GetResolution() const
+        {
+            return mResolution;
+        }
+
         /// \brief Gets the material every terrain is a slice of.
         ///
         /// \return The material the ground draws with.
@@ -149,6 +178,7 @@ namespace Tileon
             }
 
             Archive.Serialize(mRegistry);
+            Archive.Serialize(mResolution);
         }
 
     private:
@@ -165,6 +195,7 @@ namespace Tileon
 
         Sequence<Terrain, kLimit>   mRegistry;
         Retainer<Graphic::Material> mMaterial;
+        UInt16                      mResolution;
         Bool                        mLoaded;
         Bool                        mSeeded;
     };

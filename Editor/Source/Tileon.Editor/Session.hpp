@@ -19,6 +19,29 @@ namespace Tileon::Editor
     {
     public:
 
+        /// \brief The key the entity every panel agrees is the selected one is published under.
+        static constexpr Text kSelectionEntity          = "Selection.Entity";
+
+        /// \brief The key the slice the ground is painted with is published under.
+        static constexpr Text kSelectionTerrain         = "Selection.Terrain";
+
+        /// \brief The key the archetype the viewport places is published under.
+        static constexpr Text kSelectionArchetype       = "Selection.Archetype";
+
+        /// \brief The key an archetype waiting to be revealed in its own panel is published under.
+        static constexpr Text kSelectionArchetypeTarget = "Selection.Archetype.Target";
+
+        /// \brief The key the side of the toolbox a command is routed to is published under.
+        static constexpr Text kToolsMode                = "Tools.Mode";
+
+        /// \brief The key a panel asking to be brought forward names itself under.
+        static constexpr Text kNavigatePanel            = "Navigate.Panel";
+
+        /// \brief The key the viewport's free-look toggle is published under.
+        static constexpr Text kViewportPerspective      = "Viewport.Perspective";
+
+    public:
+
         /// \brief Constructs a new session object.
         Session();
 

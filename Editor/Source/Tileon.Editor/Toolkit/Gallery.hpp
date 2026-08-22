@@ -107,22 +107,6 @@ namespace Tileon::Editor::Toolkit
             return mSize;
         }
 
-        /// \brief Sets the filter string used to filter items in the gallery based on their names.
-        ///
-        /// \param Filter The new filter string to set for the gallery.
-        ZY_INLINE void SetFilter(Text Filter)
-        {
-            mFilter = Filter;
-        }
-
-        /// \brief Gets the current filter string used to filter items in the gallery based on their names.
-        ///
-        /// \return The current filter string used to filter items in the gallery.
-        ZY_INLINE Text GetFilter() const
-        {
-            return mFilter;
-        }
-
         /// \brief Sets the currently selected item in the gallery by its unique identifier.
         ///
         /// \param Selection The unique identifier of the item to set as selected in the gallery.

@@ -52,15 +52,6 @@ namespace Tileon::Editor::Toolkit
         /// \return `true` if a selection was pending for the key, `false` otherwise.
         Bool Consume(UInt64 Key, Ref<Str> Selection);
 
-        /// \brief Checks whether the browser is currently open on behalf of the given key.
-        ///
-        /// \param Key The key identifying the field to test.
-        /// \return `true` if the field is awaiting a selection, `false` otherwise.
-        ZY_INLINE Bool IsPending(UInt64 Key) const
-        {
-            return Key != 0 && mRequest == Key;
-        }
-
     private:
 
         /// \brief Defines the type for a list of content entries.

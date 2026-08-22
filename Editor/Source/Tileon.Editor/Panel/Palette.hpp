@@ -14,7 +14,7 @@
 
 #include "Tileon.Editor/Panel.hpp"
 #include "Tileon.Editor/Toolkit/Gallery.hpp"
-#include "Tileon.Editor/Edit/Assembler.hpp"
+#include "Tileon.Render/Terrain/Splatset.hpp"
 #include "Tileon.World/Repository.hpp"
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -36,19 +36,10 @@ namespace Tileon::Editor
         /// \see Panel::OnDraw()
         void OnDraw() override;
 
-        /// \brief Writes the arrays back out with every slice added since they were last assembled.
-        void OnCommit() override;
-
     private:
 
         /// \brief Draws the tab listing the terrains the ground can be painted with.
         void DrawTerrainTab();
-
-        /// \brief Draws the fields that add a terrain to the tileset.
-        void DrawTerrainAuthor();
-
-        /// \brief Draws the editable properties of the selected terrain.
-        void DrawTerrainProperties();
 
         /// \brief Draws the gallery of terrains available to paint.
         void DrawTerrainGallery();
@@ -77,7 +68,6 @@ namespace Tileon::Editor
 
         Ref<Repository>  mRepository;
         Ref<Splatset>    mSplatset;
-        Assembler        mAssembler;
         Toolkit::Gallery mTerrains;
         Toolkit::Gallery mEntities;
         SInt32           mMode;
@@ -87,6 +77,7 @@ namespace Tileon::Editor
 
         Str              mPendingAlbedo;
         Str              mPendingNormal;
+        Str              mPendingHeight;
         Str              mPendingName;
     };
 }

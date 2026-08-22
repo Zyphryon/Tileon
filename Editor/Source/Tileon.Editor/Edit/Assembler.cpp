@@ -13,7 +13,10 @@
 #include "Assembler.hpp"
 #include "Tileon.Editor/Asset/Editor/MaterialEditor.hpp"
 #include <Baker.Texture/Baker.hpp>
+#include <Baker.Texture/Exporter.hpp>
+#include <Baker.Texture/Process/Compositor.hpp>
 #include <Baker.Texture/Process/Mipmapper.hpp>
+#include <Baker.Texture/Process/Resampler.hpp>
 #include <Baker.Texture/Process/Transcoder.hpp>
 #include <Zyphryon.Graphic/Metadata.hpp>
 
@@ -26,32 +29,19 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Assembler::Assembler(Ref<Context> Context, Ref<Splatset> Splatset)
-        : mContext  { Context },
-          mSplatset { Splatset }
+    static Bool Decode(
+        ConstRef<Pipeline::Baker::Texture::Baker> Baker,
+        Text                                      Source,
+        Ref<Pipeline::Baker::Texture::Bitmap>     Output,
+        Bool                                      Linear,
+        UInt16                                    Slice = 0)
     {
-    }
+        using namespace Pipeline::Baker::Texture;
 
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        Profile Settings;
+        Settings.Linear = Linear;
 
-    Retainer<Graphic::Image> Assembler::GetArray(Texture Usage) const
-    {
-        ConstRetainer<Graphic::Material> Material = mSplatset.GetMaterial();
-        return (Material && Material->HasCompleted()) ? Material->GetImage(GetTextureID(Usage)) : nullptr;
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    static Bool Measure(
-        ConstRef<Pipeline::Baker::Texture::Baker>   Baker,
-        Text                                        Source,
-        ConstRef<Pipeline::Baker::Texture::Profile> Profile,
-        Ref<UInt16>                                 Width,
-        Ref<UInt16>                                 Height)
-    {
-        const ConstPtr<Pipeline::Baker::Texture::Importer> Codec = Baker.Find(StrAfterLast(Source, '.'));
+        const ConstPtr<Importer> Codec = Baker.Find(StrAfterLast(Source, '.'));
 
         Blob Input;
 
@@ -62,310 +52,280 @@ namespace Tileon::Editor
             return false;
         }
 
-        const Pipeline::Baker::Texture::Surface Decoded = Codec->Import(Input, Profile);
+        Surface Decoded = Codec->Import(Input, Settings);
 
-        if (!Decoded.IsValid())
+        if (!Decoded.IsValid() || Decoded.Slices.IsEmpty())
         {
             LOG_E("Splatset: '{0}' decoded to nothing", Source);
 
             return false;
         }
 
-        Width  = Decoded.Slices.GetFront().GetWidth();
-        Height = Decoded.Slices.GetFront().GetHeight();
+        if (Slice >= Decoded.Slices.GetSize())
+        {
+            LOG_E("Splatset: '{0}' holds no slice {1}", Source, Slice);
+
+            return false;
+        }
+
+        Output = Move(Decoded.Slices[Slice]);
         return true;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Assembler::Append(Text Albedo, Text Normal, Text Name)
+    static Pipeline::Baker::Texture::Bitmap Blank(UInt16 Width, UInt16 Height, ConstRef<Array<UInt8, 4>> Colour)
     {
-        using namespace Pipeline::Baker::Texture;
+        Blob Pixels = Blob::Allocate<Byte>(static_cast<UInt32>(Width) * Height * 4);
 
-        const Str AlbedoArray = Resolve(Splatset::kAlbedo);
-        const Str NormalArray = Resolve(Splatset::kNormal);
-
-        // A project that has never had a tileset has nowhere to write one yet.
-        Filesystem::MakeAll(StrBeforeLast(AlbedoArray, '/'));
-
-        const Baker Baker(mContext.GetScheduler());
-
-        // Arrays that already exist are grown one slice at a time and written in place, so only the art
-        // being added is decoded and filtered. The very first terrain has no array to grow, and no extent
-        // or format to match, so that one is still assembled onto disk to bring both into being.
-        if (const Str Relief = (Normal.IsEmpty() ? Str() : Resolve(Normal)); AppendInPlace(Resolve(Albedo), Relief, Name))
+        for (Ptr<UInt8> Texel = Pixels.GetData<UInt8>(),
+             Limit = Texel + static_cast<UInt32>(Width) * Height * 4; Texel < Limit; Texel += 4)
         {
-            return true;
+            Texel[0] = Colour[0];
+            Texel[1] = Colour[1];
+            Texel[2] = Colour[2];
+            Texel[3] = Colour[3];
         }
 
-        // One array grows per pass: the colour always, the relief only when the terrain brought one.
-        const auto Grow = [&](Text Source, Text Array, Text Mount, ConstRetainer<Graphic::Image> Existing, Bool Linear)
-        {
-            // Only an array that really loaded has slices worth keeping.
-            const Bool Mounted = Existing && Existing->GetLayers() > 0;
+        return Pipeline::Baker::Texture::Bitmap(
+            Graphic::TextureFormat::RGBA8UIntNorm, Width, Height, 1, Move(Pixels));
+    }
 
-            // Existing slices are re-read from the array the assemble is about to write over, so a material
-            // pointing somewhere else would gather the wrong art and renumber every terrain already painted.
-            if (Mounted && Existing->GetKey().GetUrl() != Mount)
-            {
-                LOG_E("Splatset: '{0}' binds '{1}' rather than '{2}', so it cannot be appended to",
-                    Splatset::kMaterial, Existing->GetKey().GetUrl(), Mount);
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-                return false;
-            }
+    Retainer<Graphic::Image> Assembler::GetArray(Texture Usage) const
+    {
+        ConstRetainer<Graphic::Material> Material = mSplatset.GetMaterial();
 
-            Profile Settings;
-            Settings.Linear   = Linear;
-            Settings.Mipmaps  = true;
-            Settings.Compress = true;
+        return (Material && Material->HasCompleted()) ? Material->GetImage(GetTextureID(Usage)) : nullptr;
+    }
 
-            UInt16 Width  = Mounted ? Existing->GetWidth()  : 0;
-            UInt16 Height = Mounted ? Existing->GetHeight() : 0;
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-            // An empty array has no extent to match, so the first terrain sets it and the source is decoded
-            // once up front to say what it is.
-            if (!Mounted && !Measure(Baker, Source, Settings, Width, Height))
-            {
-                return false;
-            }
+    Assembler::Assembler(Ref<Context> Context, Ref<Splatset> Splatset)
+        : mContext  { Context },
+          mSplatset { Splatset },
+          mDirty    { false }
+    {
+    }
 
-            // Every entry has to declare the same extent or the assemble is refused outright, and the
-            // existing slices are re-read from the array itself so they keep the place they already hold.
-            Sequence<Manifest::Entry> Entries;
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-            for (UInt16 Slice = 0; Mounted && Slice < Existing->GetLayers(); ++Slice)
-            {
-                Ref<Manifest::Entry> Entry = Entries.Append();
-                Entry.Source = Array;
-                Entry.Slice  = Slice;
-                Entry.Width  = Width;
-                Entry.Height = Height;
-            }
-
-            Ref<Manifest::Entry> Added = Entries.Append();
-            Added.Source = Source;
-            Added.Width  = Width;
-            Added.Height = Height;
-
-            Blob Baked = Baker.Assemble(Entries, Settings);
-            return Baked && Filesystem::Write(Array, Baked) == Filesystem::Result::Success;
-        };
-
-        if (!Grow(Resolve(Albedo), AlbedoArray, Splatset::kAlbedo, GetArray(Texture::Albedo), false))
-        {
-            LOG_E("Splatset: failed to add '{0}' to '{1}'", Albedo, AlbedoArray);
-            return false;
-        }
-
-        if (!Normal.IsEmpty() && !Grow(Resolve(Normal), NormalArray, Splatset::kNormal, GetArray(Texture::Normal), true))
-        {
-            LOG_E("Splatset: failed to add '{0}' to '{1}'", Normal, NormalArray);
-            return false;
-        }
-
-        // The material is rewritten every time, since the first terrain is what brings each array into being.
-        Sequence<MaterialEditor::Binding> Bindings;
-
-        Ref<MaterialEditor::Binding> Colour = Bindings.Append();
-        Colour.Name    = Enum::GetName(Texture::Albedo);
-        Colour.Path    = StrAfterLast(Splatset::kAlbedo, '/');
-        Colour.Inherit = true;
-
-        if (!Normal.IsEmpty() || GetArray(Texture::Normal))
-        {
-            Ref<MaterialEditor::Binding> Relief = Bindings.Append();
-            Relief.Name    = Enum::GetName(Texture::Normal);
-            Relief.Path    = StrAfterLast(Splatset::kNormal, '/');
-            Relief.Inherit = true;
-        }
-
-        MaterialEditor::Write(Resolve(Splatset::kMaterial), Bindings);
-
-        mContext.GetContent().Reload(mSplatset.GetMaterial());
-
-        // The slice the bake appended is the one this terrain draws, and the splatset appends in step.
-        const UInt16 Slice = mSplatset.AddTerrain(Name);
+    UInt16 Assembler::Create()
+    {
+        const UInt16 Slice = mSplatset.AddTerrain(Text());
 
         if (Slice == Splatset::kInvalid)
         {
-            LOG_E("Splatset: '{0}' is in the arrays, but the palette has no room to name it", Albedo);
+            return Splatset::kInvalid;
+        }
 
+        // An array baked with room to spare takes the terrain now; one without owes a re-bake at the save.
+        mDirty = true;
+
+        if (ConstRetainer<Graphic::Image> Colour = GetArray(Texture::Albedo); Colour && Slice < Colour->GetLayers())
+        {
+            WriteArt(Slice, Texture::Albedo);
+
+            if (GetArray(Texture::Normal))
+            {
+                WriteArt(Slice, Texture::Normal);
+            }
+        }
+        else
+        {
+            // Without a slice of its own the terrain would show whatever the array happens to hold there,
+            // so the arrays are baked again at once rather than left owing until the project is saved.
+            if (!Rebuild())
+            {
+                return Splatset::kInvalid;
+            }
+        }
+        return Slice;
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    Bool Assembler::SetSource(UInt16 Slice, Slot Slot, Text Source)
+    {
+        if (Slice >= mSplatset.GetTerrains().GetSize())
+        {
             return false;
         }
 
-        mSplatset.GetTerrain(Slice).Relief = !Normal.IsEmpty();
+        Ref<Splatset::Terrain> Terrain = mSplatset.GetTerrain(Slice);
+
+        switch (Slot)
+        {
+        case Slot::Albedo:
+            Terrain.Albedo = Source;
+            break;
+        case Slot::Normal:
+            Terrain.Normal = Source;
+            break;
+        case Slot::Height:
+            Terrain.Height = Source;
+            break;
+        }
+
+        // Relief brings an array into being the first time one is asked for, and height rides in the alpha
+        // of the colour, so only a slice that is already there can be written where it stands.
+        const Texture Written = (Slot == Slot::Normal) ? Texture::Normal : Texture::Albedo;
+
+        // The slice on the card is patched where it stands so the change shows at once, but the arrays on
+        // disk are stale either way, so the save is owed a bake regardless of which path was taken.
+        mDirty = true;
+
+        if (ConstRetainer<Graphic::Image> Array = GetArray(Written); Array && Slice < Array->GetLayers())
+        {
+            return WriteArt(Slice, Written);
+        }
         return true;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Bool Assembler::AppendInPlace(Text Albedo, Text Normal, Text Name)
+    Bool Assembler::Rebuild()
     {
         using namespace Pipeline::Baker::Texture;
 
-        // Slices go into the array the material already holds, which cannot be made bigger once it exists.
-        // Without a spare one the caller falls back to assembling the whole thing onto disk again.
-        ConstRetainer<Graphic::Image> Colour = GetArray(Texture::Albedo);
+        const ConstSpan<Splatset::Terrain> Terrains = mSplatset.GetTerrains();
 
-        const UInt16 Slice = static_cast<UInt16>(mSplatset.GetTerrains().GetSize());
-
-        if (!Colour || Slice >= Colour->GetLayers())
+        if (Terrains.IsEmpty())
         {
-            return false;
-        }
-
-        const Baker Baker(mContext.GetScheduler());
-
-        // Decoding, filtering and transcoding one terrain is all an add costs now, however many the project
-        // already holds; what is already in the arrays is never read back.
-        const auto Bake = [&](Text Source, Bool Linear, Ref<Bitmap> Output)
-        {
-            Profile Settings;
-            Settings.Linear = Linear;
-
-            const ConstPtr<Importer> Codec = Baker.Find(StrAfterLast(Source, '.'));
-
-            Blob Input;
-
-            if (Codec == nullptr || Filesystem::Read(Source, Input) != Filesystem::Result::Success)
-            {
-                LOG_E("Splatset: nothing here can read '{0}'", Source);
-
-                return false;
-            }
-
-            Surface Decoded = Codec->Import(ConstSpan<Byte>(Input.GetData(), Input.GetSize()), Settings);
-
-            if (!Decoded.IsValid() || Decoded.Slices.IsEmpty())
-            {
-                LOG_E("Splatset: '{0}' decoded to nothing", Source);
-
-                return false;
-            }
-
-            Ref<Bitmap> Frame = Decoded.Slices.GetFront();
-
-            if (Frame.GetWidth() != Colour->GetWidth() || Frame.GetHeight() != Colour->GetHeight())
-            {
-                LOG_E("Splatset: '{0}' is {1}x{2}, but every slice of the arrays is {3}x{4}",
-                    Source, Frame.GetWidth(), Frame.GetHeight(), Colour->GetWidth(), Colour->GetHeight());
-
-                return false;
-            }
-
-            Output = Transcoder::Transcode(
-                Mipmapper::Generate(Move(Frame), Colour->GetLevels()), Colour->GetFormat());
             return true;
-        };
-
-        Bitmap Tone;
-        Bitmap Relief;
-
-        if (!Bake(Albedo, false, Tone) || (!Normal.IsEmpty() && !Bake(Normal, true, Relief)))
-        {
-            return false;
         }
 
-        WriteSlice(Colour, Slice, Tone.GetPixels());
+        ConstRetainer<Graphic::Image> Colour = GetArray(Texture::Albedo);
+        ConstRetainer<Graphic::Image> Relief = GetArray(Texture::Normal);
 
-        if (ConstRetainer<Graphic::Image> Array = GetArray(Texture::Normal))
-        {
-            // The slice is sampled either way, so a terrain that brought no relief is given flat rather
-            // than left wearing whatever the array happened to hold there.
-            if (Normal.IsEmpty())
-            {
-                WriteFlatRelief(Array, Slice);
-            }
-            else
-            {
-                WriteSlice(Array, Slice, Relief.GetPixels());
-            }
-        }
-
-        const UInt16 Named = mSplatset.AddTerrain(Name);
-
-        if (Named == Splatset::kInvalid)
-        {
-            LOG_E("Splatset: '{0}' is in the arrays, but the palette has no room to name it", Albedo);
-
-            return false;
-        }
-
-        // The slice is on the GPU now, but the file behind it still ends where it did, so what it owes is
-        // remembered and paid on the next save rather than rewritten for every terrain that arrives.
-        Ref<Pending> Owed = mPending.Append();
-        Owed.Albedo = Albedo;
-        Owed.Normal = Normal;
-
-        mSplatset.GetTerrain(Named).Relief = !Normal.IsEmpty();
-        return true;
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    Bool Assembler::AppendRelief(UInt16 Slice, Text Source)
-    {
-        using namespace Pipeline::Baker::Texture;
+        // The size the project authors at, which every slice is scaled to fit whatever its art measures.
+        const UInt16 Extent = mSplatset.GetResolution();
 
         const Baker Baker(mContext.GetScheduler());
+        const Str   AlbedoArray = Resolve(Splatset::kAlbedo);
+        const Str   NormalArray = Resolve(Splatset::kNormal);
+
+        Bool Lit    = (Relief != nullptr);
+        Bool Raised = false;
+
+        for (ConstRef<Splatset::Terrain> Terrain : Terrains)
+        {
+            Lit    |= !Terrain.Normal.IsEmpty();
+            Raised |= !Terrain.Height.IsEmpty();
+        }
+
+        Sequence<Bitmap> Tones;
+        Sequence<Bitmap> Reliefs;
+
+        for (UInt16 Slice = 0; Slice < Terrains.GetSize(); ++Slice)
+        {
+            ConstRef<Splatset::Terrain> Terrain = Terrains[Slice];
+
+            // A terrain that named its art is baked from it again; one seeded from an array nobody authored
+            // through is read back out of that array, so a rebuild never costs it the slice it holds.
+            Bitmap Tone;
+
+            if (!Terrain.Albedo.IsEmpty())
+            {
+                if (!Decode(Baker, Resolve(Terrain.Albedo), Tone, false))
+                {
+                    return false;
+                }
+
+                if (!Terrain.Height.IsEmpty())
+                {
+                    Bitmap Raised;
+
+                    // The relief a terrain stands at rides in the alpha of its colour, which nothing else claims.
+                    if (Decode(Baker, Resolve(Terrain.Height), Raised, true))
+                    {
+                        if (Bitmap Merged = Compositor::Insert(Tone, Raised, 3, 0); !Merged.GetPixels().IsEmpty())
+                        {
+                            Tone = Move(Merged);
+                        }
+                    }
+                }
+            }
+            else if (!Colour || !Decode(Baker, AlbedoArray, Tone, false, Slice))
+            {
+                Tone = Blank(Extent, Extent, Array<UInt8, 4> { 128, 128, 128, 128 });
+            }
+
+            Tones.Append(Resampler::Resize(Tone, Extent, Extent));
+
+            if (!Lit)
+            {
+                continue;
+            }
+
+            Bitmap Surface;
+
+            if (!Terrain.Normal.IsEmpty())
+            {
+                if (!Decode(Baker, Resolve(Terrain.Normal), Surface, true))
+                {
+                    return false;
+                }
+            }
+            else if (!Relief || !Decode(Baker, NormalArray, Surface, true, Slice))
+            {
+                Surface = Blank(Extent, Extent, Array<UInt8, 4> { 128, 128, 255, 255 });
+            }
+
+            Reliefs.Append(Resampler::Resize(Surface, Extent, Extent));
+        }
+
+        // Room is left over so terrains authored before the next save can be written where they stand.
+        while (Tones.GetSize() % kHeadroom != 0)
+        {
+            Tones.Append(Blank(Extent, Extent, Array<UInt8, 4> { 128, 128, 128, 128 }));
+
+            if (Lit)
+            {
+                Reliefs.Append(Blank(Extent, Extent, Array<UInt8, 4> { 128, 128, 255, 255 }));
+            }
+        }
 
         Profile Settings;
-        Settings.Linear = true;
+        Settings.Mipmaps  = true;
+        Settings.Compress = true;
 
-        const Str                Path  = Resolve(Source);
-        const ConstPtr<Importer> Codec = Baker.Find(StrAfterLast(Path, '.'));
+        Settings.Linear = false;
 
-        Blob Input;
-
-        if (Codec == nullptr || Filesystem::Read(Path, Input) != Filesystem::Result::Success)
+        if (Blob Baked = Exporter::Export(
+            mContext.GetScheduler(), Move(Tones), Graphic::TextureLayout::Texture2DArray, Settings);
+            !Baked || Filesystem::Write(AlbedoArray, Baked) != Filesystem::Result::Success)
         {
-            LOG_E("Splatset: nothing here can read '{0}'", Path);
+            LOG_E("Splatset: failed to write '{0}' back", Splatset::kAlbedo);
 
             return false;
         }
 
-        Surface Decoded = Codec->Import(Input, Settings);
-
-        if (!Decoded.IsValid() || Decoded.Slices.IsEmpty())
+        if (Lit)
         {
-            LOG_E("Splatset: '{0}' decoded to nothing", Path);
+            Settings.Linear = true;
 
-            return false;
+            if (Blob Baked = Exporter::Export(
+                mContext.GetScheduler(), Move(Reliefs), Graphic::TextureLayout::Texture2DArray, Settings);
+                !Baked || Filesystem::Write(NormalArray, Baked) != Filesystem::Result::Success)
+            {
+                LOG_E("Splatset: failed to write '{0}' back", Splatset::kNormal);
+
+                return false;
+            }
         }
 
-        Ref<Bitmap> Frame = Decoded.Slices.GetFront();
+        WriteMaterial(Lit, Raised);
 
-        // The slice is already there holding this terrain's colour, so the relief is written into it rather
-        // than the array being remade. A project whose terrains never carried relief has no array to write
-        // into at all, and one cannot be conjured here: it has to be baked and bound by the material, which
-        // is a save, not a draw.
-        ConstRetainer<Graphic::Image> Array = GetArray(Texture::Normal);
-
-        if (!Array)
-        {
-            LOG_E("Splatset: this project has no normal array; author a terrain with one to bring it about");
-
-            return false;
-        }
-
-        if (Frame.GetWidth() != Array->GetWidth() || Frame.GetHeight() != Array->GetHeight())
-        {
-            LOG_E("Splatset: '{0}' is {1}x{2}, but every slice of the arrays is {3}x{4}",
-                Path, Frame.GetWidth(), Frame.GetHeight(), Array->GetWidth(), Array->GetHeight());
-
-            return false;
-        }
-
-        const Bitmap Relief = Transcoder::Transcode(
-            Mipmapper::Generate(Move(Frame), Array->GetLevels()), Array->GetFormat());
-
-        WriteSlice(Array, Slice, Relief.GetPixels());
-
-        mSplatset.GetTerrain(Slice).Relief = true;
-        mReliefs.Assign(Slice, Path);
+        mContext.GetContent().Reload(mSplatset.GetMaterial());
+        mDirty = false;
         return true;
     }
 
@@ -374,123 +334,68 @@ namespace Tileon::Editor
 
     void Assembler::Commit()
     {
-        using namespace Pipeline::Baker::Texture;
-
-        if (mPending.IsEmpty())
+        if (mDirty)
         {
-            return;
+            Rebuild();
         }
-
-        const Baker  Baker(mContext.GetScheduler());
-        const UInt16 Held = static_cast<UInt16>(mSplatset.GetTerrains().GetSize() - mPending.GetSize());
-
-        // One assemble covers every terrain added since the last save, rather than one per terrain, so what
-        // authoring costs no longer depends on how often the project happens to be written out.
-        ConstRetainer<Graphic::Image> Shape = GetArray(Texture::Albedo);
-
-        if (!Shape)
-        {
-            return;
-        }
-
-        const auto Flush = [&](Text Array, Bool Linear, Bool Relief)
-        {
-            Profile Settings;
-            Settings.Linear   = Linear;
-            Settings.Mipmaps  = true;
-            Settings.Compress = true;
-
-            Sequence<Manifest::Entry> Entries;
-
-            for (UInt16 Slice = 0; Slice < Held; ++Slice)
-            {
-                Ref<Manifest::Entry> Entry = Entries.Append();
-                Entry.Source = Array;
-                Entry.Slice  = Slice;
-                Entry.Width  = Shape->GetWidth();
-                Entry.Height = Shape->GetHeight();
-            }
-
-            for (ConstRef<Pending> Owed : mPending)
-            {
-                ConstRef<Str> Source = (Relief ? Owed.Normal : Owed.Albedo);
-
-                // A terrain that brought no relief still needs a slice of the right size, and its colour
-                // serves: nothing samples it, because that terrain is drawn flat.
-                Ref<Manifest::Entry> Entry = Entries.Append();
-                Entry.Source = (Source.IsEmpty() ? Owed.Albedo : Source);
-                Entry.Slice  = 0;
-                Entry.Width  = Shape->GetWidth();
-                Entry.Height = Shape->GetHeight();
-            }
-
-            // Relief given to a terrain authored earlier replaces the slice it already holds.
-            if (Relief)
-            {
-                for (UInt32 Index = 0; Index < Entries.GetSize(); ++Index)
-                {
-                    if (const ConstPtr<Str> Authored = mReliefs.Find(static_cast<UInt16>(Index)))
-                    {
-                        Entries[Index].Source = (* Authored);
-                        Entries[Index].Slice  = 0;
-                    }
-                }
-            }
-
-            // The array is rounded up so the terrains authored before the next save have somewhere to go
-            // without it being assembled again.
-            for (UInt32 Spare = Entries.GetSize() % kHeadroom; Spare != 0 && Spare < kHeadroom; ++Spare)
-            {
-                Entries.Append(Entries.GetBack());
-            }
-
-            Blob Baked = Baker.Assemble(Entries, Settings);
-            return Baked && Filesystem::Write(Array, Baked) == Filesystem::Result::Success;
-        };
-
-        if (!Flush(Resolve(Splatset::kAlbedo), false, false))
-        {
-            LOG_E("Splatset: failed to write '{0}' back", Splatset::kAlbedo);
-
-            return;
-        }
-
-        if (GetArray(Texture::Normal) && !Flush(Resolve(Splatset::kNormal), true, true))
-        {
-            LOG_E("Splatset: failed to write '{0}' back", Splatset::kNormal);
-
-            return;
-        }
-
-        mPending.Clear();
-        mReliefs.Clear();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Assembler::WriteFlatRelief(ConstRetainer<Graphic::Image> Array, UInt16 Slice)
+    Bool Assembler::WriteArt(UInt16 Slice, Texture Usage)
     {
         using namespace Pipeline::Baker::Texture;
 
-        const UInt16 Width  = Array->GetWidth();
-        const UInt16 Height = Array->GetHeight();
+        ConstRetainer<Graphic::Image> Store = GetArray(Usage);
 
-        // A tangent-space normal pointing straight out of the surface, which is what "no relief" means.
-        Blob Pixels = Blob::Allocate<Byte>(static_cast<UInt32>(Width) * Height * 4);
-
-        for (Ptr<UInt8> Texel = Pixels.GetData<UInt8>(), Limit = Texel + Width * Height * 4; Texel < Limit; Texel += 4)
+        // The array is baked with room to spare, so a slice inside it may still name no terrain at all.
+        if (!Store || Slice >= Store->GetLayers() || Slice >= mSplatset.GetTerrains().GetSize())
         {
-            Texel[0] = 128;
-            Texel[1] = 128;
-            Texel[2] = 255;
-            Texel[3] = 255;
+            return false;
         }
 
-        Bitmap Flat(Graphic::TextureFormat::RGBA8UIntNorm, Width, Height, 1, Move(Pixels));
+        ConstRef<Splatset::Terrain> Terrain = mSplatset.GetTerrain(Slice);
+        ConstRef<Str>               Source  = (Usage == Texture::Normal) ? Terrain.Normal : Terrain.Albedo;
 
-        WriteSlice(Array, Slice, Transcoder::Transcode(
-            Mipmapper::Generate(Move(Flat), Array->GetLevels()), Array->GetFormat()).GetPixels());
+        const Baker  Baker(mContext.GetScheduler());
+        const UInt16 Extent = Store->GetWidth();
+
+        Bitmap Frame;
+
+        if (Source.IsEmpty())
+        {
+            Frame = (Usage == Texture::Normal)
+                ? Blank(Extent, Extent, Array<UInt8, 4> { 128, 128, 255, 255 })
+                : Blank(Extent, Extent, Array<UInt8, 4> { 128, 128, 128, 128 });
+        }
+        else
+        {
+            if (!Decode(Baker, Resolve(Source), Frame, Usage == Texture::Normal))
+            {
+                return false;
+            }
+
+            Frame = Resampler::Resize(Frame, Extent, Store->GetHeight());
+
+            // The relief a terrain stands at rides in the alpha of its colour, which nothing else claims.
+            if (Usage == Texture::Albedo && !Terrain.Height.IsEmpty())
+            {
+                Bitmap Raised;
+
+                if (Decode(Baker, Resolve(Terrain.Height), Raised, true))
+                {
+                    if (Bitmap Merged = Compositor::Insert(Frame, Raised, 3, 0); !Merged.GetPixels().IsEmpty())
+                    {
+                        Frame = Move(Merged);
+                    }
+                }
+            }
+        }
+
+        WriteSlice(Store, Slice, Transcoder::Transcode(
+            Mipmapper::Generate(Move(Frame), Store->GetLevels()), Store->GetFormat()).GetPixels());
+        return true;
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -533,6 +438,43 @@ namespace Tileon::Editor
 
             Offset += Size;
         }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Assembler::WriteMaterial(Bool Lit, Bool Raised)
+    {
+        // A path with no schema is joined onto the material's own directory, and the material sits beside
+        // its arrays, so each is named by its filename alone.
+        Sequence<MaterialEditor::Binding> Bindings;
+
+        Ref<MaterialEditor::Binding> Colour = Bindings.Append();
+        Colour.Name    = Enum::GetName(Texture::Albedo);
+        Colour.Path    = StrAfterLast(Splatset::kAlbedo, '/');
+        Colour.Inherit = true;
+
+        if (Lit)
+        {
+            Ref<MaterialEditor::Binding> Relief = Bindings.Append();
+            Relief.Name    = Enum::GetName(Texture::Normal);
+            Relief.Path    = StrAfterLast(Splatset::kNormal, '/');
+            Relief.Inherit = true;
+        }
+
+        Sequence<MaterialEditor::Constant> Constants;
+
+        // The technique turns its height blend on wherever the parameter is there at all, so art that
+        // carries no height leaves it out of the material rather than writing it false.
+        if (Raised)
+        {
+            Ref<MaterialEditor::Constant> Height = Constants.Append();
+            Height.Name    = "Height";
+            Height.Type    = Graphic::Uniform::Bool;
+            Height.Boolean = true;
+        }
+
+        MaterialEditor::Write(Resolve(Splatset::kMaterial), Bindings, Constants);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

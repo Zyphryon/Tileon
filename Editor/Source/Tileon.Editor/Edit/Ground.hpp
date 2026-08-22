@@ -87,28 +87,28 @@ namespace Tileon::Editor
             return mFlow;
         }
 
-        /// \brief Sets whether the brush fades towards its rim.
+        /// \brief Sets how the brush gives way towards its rim.
         ///
-        /// \param Soft Whether the brush is soft.
-        ZY_INLINE void SetSoft(Bool Soft)
+        /// \param Falloff The falloff to set.
+        ZY_INLINE void SetFalloff(Falloff Falloff)
         {
-            mSoft = Soft;
+            mFalloff = Falloff;
         }
 
-        /// \brief Gets whether the brush fades towards its rim.
+        /// \brief Gets how the brush gives way towards its rim.
         ///
-        /// \return `true` when the brush is soft, `false` otherwise.
-        ZY_INLINE Bool IsSoft() const
+        /// \return The current falloff.
+        ZY_INLINE Falloff GetFalloff() const
         {
-            return mSoft;
+            return mFalloff;
         }
 
-        /// \brief Gets how much of the brush lands on a unit at the specified offset from its centre.
+        /// \brief Gets how much of the brush lands on one unit of the ground.
         ///
-        /// \param OffsetX The x-offset from the centre, in world units.
-        /// \param OffsetY The y-offset from the centre, in world units.
+        /// \param Unit   The unit being covered, in world units.
+        /// \param Offset The unit's offset from the centre of the stroke, in world units.
         /// \return The share of the brush that lands on the unit.
-        UInt8 Cover(SInt32 OffsetX, SInt32 OffsetY) const;
+        UInt8 Cover(IntVector2 Unit, IntVector2 Offset) const;
 
         /// \brief Paints the ground with a slice at the specified placement in the world.
         ///
@@ -131,6 +131,9 @@ namespace Tileon::Editor
 
             /// The y-coordinate of the region the stroke was waiting on.
             SInt16     RegionY;
+
+            /// The brush the stroke was laid down with.
+            Brush      Brush;
 
             /// Whether the stroke lays a terrain down or takes it away.
             Command    Command;
@@ -163,6 +166,19 @@ namespace Tileon::Editor
             IntVector2    Centre,
             UInt16        Slice);
 
+        /// \brief Pulls one point of the ground towards the average of the ones around it.
+        ///
+        /// \param Surface  The surface to soften.
+        /// \param X        The x-coordinate of the point within the region.
+        /// \param Y        The y-coordinate of the point within the region.
+        /// \param Strength How far the point is carried towards its neighbours.
+        void Soften(Ptr<Splatmap> Surface, UInt8 X, UInt8 Y, UInt8 Strength);
+
+        /// \brief Takes the terrain under a placement as the one the palette paints with.
+        ///
+        /// \param Placement The placement in the world to read.
+        void Pick(Placement Placement);
+
     private:
 
         // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -172,7 +188,7 @@ namespace Tileon::Editor
         Shape              mShape;
         UInt8              mSize;
         UInt8              mFlow;
-        Bool               mSoft;
+        Falloff            mFalloff;
         Sequence<Deferred> mDeferred;
     };
 }

@@ -709,6 +709,23 @@ namespace Tileon::Editor::Toolkit
             return ImGui::Button(Label.GetData(), ImVec2(Width, Height));
         }
 
+        ZY_INLINE static Bool ToggleButton(Text Label, Bool Active, Real32 Width = 0.0f, Real32 Height = 0.0f)
+        {
+            if (Active)
+            {
+                PushStyleColor(ImGuiCol_Button,        GetStyleColorVec4(ImGuiCol_ButtonActive));
+                PushStyleColor(ImGuiCol_ButtonHovered, GetStyleColorVec4(ImGuiCol_ButtonActive));
+            }
+
+            const Bool Pressed = Button(Label, Width, Height);
+
+            if (Active)
+            {
+                PopStyleColor(2);
+            }
+            return Pressed;
+        }
+
         ZY_INLINE static Bool DisabledButton(Text Label, Bool Disable, Real32 Width = 0.0f, Real32 Height = 0.0f)
         {
             ImGui::BeginDisabled(Disable);

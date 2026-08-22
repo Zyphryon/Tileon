@@ -81,22 +81,6 @@ namespace Tileon::Editor
             return mName;
         }
 
-        /// \brief Sets the author of the project.
-        ///
-        /// \param Author The author name to assign to the project.
-        ZY_INLINE void SetAuthor(Text Author)
-        {
-            mAuthor = Author;
-        }
-
-        /// \brief Gets the author of the project.
-        ///
-        /// \return The author name of the project.
-        ZY_INLINE Text GetAuthor() const
-        {
-            return mAuthor;
-        }
-
         /// \brief Sets the description of the project.
         ///
         /// \param Description The description to assign to the project.

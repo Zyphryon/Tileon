@@ -67,13 +67,6 @@ namespace Tileon::Editor
         /// \param Tooltip The hint shown when the button is hovered.
         void DrawBrushButton(Tools::Brush Brush, Text Icon, Text Tooltip);
 
-        /// \brief Draws a toolbar button that selects the given brush shape, highlighted while that shape is active.
-        ///
-        /// \param Shape   The footprint the button selects.
-        /// \param Icon    The icon displayed on the button.
-        /// \param Tooltip The hint shown when the button is hovered.
-        void DrawShapeButton(Tools::Shape Shape, Text Icon, Text Tooltip);
-
         /// \brief Draws a toolbar button that toggles the given overlay, highlighted while that overlay is enabled.
         ///
         /// \param Overlay The diagnostic overlay the button toggles.
@@ -98,6 +91,33 @@ namespace Tileon::Editor
 
         /// \brief Draws the viewport for the scene activity, displaying the rendered game world.
         void DrawViewport();
+
+        /// \brief Blits the composed frame into the panel, the way the driver hands it over.
+        void DrawImage();
+
+        /// \brief Marks every selected entity with corner brackets over the frame.
+        ///
+        /// \param Camera The viewport projection the brackets are placed by.
+        void DrawSelectionOverlay(ConstRef<Camera> Camera);
+
+        /// \brief Answers the clipboard and delete keys while the viewport holds focus.
+        void HandleShortcuts();
+
+        /// \brief Answers the marquee, the click selection and the paste, while the select brush is held.
+        ///
+        /// \param Camera The viewport projection a marquee is measured against.
+        /// \param Cursor The placement under the cursor.
+        void HandleSelection(ConstRef<Camera> Camera, Placement Cursor);
+
+        /// \brief Lays the ground brush down for as long as it is held.
+        ///
+        /// \param Cursor The placement under the cursor.
+        void HandleGround(Placement Cursor);
+
+        /// \brief Places and takes away the entities the palette has selected.
+        ///
+        /// \param Cursor The placement under the cursor.
+        void HandleEntities(Placement Cursor);
 
         /// \brief Marks every light in the scene, which is otherwise invisible until it is selected.
         ///

@@ -56,39 +56,17 @@ namespace Tileon::Editor::Toolkit
         Composer::SameLine();
 
         // List mode toggle button.
-        const Bool ListActive = (mMode == Mode::List);
-        if (ListActive)
-        {
-            Composer::PushStyleColor(ImGuiCol_Button,        Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            Composer::PushStyleColor(ImGuiCol_ButtonHovered, Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        }
-        if (Composer::Button(ICON_FA_LIST))
+        if (Composer::ToggleButton(ICON_FA_LIST, mMode == Mode::List))
         {
             mMode = Mode::List;
         }
-        if (ListActive)
-        {
-            Composer::PopStyleColor(2);
-        }
-
         Composer::SameLine();
 
         // Grid mode toggle button.
-        const Bool GridActive = (mMode == Mode::Grid);
-        if (GridActive)
-        {
-            Composer::PushStyleColor(ImGuiCol_Button,        Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            Composer::PushStyleColor(ImGuiCol_ButtonHovered, Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        }
-        if (Composer::Button(ICON_FA_TABLE_CELLS_LARGE))
+        if (Composer::ToggleButton(ICON_FA_TABLE_CELLS_LARGE, mMode == Mode::Grid))
         {
             mMode = Mode::Grid;
         }
-        if (GridActive)
-        {
-            Composer::PopStyleColor(2);
-        }
-
         // Cell-size slider, visible in grid mode only.
         if (mMode == Mode::Grid)
         {

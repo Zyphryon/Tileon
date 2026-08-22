@@ -86,14 +86,6 @@ namespace Tileon::Editor::Toolkit
         /// \brief Draws the explorer if currently open. Must be called every frame while active.
         void Draw();
 
-        /// \brief Checks whether the explorer is currently open and awaiting user input.
-        ///
-        /// \return `true` if the explorer is open, `false` otherwise.
-        ZY_INLINE Bool IsOpen() const
-        {
-            return mOpen;
-        }
-
     private:
 
         /// \brief Identifies the listing column the entries are ordered by, matching the table's column indices.

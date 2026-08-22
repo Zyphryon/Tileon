@@ -49,14 +49,6 @@ namespace Tileon::Editor
             return mContext;
         }
 
-        /// \brief Set the title of the activity.
-        ///
-        /// \param Title The new title for the activity.
-        ZY_INLINE void SetTitle(Text Title)
-        {
-            mTitle = Title;
-        }
-
         /// \brief Get the title of the activity.
         ///
         /// \return The current title of the activity.

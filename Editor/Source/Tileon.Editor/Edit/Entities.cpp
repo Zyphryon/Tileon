@@ -193,7 +193,7 @@ namespace Tileon::Editor
         mContext.GetHistory().RecordEntity(Instance);
 
         // Select what was just placed so the inspector targets it; the brush stays armed for the next stamp.
-        mContext.SetInteger("Selection.Entity", Instance.GetID());
+        mContext.SetInteger(Session::kSelectionEntity, Instance.GetID());
 
         // Snapshot the placed pose so the replacement preview continues from the same scale and rotation.
         mPreview = Scene::Entity();
@@ -237,7 +237,7 @@ namespace Tileon::Editor
     void Entities::SetPrimary(UInt64 Entity)
     {
         mSelectionPrimary = Entity;
-        mContext.SetInteger("Selection.Entity", static_cast<SInt64>(Entity));
+        mContext.SetInteger(Session::kSelectionEntity, static_cast<SInt64>(Entity));
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -288,10 +288,10 @@ namespace Tileon::Editor
             mSelection        = Move(Live);
             mSelectionPrimary = History.Remap(mSelectionPrimary);
 
-            mContext.SetInteger("Selection.Entity", static_cast<SInt64>(mSelectionPrimary));
+            mContext.SetInteger(Session::kSelectionEntity, static_cast<SInt64>(mSelectionPrimary));
         }
 
-        const UInt64 Current = static_cast<UInt64>(mContext.GetInteger("Selection.Entity", 0));
+        const UInt64 Current = static_cast<UInt64>(mContext.GetInteger(Session::kSelectionEntity, 0));
 
         if (Current != mSelectionPrimary)
         {

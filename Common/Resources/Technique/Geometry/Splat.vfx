@@ -23,7 +23,8 @@
                 [5, "Float32x2", 0,  44, 1],
                 [6, "Float32x2", 0,  52, 1],
                 [7, "Float32x2", 0,  60, 1],
-                [8, "UInt32x4",  0,  68, 1]
+                [8, "UInt32x4",  0,  68, 1],
+                [9, "Float32x4", 0,  84, 1]
             ],
             "Primitive": "TriangleStrip"
         }
@@ -63,11 +64,30 @@
     "Features": [
         {
             "Name": "Lit",
-            "Enable": { "Texture": "Normal" },
-            "Program": { "Defines": ["ENABLE_NORMAL_MAPPING"] }
+            "Enable": {
+                "Texture": "Normal"
+            },
+            "Program": {
+                "Defines": [
+                    "ENABLE_NORMAL_MAPPING"
+                ]
+            }
+        },
+        {
+            "Name": "Height",
+            "Enable": {
+                "Parameter": "Height"
+            },
+            "Program": {
+                "Defines": [
+                    "ENABLE_HEIGHT_BLEND"
+                ]
+            }
         }
     ],
     "Preload": [
-        ["Lit"]
+        ["Lit"],
+        ["Lit", "Height"],
+        ["Height"]
     ]
 }

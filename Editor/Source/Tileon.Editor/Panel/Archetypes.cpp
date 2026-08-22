@@ -66,13 +66,13 @@ namespace Tileon::Editor
     void Archetypes::OnDraw()
     {
         // Adopt an archetype requested from another panel (Palette right-click), scroll it into view, and pull focus.
-        if (const SInt64 Request = GetContext().GetInteger("Selection.Archetype.Target", 0); Request != 0)
+        if (const SInt64 Request = GetContext().GetInteger(Session::kSelectionArchetypeTarget, 0); Request != 0)
         {
             mSelection = mRepository.GetArchetype(static_cast<UInt64>(Request));
             mScroll    = mSelection;
             mPreview.Reset();
 
-            GetContext().SetInteger("Selection.Archetype.Target", 0);
+            GetContext().SetInteger(Session::kSelectionArchetypeTarget, 0);
             Toolkit::Composer::SetNextWindowFocus();
         }
 

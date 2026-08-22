@@ -34,6 +34,8 @@ namespace Tileon::Editor
         Select,     ///< A brush used for selecting objects or areas in the scene.
         Pencil,     ///< A brush used for painting individual tiles.
         Bucket,     ///< A brush used for filling an area with a specific tile type.
+        Smudge,     ///< A brush that mixes the terrains already laid down, adding none of its own.
+        Sample,     ///< A brush that takes the terrain under the cursor as the one to paint with.
     };
 
     /// \brief Defines the different modes that can be used for editing the scene.
@@ -49,5 +51,16 @@ namespace Tileon::Editor
         Square,     ///< The brush covers a square, which suits laying broad even ground down.
         Circle,     ///< The brush covers a disc, which leaves no corners for the eye to catch on.
         Diamond,    ///< The brush covers a diamond, which follows the way the units themselves sit.
+        Ring,       ///< The brush covers the rim of a disc, leaving the middle as it was found.
+        Noise,      ///< The brush covers a disc broken into grain, so its edge reads as weathered.
+    };
+
+    /// \brief Defines how the ground brush gives way towards its rim.
+    enum class Falloff : UInt8
+    {
+        Hard,       ///< The brush lands evenly, edge and all.
+        Linear,     ///< The brush fades off in a straight ramp over its outer half.
+        Smooth,     ///< The brush eases off, holding its middle and softening only the rim.
+        Dither,     ///< The brush breaks the ramp into a speckle, which leaves every unit whole.
     };
 }

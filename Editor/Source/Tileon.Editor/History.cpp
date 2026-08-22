@@ -634,9 +634,9 @@ namespace Tileon::Editor
             ++mRevision;
 
             // The selection is held by id, so anything it points at that was rebuilt has to follow it.
-            if (const UInt64 Selection = static_cast<UInt64>(mContext.GetInteger("Selection.Entity", 0)))
+            if (const UInt64 Selection = static_cast<UInt64>(mContext.GetInteger(Session::kSelectionEntity, 0)))
             {
-                mContext.SetInteger("Selection.Entity", static_cast<SInt64>(Remap(Selection)));
+                mContext.SetInteger(Session::kSelectionEntity, static_cast<SInt64>(Remap(Selection)));
             }
         }
 

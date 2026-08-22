@@ -22,6 +22,7 @@ in vec2  a_Phase1;    // the same, for slot 1
 in vec2  a_Phase2;    // the same, for slot 2
 in vec2  a_Phase3;    // the same, for slot 3
 in uvec4 a_Tint;      // the color each slot's art is multiplied by, packed as RGBA8
+in vec4  a_Feather;   // how wide a band each slot's relief feathers over
 
 out vec2 v_Ground;
 flat out uint  v_Weights;
@@ -29,6 +30,7 @@ flat out uvec4 v_Palette;
 flat out vec4  v_Mapping;
 flat out vec2  v_Phase[4];
 flat out uvec4 v_Tint;
+flat out vec4  v_Feather;
 
 vec2 TessellateRect(int VertexID)
 {
@@ -58,6 +60,7 @@ void main()
     v_Phase[2] = a_Phase2;
     v_Phase[3] = a_Phase3;
     v_Tint     = a_Tint;
+    v_Feather  = a_Feather;
 }
 
 #endif // VERTEX_SHADER
@@ -80,11 +83,11 @@ flat in uvec4 v_Palette;
 flat in vec4  v_Mapping;
 flat in vec2  v_Phase[4];
 flat in uvec4 v_Tint;
+flat in vec4  v_Feather;
 
 vec4 UnpackTint(uint Packed)
 {
     uvec4 Bytes = uvec4(Packed, Packed >> 8u, Packed >> 16u, Packed >> 24u) & 0xFFu;
-
     return vec4(Bytes) * (1.0 / 255.0);
 }
 
@@ -116,8 +119,18 @@ void main()
         Source[Slot]  = texture(t_Albedo, vec3(Texture[Slot], float(v_Palette[Slot])));
     }
 
+#ifdef ENABLE_HEIGHT_BLEND
+    // Each terrain feathers over a band of its own, mixed by how much of the pixel it already covers.
+    float Band = max(dot(v_Feather, Weight), 0.001);
+
+    vec4 Raised = vec4(Source[0].a, Source[1].a, Source[2].a, Source[3].a) + Weight;
+    Raised *= step(vec4(SPLAT_WEIGHT_FLOOR), Weight);
+    Weight  = max(Raised - (max(max(Raised.x, Raised.y), max(Raised.z, Raised.w)) - Band), vec4(0.0));
+    Weight /= max(dot(Weight, vec4(1.0)), 0.0001);
+#endif
+
     vec4 Albedo = vec4(0.0);
-    vec3 Normal = vec3(0.0);
+    vec2 Slope  = vec2(0.0);
 
     for (int Slot = 0; Slot < 4; ++Slot)
     {
@@ -126,15 +139,16 @@ void main()
 #ifdef ENABLE_NORMAL_MAPPING
         vec3 Tangent = texture(t_Normal, vec3(Texture[Slot], float(v_Palette[Slot]))).xyz * 2.0 - 1.0;
 
-        Normal += Tangent * Weight[Slot];
+        // Averaging unit normals pulls a meeting toward flat, so the slopes each one stands at are mixed.
+        Slope += (Tangent.xy / max(Tangent.z, 0.0001)) * Weight[Slot];
 #endif
     }
 
     out_Albedo = vec4(Albedo.rgb, 1.0);
 
 #ifdef ENABLE_NORMAL_MAPPING
-    // The ground faces up, so tangent Z is world up and the other two lie along the plane.
-    vec3 Surface = normalize(vec3(Normal.x, max(Normal.z, 0.0001), Normal.y));
+    // The ground faces up, so the slope runs along the plane and world up stands at one.
+    vec3 Surface = normalize(vec3(Slope.x, 1.0, Slope.y));
     out_Normal = vec4(Surface * 0.5 + 0.5, 1.0);
 #else
     out_Normal = vec4(0.5, 1.0, 0.5, 1.0);

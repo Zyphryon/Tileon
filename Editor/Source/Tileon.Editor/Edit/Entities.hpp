@@ -98,14 +98,6 @@ namespace Tileon::Editor
             return mSelection;
         }
 
-        /// \brief Returns whether the clipboard holds a group that can be pasted.
-        ///
-        /// \return `true` if a copy or cut has populated the clipboard, `false` otherwise.
-        ZY_INLINE Bool HasClipboard() const
-        {
-            return mClipboardCount > 0;
-        }
-
         /// \brief Mirrors external single-selection changes (Hierarchy, Inspector) into the multi-selection set.
         void ReconcileSelection();
 

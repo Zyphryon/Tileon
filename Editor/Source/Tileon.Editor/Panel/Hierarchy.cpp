@@ -81,7 +81,7 @@ namespace Tileon::Editor
             Children.Append(Child);
         });
 
-        const UInt64 Selection = GetContext().GetInteger("Selection.Entity", 0);
+        const UInt64 Selection = GetContext().GetInteger(Session::kSelectionEntity, 0);
 
         ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
 
@@ -124,7 +124,7 @@ namespace Tileon::Editor
         // Select on a plain click; a click that only toggled the expander must not steal the selection.
         if (Toolkit::Composer::IsItemClicked() && !Toolkit::Composer::IsItemToggledOpen())
         {
-            GetContext().SetInteger("Selection.Entity", Actor.GetID());
+            GetContext().SetInteger(Session::kSelectionEntity, Actor.GetID());
         }
 
         if (Toolkit::Composer::BeginPopupContextItem())
@@ -202,7 +202,7 @@ namespace Tileon::Editor
     void Hierarchy::DeleteSelection()
     {
         Ref<Context>  Context = GetContext();
-        Scene::Entity Actor   = Context.GetScene().GetEntity(Context.GetInteger("Selection.Entity", 0));
+        Scene::Entity Actor   = Context.GetScene().GetEntity(Context.GetInteger(Session::kSelectionEntity, 0));
 
         // Regions own their own load/unload lifecycle and must never be deleted from the tree.
         if (!Actor.IsValid() || Actor.Has<Region>())
@@ -220,6 +220,6 @@ namespace Tileon::Editor
         }
 
         Actor.Add<Dispose>();
-        Context.SetInteger("Selection.Entity", 0);
+        Context.SetInteger(Session::kSelectionEntity, 0);
     }
 }

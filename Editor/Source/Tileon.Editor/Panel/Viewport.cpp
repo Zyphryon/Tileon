@@ -216,11 +216,11 @@ namespace Tileon::Editor
         Toolkit::Composer::SetCursorPosX(Toolkit::Composer::GetWindowWidth() - 200.0f);
         Toolkit::Composer::SetNextItemWidth(96.0f);
 
-        Perspective CurrentMode = GetContext().GetEnum("Viewport.Perspective", Perspective::Ortho);
+        Perspective CurrentMode = GetContext().GetEnum(Session::kViewportPerspective, Perspective::Ortho);
 
         if (Toolkit::Composer::Combo("##projection", CurrentMode))
         {
-            GetContext().SetEnum("Viewport.Perspective", CurrentMode);
+            GetContext().SetEnum(Session::kViewportPerspective, CurrentMode);
 
             switch (CurrentMode)
             {
@@ -255,51 +255,13 @@ namespace Tileon::Editor
 
     void Viewport::DrawBrushButton(Tools::Brush Brush, Text Icon, Text Tooltip)
     {
-        const Bool Active = (mTools.GetBrush() == Brush);
-
-        if (Active)
-        {
-            Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        }
-
-        if (Toolkit::Composer::Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Brush)), 32.0f))
+        if (Toolkit::Composer::ToggleButton(
+                String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Brush)), mTools.GetBrush() == Brush, 32.0f))
         {
             mTools.SetBrush(Brush);
         }
 
         Toolkit::Composer::Tooltip(Tooltip);
-
-        if (Active)
-        {
-            Toolkit::Composer::PopStyleColor(2);
-        }
-    }
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    void Viewport::DrawShapeButton(Tools::Shape Shape, Text Icon, Text Tooltip)
-    {
-        const Bool Active = (mTools.GetGround().GetShape() == Shape);
-
-        if (Active)
-        {
-            Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        }
-
-        if (Toolkit::Composer::Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Shape)), 32.0f))
-        {
-            mTools.GetGround().SetShape(Shape);
-        }
-
-        Toolkit::Composer::Tooltip(Tooltip);
-
-        if (Active)
-        {
-            Toolkit::Composer::PopStyleColor(2);
-        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -360,8 +322,8 @@ namespace Tileon::Editor
         }
     }
 
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     void Viewport::DrawTimescaleToolbar()
     {
@@ -403,30 +365,20 @@ namespace Tileon::Editor
         Toolkit::Composer::Tooltip("Speed the scene simulation runs at");
     }
 
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     void Viewport::DrawDebugButton(Renderer::Debug Overlay, Text Icon, Text Tooltip)
     {
         const Bool Active = GetContext().GetRenderer().HasOverlay(Overlay);
 
-        if (Active)
-        {
-            Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        }
-
-        if (Toolkit::Composer::Button(String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Overlay)), 32.0f))
+        if (Toolkit::Composer::ToggleButton(
+                String<64>::Print<"{0}##{1}">(Icon, Enum::GetName(Overlay)), Active, 32.0f))
         {
             GetContext().GetRenderer().SetOverlay(Overlay, !Active);
         }
 
         Toolkit::Composer::Tooltip(Tooltip);
-
-        if (Active)
-        {
-            Toolkit::Composer::PopStyleColor(2);
-        }
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -440,25 +392,53 @@ namespace Tileon::Editor
         DrawBrushButton(Tools::Brush::Select, ICON_FA_ARROW_POINTER, "Select");
         Toolkit::Composer::SameLine();
 
-        DrawBrushButton(Tools::Brush::Pencil, ICON_FA_BRUSH,         "Paint the ground");
-        Toolkit::Composer::SameLine();
-
-        DrawBrushButton(Tools::Brush::Bucket, ICON_FA_FILL_DRIP,     "Fill the region");
-        Toolkit::Composer::SameLine();
-
         Toolkit::Composer::SeparatorEx(ImGuiSeparatorFlags_Vertical);
         Toolkit::Composer::SameLine();
 
-        DrawShapeButton(Tools::Shape::Square,  ICON_FA_SQUARE,  "Square brush");
+        static constexpr Tools::Brush kOperations[] = {
+            Tools::Brush::Pencil,
+            Tools::Brush::Bucket,
+            Tools::Brush::Smudge,
+            Tools::Brush::Sample
+        };
+
+        const Tools::Brush Held    = mTools.GetBrush();
+        const Bool         Working = (Held != Tools::Brush::Hand && Held != Tools::Brush::Select);
+
+        Toolkit::Composer::SetNextItemWidth(112.0f);
+
+        if (Toolkit::Composer::BeginCombo("##brush", Working ? Enum::GetName(Held) : "Paint"_Text))
+        {
+            for (const Tools::Brush Option : kOperations)
+            {
+                if (Toolkit::Composer::Selectable(Enum::GetName(Option), Option == Held))
+                {
+                    mTools.SetBrush(Option);
+                }
+            }
+            Toolkit::Composer::EndCombo();
+        }
+
+        Toolkit::Composer::Tooltip(
+            "Pencil lays a terrain down, Bucket floods the region, Smudge mixes what is already there "
+            "and Sample takes the terrain under the cursor"_Text);
         Toolkit::Composer::SameLine();
 
-        DrawShapeButton(Tools::Shape::Circle,  ICON_FA_CIRCLE,  "Round brush");
-        Toolkit::Composer::SameLine();
+        // Only a brush that wears a shape has any use for one, or for a reach and a strength.
+        const Bool Shaped = (Held == Tools::Brush::Pencil || Held == Tools::Brush::Smudge);
 
-        DrawShapeButton(Tools::Shape::Diamond, ICON_FA_DIAMOND, "Diamond brush");
-        Toolkit::Composer::SameLine();
+        Toolkit::Composer::BeginDisabled(!Shaped);
 
-        Toolkit::Composer::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        Tools::Shape Shape = mTools.GetGround().GetShape();
+
+        Toolkit::Composer::SetNextItemWidth(112.0f);
+
+        if (Toolkit::Composer::Combo("##brush_shape", Shape))
+        {
+            mTools.GetGround().SetShape(Shape);
+        }
+
+        Toolkit::Composer::Tooltip("The footprint the brush covers");
         Toolkit::Composer::SameLine();
 
         SInt32 Size = mTools.GetGround().GetSize();
@@ -485,27 +465,20 @@ namespace Tileon::Editor
         Toolkit::Composer::Tooltip("How much the brush lays down on each pass — work it in by going over it");
         Toolkit::Composer::SameLine();
 
-        const Bool Soft = mTools.GetGround().IsSoft();
+        Tools::Falloff Falloff = mTools.GetGround().GetFalloff();
 
-        if (Soft)
+        Toolkit::Composer::SetNextItemWidth(112.0f);
+
+        if (Toolkit::Composer::Combo("##brush_falloff", Falloff))
         {
-            Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            mTools.GetGround().SetFalloff(Falloff);
         }
 
-        if (Toolkit::Composer::Button(ICON_FA_FEATHER "##softness", 32.0f))
-        {
-            mTools.GetGround().SetSoft(!Soft);
-        }
+        Toolkit::Composer::Tooltip(
+            "How the brush gives way at its rim: evenly, in a straight ramp, eased off, or broken into a "
+            "speckle that leaves every unit whole"_Text);
 
-        Toolkit::Composer::Tooltip(Soft
-            ? "Fade the terrain out towards the rim"_Text
-            : "Lay the terrain down evenly, edge and all"_Text);
-
-        if (Soft)
-        {
-            Toolkit::Composer::PopStyleColor(2);
-        }
+        Toolkit::Composer::EndDisabled();
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -513,7 +486,9 @@ namespace Tileon::Editor
 
     void Viewport::DrawEntityToolbar()
     {
-        if (mTools.GetBrush() == Tools::Brush::Bucket)
+        const Tools::Brush Held = mTools.GetBrush();
+
+        if (Held == Tools::Brush::Bucket || Held == Tools::Brush::Smudge || Held == Tools::Brush::Sample)
         {
             mTools.SetBrush(Tools::Brush::Pencil);
         }
@@ -534,13 +509,7 @@ namespace Tileon::Editor
         // Snap placement to tile centers, so entities line up on the grid instead of landing at the exact cursor.
         const Bool Aligned = mTools.IsAligned();
 
-        if (Aligned)
-        {
-            Toolkit::Composer::PushStyleColor(ImGuiCol_Button,        Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            Toolkit::Composer::PushStyleColor(ImGuiCol_ButtonHovered, Toolkit::Composer::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        }
-
-        if (Toolkit::Composer::Button(ICON_FA_CROSSHAIRS "##center", 32.0f))
+        if (Toolkit::Composer::ToggleButton(ICON_FA_CROSSHAIRS "##center", Aligned, 32.0f))
         {
             mTools.SetAligned(!Aligned);
         }
@@ -548,11 +517,6 @@ namespace Tileon::Editor
         Toolkit::Composer::Tooltip(Aligned
             ? "Snap to tile center"_Text
             : "Free placement (hold Shift to center)"_Text);
-
-        if (Aligned)
-        {
-            Toolkit::Composer::PopStyleColor(2);
-        }
         Toolkit::Composer::SameLine();
     }
 
@@ -744,20 +708,9 @@ namespace Tileon::Editor
 
     void Viewport::DrawViewport()
     {
-        Ref<Renderer> Renderer = GetContext().GetRenderer();
+        DrawImage();
+
         Ref<Director> Director = GetContext().GetDirector();
-
-        const Graphic::Object Texture = Renderer.GetTarget(Renderer::Target::Final);
-
-        // OpenGL samples from the bottom-left, so its render target arrives flipped relative to Direct3D's.
-        if (GetContext().GetGraphic().GetDescription().Language == Graphic::ShaderLanguage::GLSL)
-        {
-            Toolkit::Composer::Image(Texture, Toolkit::Composer::GetContentRegionAvail(), ImVec4(0, 1, 1, 0));
-        }
-        else
-        {
-            Toolkit::Composer::Image(Texture, Toolkit::Composer::GetContentRegionAvail(), ImVec4(0, 0, 1, 1));
-        }
 
         const ImVec2 ViewportOrigin = Toolkit::Composer::GetItemRectMin();
         const ImVec2 ViewportSize   = Toolkit::Composer::GetItemRectSize();
@@ -773,6 +726,190 @@ namespace Tileon::Editor
             DrawLightMarkers(Camera);
         }
 
+        DrawSelectionOverlay(Camera);
+
+        HandleShortcuts();
+
+        // Clipboard and delete shortcuts act on the whole selection whenever the viewport holds focus.
+        Bool Manipulating = false;
+
+        if (mTools.GetBrush() == Tools::Brush::Select)
+        {
+            if (Toolkit::Composer::IsWindowFocused())
+            {
+                if (Toolkit::Composer::IsKeyPressed(ImGuiKey_Q))
+                {
+                    mGizmo.SetMode(Gizmo::Mode::Move);
+                }
+                else if (Toolkit::Composer::IsKeyPressed(ImGuiKey_W))
+                {
+                    mGizmo.SetMode(Gizmo::Mode::Rotate);
+                }
+                else if (Toolkit::Composer::IsKeyPressed(ImGuiKey_E))
+                {
+                    mGizmo.SetMode(Gizmo::Mode::Scale);
+                }
+            }
+
+            const UInt64        Selection = GetContext().GetInteger(Session::kSelectionEntity, 0);
+            const Scene::Entity Actor     = GetContext().GetScene().GetEntity(Selection);
+
+            // A marquee drag must own the cursor outright, so the handles stand down while one is in progress.
+            if (!mMarquee)
+            {
+                Manipulating = mGizmo.Draw(mTools.GetEntities().GetSelection(), Actor, ViewportOrigin, ViewportSize);
+            }
+        }
+
+        // Handle interactions with the viewport, such as hovering and clicking to manipulate the scene.
+        // A drag that belongs to the handles must not also reach the brush, or picking would fight the gizmo.
+        if (!Manipulating && Toolkit::Composer::IsItemHovered())
+        {
+            const UInt32 AbsoluteX  = Toolkit::Composer::GetMousePos().x - Toolkit::Composer::GetItemRectMin().x;
+            const Real32 NormalizeX = AbsoluteX / Toolkit::Composer::GetItemRectSize().x;
+            const UInt32 AbsoluteY  = Toolkit::Composer::GetMousePos().y - Toolkit::Composer::GetItemRectMin().y;
+            const Real32 NormalizeY = AbsoluteY / Toolkit::Composer::GetItemRectSize().y;
+
+            // Ctrl + wheel resizes the pending entity.
+            if (const Real32 Wheel = Toolkit::Composer::GetMouseWheel(); Wheel != 0.0f)
+            {
+                if (mTools.GetEntities().HasPreview() && Toolkit::Composer::IsKeyDown(ImGuiMod_Ctrl))
+                {
+                    mTools.GetEntities().AdjustPreviewScale(Wheel);
+                }
+                else
+                {
+                    constexpr Real32 kFactor = 1.25f;
+
+                    const Real32  Step = -Wheel;
+                    const Real32  Zoom = Director.GetZoom() * (Step > 0.0f ? kFactor : (1.0f / kFactor));
+                    const Vector2 Pixel(
+                        NormalizeX * Director.GetViewport().GetX() * Director.GetDensity(),
+                        NormalizeY * Director.GetViewport().GetY() * Director.GetDensity());
+                    Director.Focus(Director.GetWorldCoordinates(Pixel), Zoom);
+                }
+            }
+
+            // Hold Q / E to rotate the pending entity smoothly; hold Shift for fine control.
+            if (mTools.GetEntities().HasPreview())
+            {
+                const Real32 Direction =
+                    (Toolkit::Composer::IsKeyDown(ImGuiKey_E) ? 1.0f : 0.0f) -
+                    (Toolkit::Composer::IsKeyDown(ImGuiKey_Q) ? 1.0f : 0.0f);
+
+                if (Direction != 0.0f)
+                {
+                    const Real32 Speed = Toolkit::Composer::IsKeyDown(ImGuiMod_Shift) ? 30.0f : 120.0f;
+                    mTools.GetEntities().AdjustPreviewRotation(Angle::FromDegrees(Direction * Speed * Toolkit::Composer::GetDeltaTime()));
+                }
+            }
+
+            // Converts this frame's cursor pixel delta into a world-space shift of the camera.
+            const auto PanByCursorDelta = [&]()
+            {
+                const ImVec2 Delta = Toolkit::Composer::GetMouseDelta();
+                const ImVec2 Size  = Toolkit::Composer::GetItemRectSize();
+
+                const Real32 ScaleX = Director.GetViewport().GetX() * Director.GetDensity() / Size.x;
+                const Real32 ScaleY = Director.GetViewport().GetY() * Director.GetDensity() / Size.y;
+
+                const Vector2 OldPosition(AbsoluteX * ScaleX, AbsoluteY* ScaleY);
+                const Vector2 NewPosition((AbsoluteX - Delta.x) * ScaleX, (AbsoluteY - Delta.y) * ScaleY);
+
+                const Placement OldPlacement = Director.GetWorldCoordinates(OldPosition);
+                const Placement NewPlacement = Director.GetWorldCoordinates(NewPosition);
+                Director.SetPosition(Placement::Normalize(Director.GetPosition() + NewPlacement - OldPlacement));
+            };
+
+            // Alt and a drag swing the free view around, which is the whole reason it exists: a 3D shape read
+            // straight on is a rectangle, and a few degrees of yaw is what tells its depth from its height.
+            const Perspective Viewing  = GetContext().GetEnum(Session::kViewportPerspective, Perspective::Ortho);
+            const Bool        Swinging = Viewing == Perspective::Axonometric
+                                      && Toolkit::Composer::IsKeyDown(ImGuiMod_Alt)
+                                      && Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left);
+
+            // Hold Space (or drag with the middle mouse) to pan the view with any brush active, so the camera can
+            // be repositioned mid-paint without switching to the hand tool.
+            const Bool SpacePan = !Toolkit::Composer::IsTextInputActive() && Toolkit::Composer::IsKeyDown(ImGuiKey_Space);
+            const Bool Panning  = Toolkit::Composer::IsMouseDragging(ImGuiMouseButton_Middle)
+                               || (SpacePan && Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left));
+
+            // Hint the pan affordance so holding Space is discoverable.
+        const Placement Cursor = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
+
+            if (SpacePan)
+            {
+                Toolkit::Composer::SetMouseCursor(ImGuiMouseCursor_Hand);
+            }
+
+            if (Swinging)
+            {
+                const ImVec2 Swing = Toolkit::Composer::GetMouseDelta();
+
+                mYaw  = Mod(mYaw + Swing.x * 0.4f, 360.0f);
+                mTilt = Clamp(mTilt - Swing.y * 0.004f, kMinTilt, kMaxTilt);
+
+                Director.SetProjection(Tileon::Projection::Axonometric(Angle::FromDegrees(mYaw), mTilt));
+
+                mTools.GetEntities().ClearPreview();
+                mMarquee      = false;
+                mMarqueeMoved = false;
+            }
+            else if (Panning)
+            {
+                PanByCursorDelta();
+            }
+            else if (mTools.GetBrush() == Tools::Brush::Hand)
+            {
+                mTools.GetEntities().ClearPreview();
+
+                if (Toolkit::Composer::IsMouseDragging(ImGuiMouseButton_Left))
+                {
+                    PanByCursorDelta();
+                }
+            }
+        else if (mTools.GetBrush() == Tools::Brush::Select)
+        {
+            HandleSelection(Camera, Cursor);
+        }
+        else if (mTools.GetMode() == Tools::Mode::Ground)
+        {
+            HandleGround(Cursor);
+        }
+        else
+        {
+            HandleEntities(Cursor);
+        }
+        }
+        else
+        {
+            mTools.GetEntities().ClearPreview();
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Viewport::DrawImage()
+    {
+        const Graphic::Object Texture = GetContext().GetRenderer().GetTarget(Renderer::Target::Final);
+
+        // OpenGL samples from the bottom-left, so its render target arrives flipped relative to Direct3D's.
+        if (GetContext().GetGraphic().GetDescription().Language == Graphic::ShaderLanguage::GLSL)
+        {
+            Toolkit::Composer::Image(Texture, Toolkit::Composer::GetContentRegionAvail(), ImVec4(0, 1, 1, 0));
+        }
+        else
+        {
+            Toolkit::Composer::Image(Texture, Toolkit::Composer::GetContentRegionAvail(), ImVec4(0, 0, 1, 1));
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Viewport::DrawSelectionOverlay(ConstRef<Camera> Camera)
+    {
         // Mark every selected entity with corner brackets, drawn as an overlay so they show under any brush.
         const auto DrawBrackets = [&](IntRect AABB)
         {
@@ -846,12 +983,18 @@ namespace Tileon::Editor
                 DrawSelected(GetContext().GetScene().GetEntity(ID));
             }
         }
-        else if (const UInt64 Selected = GetContext().GetInteger("Selection.Entity", 0))
+        else if (const UInt64 Selected = GetContext().GetInteger(Session::kSelectionEntity, 0))
         {
             DrawSelected(GetContext().GetScene().GetEntity(Selected));
         }
 
-        // Clipboard and delete shortcuts act on the whole selection whenever the viewport holds focus.
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Viewport::HandleShortcuts()
+    {
         if (Toolkit::Composer::IsWindowFocused())
         {
             const Bool Control = Toolkit::Composer::IsKeyDown(ImGuiMod_Ctrl);
@@ -871,298 +1014,166 @@ namespace Tileon::Editor
             }
         }
 
-        Bool Manipulating = false;
+    }
 
-        if (mTools.GetBrush() == Tools::Brush::Select)
-        {
-            if (Toolkit::Composer::IsWindowFocused())
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Viewport::HandleSelection(ConstRef<Camera> Camera, Placement Cursor)
+    {
+            mTools.GetEntities().ClearPreview();
+
+            const Bool      Shift  = Toolkit::Composer::IsKeyDown(ImGuiMod_Shift);
+
+            // Paste the clipboard's group so its anchor lands on the cursor.
+            if (Toolkit::Composer::IsKeyDown(ImGuiMod_Ctrl) && Toolkit::Composer::IsKeyPressed(ImGuiKey_V))
             {
-                if (Toolkit::Composer::IsKeyPressed(ImGuiKey_Q))
-                {
-                    mGizmo.SetMode(Gizmo::Mode::Move);
-                }
-                else if (Toolkit::Composer::IsKeyPressed(ImGuiKey_W))
-                {
-                    mGizmo.SetMode(Gizmo::Mode::Rotate);
-                }
-                else if (Toolkit::Composer::IsKeyPressed(ImGuiKey_E))
-                {
-                    mGizmo.SetMode(Gizmo::Mode::Scale);
-                }
+                mTools.GetEntities().Paste(Cursor);
             }
 
-            const UInt64        Selection = GetContext().GetInteger("Selection.Entity", 0);
-            const Scene::Entity Actor     = GetContext().GetScene().GetEntity(Selection);
-
-            // A marquee drag must own the cursor outright, so the handles stand down while one is in progress.
+            // Outline what a click would take. A marquee decides by area instead, so it takes over.
             if (!mMarquee)
             {
-                Manipulating = mGizmo.Draw(mTools.GetEntities().GetSelection(), Actor, ViewportOrigin, ViewportSize);
+                DrawSelectionHint(Camera, mTools.GetEntities().ResolveSelection(Cursor));
             }
-        }
 
-        // Handle interactions with the viewport, such as hovering and clicking to manipulate the scene.
-        // A drag that belongs to the handles must not also reach the brush, or picking would fight the gizmo.
-        if (!Manipulating && Toolkit::Composer::IsItemHovered())
-        {
-            const UInt32 AbsoluteX  = Toolkit::Composer::GetMousePos().x - Toolkit::Composer::GetItemRectMin().x;
-            const Real32 NormalizeX = AbsoluteX / Toolkit::Composer::GetItemRectSize().x;
-            const UInt32 AbsoluteY  = Toolkit::Composer::GetMousePos().y - Toolkit::Composer::GetItemRectMin().y;
-            const Real32 NormalizeY = AbsoluteY / Toolkit::Composer::GetItemRectSize().y;
-
-            // Ctrl + wheel resizes the pending entity.
-            if (const Real32 Wheel = Toolkit::Composer::GetMouseWheel(); Wheel != 0.0f)
+            // A press starts either a marquee or a plain click; the drag distance decides which on release.
+            if (Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Left))
             {
-                if (mTools.GetEntities().HasPreview() && Toolkit::Composer::IsKeyDown(ImGuiMod_Ctrl))
+                mMarquee       = true;
+                mMarqueeMoved  = false;
+                mMarqueeScreen = Toolkit::Composer::GetMousePos();
+            }
+
+            if (mMarquee && Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left))
+            {
+                const ImVec2 Now = Toolkit::Composer::GetMousePos();
+
+                if (Abs(Now.x - mMarqueeScreen.x) + Abs(Now.y - mMarqueeScreen.y) > 4.0f)
                 {
-                    mTools.GetEntities().AdjustPreviewScale(Wheel);
+                    mMarqueeMoved = true;
+                }
+
+                if (mMarqueeMoved)
+                {
+                    const ImVec2 Lower(Min(mMarqueeScreen.x, Now.x), Min(mMarqueeScreen.y, Now.y));
+                    const ImVec2 Upper(Max(mMarqueeScreen.x, Now.x), Max(mMarqueeScreen.y, Now.y));
+
+                    const Ptr<ImDrawList> List = Toolkit::Composer::GetWindowDrawList();
+                    List->AddRectFilled(Lower, Upper, Toolkit::Theme::kSelectWash);
+                    List->AddRect(Lower, Upper, Toolkit::Theme::kSelect);
+                }
+            }
+
+            if (mMarquee && Toolkit::Composer::IsMouseReleased(ImGuiMouseButton_Left))
+            {
+                mMarquee = false;
+
+                if (mMarqueeMoved)
+                {
+                    const ImVec2 Release = Toolkit::Composer::GetMousePos();
+                    const ImVec2 Lower(Min(mMarqueeScreen.x, Release.x), Min(mMarqueeScreen.y, Release.y));
+                    const ImVec2 Upper(Max(mMarqueeScreen.x, Release.x), Max(mMarqueeScreen.y, Release.y));
+
+                    mTools.GetEntities().SelectWithin(Camera, Lower, Upper, Shift);
+                }
+                else if (Shift)
+                {
+                    mTools.GetEntities().SelectToggle(Cursor);
                 }
                 else
                 {
-                    constexpr Real32 kFactor = 1.25f;
-
-                    const Real32  Step = -Wheel;
-                    const Real32  Zoom = Director.GetZoom() * (Step > 0.0f ? kFactor : (1.0f / kFactor));
-                    const Vector2 Pixel(
-                        NormalizeX * Director.GetViewport().GetX() * Director.GetDensity(),
-                        NormalizeY * Director.GetViewport().GetY() * Director.GetDensity());
-                    Director.Focus(Director.GetWorldCoordinates(Pixel), Zoom);
+                    mTools.GetEntities().SelectSingle(Cursor);
                 }
             }
+    }
 
-            // Hold Q / E to rotate the pending entity smoothly; hold Shift for fine control.
-            if (mTools.GetEntities().HasPreview())
-            {
-                const Real32 Direction =
-                    (Toolkit::Composer::IsKeyDown(ImGuiKey_E) ? 1.0f : 0.0f) -
-                    (Toolkit::Composer::IsKeyDown(ImGuiKey_Q) ? 1.0f : 0.0f);
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-                if (Direction != 0.0f)
-                {
-                    const Real32 Speed = Toolkit::Composer::IsKeyDown(ImGuiMod_Shift) ? 30.0f : 120.0f;
-                    mTools.GetEntities().AdjustPreviewRotation(Angle::FromDegrees(Direction * Speed * Toolkit::Composer::GetDeltaTime()));
-                }
-            }
-
-            // Converts this frame's cursor pixel delta into a world-space shift of the camera.
-            const auto PanByCursorDelta = [&]()
-            {
-                const ImVec2 Delta = Toolkit::Composer::GetMouseDelta();
-                const ImVec2 Size  = Toolkit::Composer::GetItemRectSize();
-
-                const Real32 ScaleX = Director.GetViewport().GetX() * Director.GetDensity() / Size.x;
-                const Real32 ScaleY = Director.GetViewport().GetY() * Director.GetDensity() / Size.y;
-
-                const Vector2 OldPosition(AbsoluteX * ScaleX, AbsoluteY* ScaleY);
-                const Vector2 NewPosition((AbsoluteX - Delta.x) * ScaleX, (AbsoluteY - Delta.y) * ScaleY);
-
-                const Placement OldPlacement = Director.GetWorldCoordinates(OldPosition);
-                const Placement NewPlacement = Director.GetWorldCoordinates(NewPosition);
-                Director.SetPosition(Placement::Normalize(Director.GetPosition() + NewPlacement - OldPlacement));
-            };
-
-            // Alt and a drag swing the free view around, which is the whole reason it exists: a 3D shape read
-            // straight on is a rectangle, and a few degrees of yaw is what tells its depth from its height.
-            const Perspective Viewing  = GetContext().GetEnum("Viewport.Perspective", Perspective::Ortho);
-            const Bool        Swinging = Viewing == Perspective::Axonometric
-                                      && Toolkit::Composer::IsKeyDown(ImGuiMod_Alt)
-                                      && Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left);
-
-            // Hold Space (or drag with the middle mouse) to pan the view with any brush active, so the camera can
-            // be repositioned mid-paint without switching to the hand tool.
-            const Bool SpacePan = !Toolkit::Composer::IsTextInputActive() && Toolkit::Composer::IsKeyDown(ImGuiKey_Space);
-            const Bool Panning  = Toolkit::Composer::IsMouseDragging(ImGuiMouseButton_Middle)
-                               || (SpacePan && Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left));
-
-            // Hint the pan affordance so holding Space is discoverable.
-            if (SpacePan)
-            {
-                Toolkit::Composer::SetMouseCursor(ImGuiMouseCursor_Hand);
-            }
-
-            if (Swinging)
-            {
-                const ImVec2 Swing = Toolkit::Composer::GetMouseDelta();
-
-                mYaw  = Mod(mYaw + Swing.x * 0.4f, 360.0f);
-                mTilt = Clamp(mTilt - Swing.y * 0.004f, kMinTilt, kMaxTilt);
-
-                Director.SetProjection(Tileon::Projection::Axonometric(Angle::FromDegrees(mYaw), mTilt));
-
-                mTools.GetEntities().ClearPreview();
-                mMarquee      = false;
-                mMarqueeMoved = false;
-            }
-            else if (Panning)
-            {
-                PanByCursorDelta();
-            }
-            else if (mTools.GetBrush() == Tools::Brush::Hand)
-            {
-                mTools.GetEntities().ClearPreview();
-
-                if (Toolkit::Composer::IsMouseDragging(ImGuiMouseButton_Left))
-                {
-                    PanByCursorDelta();
-                }
-            }
-            else if (mTools.GetBrush() == Tools::Brush::Select)
-            {
-                mTools.GetEntities().ClearPreview();
-
-                const Placement Cursor = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
-                const Bool      Shift  = Toolkit::Composer::IsKeyDown(ImGuiMod_Shift);
-
-                // Paste the clipboard's group so its anchor lands on the cursor.
-                if (Toolkit::Composer::IsKeyDown(ImGuiMod_Ctrl) && Toolkit::Composer::IsKeyPressed(ImGuiKey_V))
-                {
-                    mTools.GetEntities().Paste(Cursor);
-                }
-
-                // Outline what a click would take. A marquee decides by area instead, so it takes over.
-                if (!mMarquee)
-                {
-                    DrawSelectionHint(Camera, mTools.GetEntities().ResolveSelection(Cursor));
-                }
-
-                // A press starts either a marquee or a plain click; the drag distance decides which on release.
-                if (Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Left))
-                {
-                    mMarquee       = true;
-                    mMarqueeMoved  = false;
-                    mMarqueeScreen = Toolkit::Composer::GetMousePos();
-                }
-
-                if (mMarquee && Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left))
-                {
-                    const ImVec2 Now = Toolkit::Composer::GetMousePos();
-
-                    if (Abs(Now.x - mMarqueeScreen.x) + Abs(Now.y - mMarqueeScreen.y) > 4.0f)
-                    {
-                        mMarqueeMoved = true;
-                    }
-
-                    if (mMarqueeMoved)
-                    {
-                        const ImVec2 Lower(Min(mMarqueeScreen.x, Now.x), Min(mMarqueeScreen.y, Now.y));
-                        const ImVec2 Upper(Max(mMarqueeScreen.x, Now.x), Max(mMarqueeScreen.y, Now.y));
-
-                        const Ptr<ImDrawList> List = Toolkit::Composer::GetWindowDrawList();
-                        List->AddRectFilled(Lower, Upper, Toolkit::Theme::kSelectWash);
-                        List->AddRect(Lower, Upper, Toolkit::Theme::kSelect);
-                    }
-                }
-
-                if (mMarquee && Toolkit::Composer::IsMouseReleased(ImGuiMouseButton_Left))
-                {
-                    mMarquee = false;
-
-                    if (mMarqueeMoved)
-                    {
-                        const ImVec2 Release = Toolkit::Composer::GetMousePos();
-                        const ImVec2 Lower(Min(mMarqueeScreen.x, Release.x), Min(mMarqueeScreen.y, Release.y));
-                        const ImVec2 Upper(Max(mMarqueeScreen.x, Release.x), Max(mMarqueeScreen.y, Release.y));
-
-                        mTools.GetEntities().SelectWithin(Camera, Lower, Upper, Shift);
-                    }
-                    else if (Shift)
-                    {
-                        mTools.GetEntities().SelectToggle(Cursor);
-                    }
-                    else
-                    {
-                        mTools.GetEntities().SelectSingle(Cursor);
-                    }
-                }
-            }
-            else if (mTools.GetMode() == Tools::Mode::Ground)
-            {
-                mTools.GetEntities().ClearPreview();
-
-                // the selection is taken as it stands rather than reserving a value to mean nothing.
-                const UInt32    Selection = GetContext().GetInteger("Selection.Terrain", 0);
-                const Placement Cursor    = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
-
-                // Pencil paints a continuous stroke while held; Bucket fills once per click.
-                const Bool   Continuous = (mTools.GetBrush() == Tools::Brush::Pencil);
-                const SInt32 UnitX      = static_cast<SInt32>(Floor(Cursor.GetAbsoluteX()));
-                const SInt32 UnitY      = static_cast<SInt32>(Floor(Cursor.GetAbsoluteY()));
-
-                // Ground is worked in rather than stamped, so holding the brush still keeps depositing and the
-                // terrain comes on the longer it is leant on.
-                const Real64 Now     = Toolkit::Composer::GetTime();
-                const Bool   Moved   = (UnitX != mPaintUnitX) || (UnitY != mPaintUnitY);
-                const Bool   NewUnit = Moved || (Now - mPaintTime) >= Ground::kCadence;
-
-                const Bool LeftClick  = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Left);
-                const Bool RightClick = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Right);
-                const Bool LeftHeld   = Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left);
-                const Bool RightHeld  = Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Right);
-
-                const Bool Erase = RightClick || (Continuous && RightHeld && NewUnit);
-                const Bool Paint = LeftClick  || (Continuous && LeftHeld  && NewUnit);
-
-                // A stroke held across many units is one edit, so it keeps a single step open until it is let go.
-                if ((LeftHeld || RightHeld) && !mStroke)
-                {
-                    mStroke = true;
-
-                    GetContext().GetHistory().Open("Paint Ground"_Text);
-                }
-
-                if (Erase)
-                {
-                    mTools.Execute(Tools::Command::Remove, Cursor, Selection);
-                }
-                else if (Paint)
-                {
-                    mTools.Execute(Tools::Command::Add, Cursor, Selection);
-                }
-
-                if (LeftHeld || RightHeld)
-                {
-                    mPaintUnitX = UnitX;
-                    mPaintUnitY = UnitY;
-
-                    if (NewUnit)
-                    {
-                        mPaintTime = Now;
-                    }
-                }
-            }
-            else
-            {
-                const Bool IsLeftButton  = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Left);
-                const Bool IsRightButton = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Right);
-
-                const UInt32 Selection = GetContext().GetInteger("Selection.Archetype", 0);
-
-                Placement Cursor = Director.GetWorldCoordinates(Vector2(AbsoluteX, AbsoluteY));
-
-                // Snap to the center of the hovered tile when the toggle is on, or momentarily while Shift is held.
-                if (mTools.IsAligned() || Toolkit::Composer::IsKeyDown(ImGuiMod_Shift))
-                {
-                    Cursor = Placement::FromAbsolute(
-                        Floor(Cursor.GetAbsoluteX()) + 0.5,
-                        Floor(Cursor.GetAbsoluteY()) + 0.5);
-                }
-
-                // Show the pending entity under the cursor before it is committed by a click.
-                mTools.GetEntities().UpdatePreview(mTools.GetBrush(), Cursor, Selection);
-
-                // Handle left-click for adding and right-click for removing entities.
-                if (IsRightButton || (IsLeftButton && Selection != 0))
-                {
-                    const Tools::Command Command = IsLeftButton
-                        ? Tools::Command::Add
-                        : Tools::Command::Remove;
-                    mTools.Execute(Command, Cursor, Selection);
-                }
-            }
-        }
-        else
-        {
+    void Viewport::HandleGround(Placement Cursor)
+    {
             mTools.GetEntities().ClearPreview();
-        }
+
+            // the selection is taken as it stands rather than reserving a value to mean nothing.
+            const UInt32    Selection = GetContext().GetInteger(Session::kSelectionTerrain, 0);
+
+            // Pencil paints a continuous stroke while held; Bucket fills once per click.
+            const Bool   Continuous = (mTools.GetBrush() == Tools::Brush::Pencil);
+            const SInt32 UnitX      = static_cast<SInt32>(Floor(Cursor.GetAbsoluteX()));
+            const SInt32 UnitY      = static_cast<SInt32>(Floor(Cursor.GetAbsoluteY()));
+
+            // Ground is worked in rather than stamped, so holding the brush still keeps depositing and the
+            // terrain comes on the longer it is leant on.
+            const Real64 Now     = Toolkit::Composer::GetTime();
+            const Bool   Moved   = (UnitX != mPaintUnitX) || (UnitY != mPaintUnitY);
+            const Bool   NewUnit = Moved || (Now - mPaintTime) >= Ground::kCadence;
+
+            const Bool LeftClick  = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Left);
+            const Bool RightClick = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Right);
+            const Bool LeftHeld   = Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Left);
+            const Bool RightHeld  = Toolkit::Composer::IsMouseDown(ImGuiMouseButton_Right);
+
+            const Bool Erase = RightClick || (Continuous && RightHeld && NewUnit);
+            const Bool Paint = LeftClick  || (Continuous && LeftHeld  && NewUnit);
+
+            // A stroke held across many units is one edit, so it keeps a single step open until it is let go.
+            if ((LeftHeld || RightHeld) && !mStroke)
+            {
+                mStroke = true;
+
+                GetContext().GetHistory().Open("Paint Ground"_Text);
+            }
+
+            if (Erase)
+            {
+                mTools.Execute(Tools::Command::Remove, Cursor, Selection);
+            }
+            else if (Paint)
+            {
+                mTools.Execute(Tools::Command::Add, Cursor, Selection);
+            }
+
+            if (LeftHeld || RightHeld)
+            {
+                mPaintUnitX = UnitX;
+                mPaintUnitY = UnitY;
+
+                if (NewUnit)
+                {
+                    mPaintTime = Now;
+                }
+            }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Viewport::HandleEntities(Placement Cursor)
+    {
+            const Bool IsLeftButton  = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Left);
+            const Bool IsRightButton = Toolkit::Composer::IsMouseClicked(ImGuiMouseButton_Right);
+
+            const UInt32 Selection = GetContext().GetInteger(Session::kSelectionArchetype, 0);
+
+            // Snap to the center of the hovered tile when the toggle is on, or momentarily while Shift is held.
+            if (mTools.IsAligned() || Toolkit::Composer::IsKeyDown(ImGuiMod_Shift))
+            {
+                Cursor = Placement::FromAbsolute(
+                    Floor(Cursor.GetAbsoluteX()) + 0.5,
+                    Floor(Cursor.GetAbsoluteY()) + 0.5);
+            }
+
+            // Show the pending entity under the cursor before it is committed by a click.
+            mTools.GetEntities().UpdatePreview(mTools.GetBrush(), Cursor, Selection);
+
+            // Handle left-click for adding and right-click for removing entities.
+            if (IsRightButton || (IsLeftButton && Selection != 0))
+            {
+                const Tools::Command Command = IsLeftButton
+                    ? Tools::Command::Add
+                    : Tools::Command::Remove;
+                mTools.Execute(Command, Cursor, Selection);
+            }
     }
 }

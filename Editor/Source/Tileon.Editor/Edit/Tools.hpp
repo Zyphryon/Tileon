@@ -38,6 +38,9 @@ namespace Tileon::Editor
         /// \brief The footprints the ground brush covers.
         using Shape   = Editor::Shape;
 
+        /// \brief The ways the ground brush gives way at its rim.
+        using Falloff = Editor::Falloff;
+
     public:
 
         /// \brief Constructs a toolbox with the specified context reference.
@@ -66,7 +69,7 @@ namespace Tileon::Editor
         /// \param Mode The mode to set.
         ZY_INLINE void SetMode(Mode Mode)
         {
-            mContext.SetEnum("Tools.Mode", Mode);
+            mContext.SetEnum(Session::kToolsMode, Mode);
         }
 
         /// \brief Gets the current editing mode.
@@ -74,7 +77,7 @@ namespace Tileon::Editor
         /// \return The current editing mode.
         ZY_INLINE Mode GetMode() const
         {
-            return mContext.GetEnum("Tools.Mode", Mode::Ground);
+            return mContext.GetEnum(Session::kToolsMode, Mode::Ground);
         }
 
         /// \brief Sets the brush subsequent commands are issued with.

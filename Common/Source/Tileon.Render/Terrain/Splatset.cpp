@@ -23,9 +23,10 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     Splatset::Splatset(Ref<Engine::Subsystem::Host> Host)
-        : Locator   { Host },
-          mLoaded   { false },
-          mSeeded   { false }
+        : Locator     { Host },
+          mResolution { 256 },
+          mLoaded     { false },
+          mSeeded     { false }
     {
     }
 
@@ -127,9 +128,12 @@ namespace Tileon
         {
             mSeeded = true;
 
-            for (UInt Slice = mRegistry.GetSize(); Slice < Min(Albedo->GetLayers(), kLimit); ++Slice)
+            if (mRegistry.IsEmpty())
             {
-                mRegistry.Append();
+                for (UInt Slice = 0; Slice < Min(Albedo->GetLayers(), kLimit); ++Slice)
+                {
+                    mRegistry.Append();
+                }
             }
         }
     }

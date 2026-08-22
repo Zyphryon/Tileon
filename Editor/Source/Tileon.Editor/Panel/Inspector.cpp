@@ -41,7 +41,7 @@ namespace Tileon::Editor
             constexpr Real32 kFooterHeight = 40.0f;
 
             // The selection can be destroyed from elsewhere while it is still being pointed at.
-            const Scene::Entity Actor = GetContext().GetScene().GetEntity(GetContext().GetInteger("Selection.Entity"));
+            const Scene::Entity Actor = GetContext().GetScene().GetEntity(GetContext().GetInteger(Session::kSelectionEntity));
             const Bool          Alive = Actor.IsValid() && Actor.IsAlive();
 
             if (Alive)
@@ -106,9 +106,9 @@ namespace Tileon::Editor
             // The name is the way into what it names, the same jump the palette offers on right click.
             if (Toolkit::Composer::Selectable(String<128>::Print<"{0}###archetype">(Archetype.GetAlias())))
             {
-                GetContext().SetString("Navigate.Panel", "Archetypes");
-                GetContext().SetInteger("Selection.Archetype", Archetype.GetID());
-                GetContext().SetInteger("Selection.Archetype.Target", Archetype.GetID());
+                GetContext().SetString(Session::kNavigatePanel, "Archetypes");
+                GetContext().SetInteger(Session::kSelectionArchetype, Archetype.GetID());
+                GetContext().SetInteger(Session::kSelectionArchetypeTarget, Archetype.GetID());
             }
 
             Toolkit::Composer::Tooltip("Open this archetype in the Archetypes panel");
@@ -190,7 +190,7 @@ namespace Tileon::Editor
 
             Actor.Add<Dispose>();
 
-            GetContext().SetInteger("Selection.Entity", 0);
+            GetContext().SetInteger(Session::kSelectionEntity, 0);
         }
 
         Toolkit::Composer::EndDisabled();

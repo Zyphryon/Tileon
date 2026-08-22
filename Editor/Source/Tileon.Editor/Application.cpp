@@ -16,6 +16,7 @@
 #include "Panel/Hierarchy.hpp"
 #include "Panel/Inspector.hpp"
 #include "Panel/Palette.hpp"
+#include "Panel/Terrain.hpp"
 #include "Panel/Environment.hpp"
 #include "Panel/Assets.hpp"
 #include "Tileon.Editor/Toolkit/Theme.hpp"
@@ -217,6 +218,7 @@ namespace Tileon::Editor
         mPanels.Append(Retainer<Inspector>::Create(* mContext));
         mPanels.Append(Retainer<Hierarchy>::Create(* mContext));
         mPanels.Append(Retainer<Palette>::Create(* mContext));
+        mPanels.Append(Retainer<Terrain>::Create(* mContext));
         mPanels.Append(Retainer<Environment>::Create(* mContext));
         mPanels.Append(Retainer<Assets>::Create(* mContext));
         mPanels.Append(Retainer<Viewport>::Create(* mContext));
@@ -375,6 +377,7 @@ namespace Tileon::Editor
             const ImGuiID LeftBottom = Layout.Split(LeftTop, ImGuiDir_Down, 0.5f);
 
             Layout.Attach("Palette",     LeftTop);
+            Layout.Attach("Terrain",     Right);
             Layout.Attach("Hierarchy",   LeftBottom);
             Layout.Attach("Inspector",   Right);
             Layout.Attach("Environment", Right);
@@ -383,7 +386,7 @@ namespace Tileon::Editor
         });
 
         // Honour a pending navigation request from another panel.
-        if (const Text Target = mContext->GetString("Navigate.Panel"); !Target.IsEmpty())
+        if (const Text Target = mContext->GetString(Session::kNavigatePanel); !Target.IsEmpty())
         {
             for (ConstRetainer<Panel> Panel : mPanels)
             {
@@ -393,7 +396,7 @@ namespace Tileon::Editor
                     break;
                 }
             }
-            mContext->SetString("Navigate.Panel", Text::Empty());
+            mContext->SetString(Session::kNavigatePanel, Text::Empty());
         }
 
         // Draw each visible activity, allowing them to render their respective user interfaces.

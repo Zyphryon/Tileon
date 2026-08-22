@@ -23,22 +23,54 @@ namespace Tileon::Editor
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    Ground::Ground(Ref<Context> Context)
-        : mContext { Context },
-          mShape   { Shape::Circle },
-          mSize    { 3 },
-          mFlow    { 255 },
-          mSoft    { true }
+    static Real32 Grain(IntVector2 Unit)
     {
+        UInt32 Seed = static_cast<UInt32>(Unit.GetX()) * 73856093u ^ static_cast<UInt32>(Unit.GetY()) * 19349663u;
+
+        Seed ^= Seed >> 13;
+        Seed *= 0x5BD1E995u;
+        Seed ^= Seed >> 15;
+
+        return static_cast<Real32>(Seed & 0xFF) * (1.0f / 255.0f);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    static Real32 Threshold(IntVector2 Unit)
+    {
+        static constexpr UInt8 kOrdered[16] = {
+            0,  8,  2, 10,
+           12,  4, 14,  6,
+            3, 11,  1,  9,
+           15,  7, 13,  5 };
+
+        const UInt32 Column = static_cast<UInt32>(Unit.GetX()) & 3u;
+        const UInt32 Row    = static_cast<UInt32>(Unit.GetY()) & 3u;
+
+        return static_cast<Real32>(kOrdered[Row * 4 + Column]) * (1.0f / 16.0f);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    UInt8 Ground::Cover(SInt32 OffsetX, SInt32 OffsetY) const
+    Ground::Ground(Ref<Context> Context)
+        : mContext { Context },
+          mShape   { Shape::Circle },
+          mSize    { 3 },
+          mFlow    { 255 },
+          mFalloff { Falloff::Linear }
     {
-        const Real32 X = static_cast<Real32>(Abs(OffsetX));
-        const Real32 Y = static_cast<Real32>(Abs(OffsetY));
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    UInt8 Ground::Cover(IntVector2 Unit, IntVector2 Offset) const
+    {
+        const Real32 X     = static_cast<Real32>(Abs(Offset.GetX()));
+        const Real32 Y     = static_cast<Real32>(Abs(Offset.GetY()));
+        const Real32 Reach = static_cast<Real32>(mSize);
 
         Real32 Distance = 0.0f;
 
@@ -47,28 +79,55 @@ namespace Tileon::Editor
         case Shape::Square:
             Distance = Max(X, Y);
             break;
-        case Shape::Circle:
-            Distance = Sqrt(X * X + Y * Y);
-            break;
         case Shape::Diamond:
             Distance = X + Y;
             break;
+        default:
+            Distance = Sqrt(X * X + Y * Y);
+            break;
         }
 
-        if (Distance >= mSize)
+        if (Distance >= Reach)
         {
             return 0;
         }
 
-        if (!mSoft)
+        Real32 Share;
+
+        if (mShape == Shape::Ring)
         {
-            return 255;
+            // The rim keeps a band of its own and peaks along the middle of it, so the disc is left hollow.
+            const Real32 Band   = Max(Reach * 0.5f, 1.0f);
+            const Real32 Middle = Reach - Band * 0.5f;
+
+            Share = 1.0f - Abs(Distance - Middle) / Max(Band * 0.5f, 1.0f);
+        }
+        else
+        {
+            Share = (Reach - Distance) / Max(Reach * 0.5f, 1.0f);
         }
 
-        // A soft brush holds full strength over its inner half and gives way over the outer one, which
-        // leaves a band wide enough to read as a blend without washing the middle of the stroke out.
-        const Real32 Falloff = Max(mSize * 0.5f, 1.0f);
-        const Real32 Share   = Clamp((mSize - Distance) / Falloff, 0.0f, 1.0f);
+        Share = Clamp(Share, 0.0f, 1.0f);
+
+        switch (mFalloff)
+        {
+        case Falloff::Hard:
+            Share = (Share > 0.0f ? 1.0f : 0.0f);
+            break;
+        case Falloff::Linear:
+            break;
+        case Falloff::Smooth:
+            Share = Share * Share * (3.0f - 2.0f * Share);
+            break;
+        case Falloff::Dither:
+            Share = (Share > Threshold(Unit) ? 1.0f : 0.0f);
+            break;
+        }
+
+        if (mShape == Shape::Noise)
+        {
+            Share *= Grain(Unit);
+        }
         return static_cast<UInt8>(Share * 255.0f);
     }
 
@@ -85,6 +144,10 @@ namespace Tileon::Editor
         case Brush::Hand:
         case Brush::Select:
             return;
+        case Brush::Sample:
+            Pick(Placement);
+            return;
+        case Brush::Smudge:
         case Brush::Pencil:
         {
             // The brush covers a shape around the unit under the cursor, so the stroke is worked out over
@@ -132,6 +195,7 @@ namespace Tileon::Editor
                     Ref<Deferred> Waiting = mDeferred.Append();
                     Waiting.RegionX = RegionX;
                     Waiting.RegionY = RegionY;
+                    Waiting.Brush   = Brush;
                     Waiting.Command = Command;
                     Waiting.Area    = Area;
                     Waiting.Centre  = Centre;
@@ -169,7 +233,9 @@ namespace Tileon::Editor
         IntVector2    Centre,
         UInt16        Slice)
     {
-        if (Command == Command::Remove && !Surface->IsVisible(0))
+        const Bool Mixing = (Brush == Brush::Smudge);
+
+        if (!Mixing && Command == Command::Remove && !Surface->IsVisible(0))
         {
             return;
         }
@@ -190,13 +256,16 @@ namespace Tileon::Editor
         // The bucket fills whatever it lands on evenly; every other brush wears a shape.
         const Bool Shaped = (Brush != Brush::Bucket);
 
-        UInt8 Slot = Splatmap::kSlots;
+        UInt8 Slot    = Splatmap::kSlots;
+        Bool  Touched = false;
 
         for (SInt32 Y = Clipped.GetMinimumY(); Y < Clipped.GetMaximumY(); ++Y)
         {
             for (SInt32 X = Clipped.GetMinimumX(); X < Clipped.GetMaximumX(); ++X)
             {
-                const UInt8 Covered = Shaped ? Cover(X - Centre.GetX(), Y - Centre.GetY()) : 255;
+                const UInt8 Covered = Shaped
+                    ? Cover(IntVector2(X, Y), IntVector2(X - Centre.GetX(), Y - Centre.GetY()))
+                    : 255;
 
                 if (Covered == 0)
                 {
@@ -205,6 +274,20 @@ namespace Tileon::Editor
 
                 const UInt32 Share    = Shaped ? Covered * mFlow / 255 : 255;
                 const UInt8  Strength = static_cast<UInt8>(Share > 0 ? Share : 1);
+                const UInt8  LocalX   = static_cast<UInt8>(X - OriginX);
+                const UInt8  LocalY   = static_cast<UInt8>(Y - OriginY);
+
+                if (Mixing)
+                {
+                    if (!Touched)
+                    {
+                        mContext.GetHistory().CaptureRegion(Actor);
+                        Touched = true;
+                    }
+
+                    Soften(Surface, LocalX, LocalY, Strength);
+                    continue;
+                }
 
                 if (Slot == Splatmap::kSlots)
                 {
@@ -215,13 +298,14 @@ namespace Tileon::Editor
                         LOG_W("Ground: region {0},{1} already blends four terrains", Region.GetX(), Region.GetY());
                         return;
                     }
+                    Touched = true;
                 }
 
-                Surface->Blend(static_cast<UInt8>(X - OriginX), static_cast<UInt8>(Y - OriginY), Slot, Strength);
+                Surface->Blend(LocalX, LocalY, Slot, Strength);
             }
         }
 
-        if (Slot == Splatmap::kSlots)
+        if (!Touched)
         {
             return;
         }
@@ -246,6 +330,89 @@ namespace Tileon::Editor
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Ground::Soften(Ptr<Splatmap> Surface, UInt8 X, UInt8 Y, UInt8 Strength)
+    {
+        const SInt32 MinX = Max<SInt32>(X - 1, 0);
+        const SInt32 MinY = Max<SInt32>(Y - 1, 0);
+        const SInt32 MaxX = Min<SInt32>(X + 1, Tileon::Region::kUnitsPerX - 1);
+        const SInt32 MaxY = Min<SInt32>(Y + 1, Tileon::Region::kUnitsPerY - 1);
+
+        Array<UInt32, Splatmap::kSlots> Total { };
+
+        UInt32 Count = 0;
+
+        // The ring stops at the region's edge, so a stroke along a border leans on the side it can see.
+        for (SInt32 NeighbourY = MinY; NeighbourY <= MaxY; ++NeighbourY)
+        {
+            for (SInt32 NeighbourX = MinX; NeighbourX <= MaxX; ++NeighbourX)
+            {
+                for (UInt8 Slot = 0; Slot < Splatmap::kSlots; ++Slot)
+                {
+                    Total[Slot] += Surface->GetWeight(
+                        static_cast<UInt8>(NeighbourX), static_cast<UInt8>(NeighbourY), Slot);
+                }
+                ++Count;
+            }
+        }
+
+        Array<UInt8, Splatmap::kSlots> Mixed;
+
+        for (UInt8 Slot = 0; Slot < Splatmap::kSlots; ++Slot)
+        {
+            const UInt32 Average = Total[Slot] / Count;
+            const UInt32 Current = Surface->GetWeight(X, Y, Slot);
+
+            Mixed[Slot] = static_cast<UInt8>((Current * (255 - Strength) + Average * Strength) / 255);
+        }
+
+        Surface->SetWeights(X, Y, Mixed);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+    void Ground::Pick(Placement Placement)
+    {
+        const SInt32 UnitX = Floor(Placement.GetAbsoluteX());
+        const SInt32 UnitY = Floor(Placement.GetAbsoluteY());
+
+        const Scene::Entity Actor = mContext.GetSupervisor().GetOrLoadRegion(
+            Coordinate::GetRegionX(UnitX), Coordinate::GetRegionY(UnitY), false);
+
+        const ConstPtr<Splatmap> Surface = Actor.IsValid() ? Actor.TryGet<const Splatmap>() : nullptr;
+
+        if (!Surface)
+        {
+            return;
+        }
+
+        const UInt8 LocalX = static_cast<UInt8>(UnitX - Coordinate::GetRegionX(UnitX) * Tileon::Region::kUnitsPerX);
+        const UInt8 LocalY = static_cast<UInt8>(UnitY - Coordinate::GetRegionY(UnitY) * Tileon::Region::kUnitsPerY);
+
+        UInt8 Chosen    = Splatmap::kSlots;
+        UInt8 Strongest = 0;
+
+        for (UInt8 Slot = 0; Slot < Splatmap::kSlots; ++Slot)
+        {
+            if (const UInt8 Weight = Surface->GetWeight(LocalX, LocalY, Slot); Weight > Strongest)
+            {
+                Strongest = Weight;
+                Chosen    = Slot;
+            }
+        }
+
+        if (Chosen < Splatmap::kSlots)
+        {
+            mContext.SetInteger(Session::kSelectionTerrain, Surface->GetSplat(Chosen));
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
     void Ground::Flush()
     {
@@ -281,7 +448,7 @@ namespace Tileon::Editor
 
                 if (Surface)
                 {
-                    Apply(Actor, Surface, Brush::Pencil, Waiting.Command, Waiting.Area, Waiting.Centre, Waiting.Slice);
+                    Apply(Actor, Surface, Waiting.Brush, Waiting.Command, Waiting.Area, Waiting.Centre, Waiting.Slice);
                 }
             }
 

@@ -47,7 +47,7 @@ namespace Tileon
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    void Splatter::Draw(Ref<Render::Encoder> Encoder, ConstRetainer<Graphic::Technique> Technique, Graphic::Technique::Key Variant, IntVector3 Origin)
+    void Splatter::Draw(Ref<Render::Encoder> Encoder, ConstRetainer<Graphic::Technique> Technique, IntVector3 Origin)
     {
         ConstRetainer<Graphic::Material> Material = mSplatset.GetMaterial();
 
@@ -129,6 +129,7 @@ namespace Tileon
                         Instance.Phase[Slot * 2 + 0] = static_cast<Real32>(SweepX - static_cast<SInt64>(SweepX));
                         Instance.Phase[Slot * 2 + 1] = static_cast<Real32>(SweepY - static_cast<SInt64>(SweepY));
                         Instance.Tint[Slot]          = Terrain.Tint;
+                        Instance.Feather[Slot]       = Terrain.Feather;
                     }
                 }
 
@@ -144,7 +145,6 @@ namespace Tileon
                     Render::Encoder::Binder Binder = Encoder.Begin(* Technique);
                     Binder.Apply(* Material);
                     Binder.SetImage("Weight"_Hash, mTextures[Bank]);
-                    Binder.SetVariant(Variant);
                     Binder.Draw(Instances.GetStream(), Invocation);
                 }
             }

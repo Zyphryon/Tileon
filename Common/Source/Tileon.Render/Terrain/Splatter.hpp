@@ -45,9 +45,8 @@ namespace Tileon
         ///
         /// \param Encoder   The encoder that builds and binds the resulting draw command.
         /// \param Technique The technique the ground blends with.
-        /// \param Variant   The features to turn on beyond the ones the material implies.
         /// \param Origin    The whole-unit origin the frame's world coordinates are expressed against.
-        void Draw(Ref<Render::Encoder> Encoder, ConstRetainer<Graphic::Technique> Technique, Graphic::Technique::Key Variant, IntVector3 Origin);
+        void Draw(Ref<Render::Encoder> Encoder, ConstRetainer<Graphic::Technique> Technique, IntVector3 Origin);
 
         /// \brief Takes back the page a region was lent, leaving it free for another to take.
         ///
@@ -85,6 +84,9 @@ namespace Tileon
 
             /// The color each slot's art is multiplied by.
             Array<IntColor8, Splatmap::kSlots>  Tint;
+
+            /// How wide a band each slot's relief feathers over where it meets another.
+            Array<Real32, Splatmap::kSlots>     Feather;
         };
 
         /// \brief Holds a region and its ground for as long as the frame is being built.
